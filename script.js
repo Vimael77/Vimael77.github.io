@@ -134,6 +134,8 @@ function buscar() {
   const lista = document.getElementById('lista');
   lista.innerHTML = '';
 
+  lista.classList.add('table', 'table-striped', 'table-hover', 'table-borderless');
+  
   const th_nombre = document.createElement('th');
   const th_energia_calculada = document.createElement('th');
   const th_proteina = document.createElement('th');
@@ -148,7 +150,8 @@ function buscar() {
   th_carbohidratos.textContent = "Carbohidratos";
   th_fibra.textContent = "Fibra";      
 
-  const encabezado = document.createElement('tr');
+  const encabezado = document.createElement('thead');
+  encabezado.classList.add('table-primary');
 
   encabezado.appendChild(th_nombre);
   encabezado.appendChild(th_energia_calculada);
@@ -158,6 +161,8 @@ function buscar() {
   encabezado.appendChild(th_fibra);
 
   lista.appendChild(encabezado);
+
+  const tbody = document.createElement('tbody');
 
   for (let i = 0; i < alimentos.length; i++) {
     if (alimentos[i].nombre.toLowerCase().includes(busqueda.toLowerCase())) {
@@ -177,6 +182,7 @@ function buscar() {
       td_fibra.textContent = alimentos[i].fibra;
 
       const fila = document.createElement('tr');
+
       fila.addEventListener('click', () => agregar(baseGramos, alimentos[i]));
 
       fila.appendChild(td_nombre);
@@ -186,9 +192,11 @@ function buscar() {
       fila.appendChild(td_carbohidratos);
       fila.appendChild(td_fibra);
 
-      lista.appendChild(fila);
+      tbody.append(fila);
     }
   }
+
+  lista.appendChild(tbody);
 
 }
 

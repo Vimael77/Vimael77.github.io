@@ -1,3 +1,4 @@
+/*
 body {
 	font-family: Arial, sans-serif;
 	display: flex;
@@ -7,13 +8,16 @@ body {
 td {
 	background-color: #D8F1F5;	
 }
+/*
 th {
 	background-color: #36E4F5;	
 	/*writing-mode: vertical-lr;*/
     /*transform: rotate(180deg);*/
-	max-width: 35px;
+	/*max-width: 35px;
 	text-align: center;
 }
+*/
+/*
 h1 {
 	text-align: center;
 	margin-top: 0;
@@ -30,3 +34,4 @@ p {
 div {
 	border: 1px solid black;
   }
+*/
