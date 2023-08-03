@@ -1,3 +1,11 @@
+/*
 tr:hover{
+	background: rgb(46, 187, 187);
 	transform: scale(1.02);
 }
+*/
+
+.table-hover tbody tr:hover {
+	box-shadow: 0 0 10px #9c8f3a; /* Cambia este valor al color que desees */
+	transform: scale(1.02);
+  }
