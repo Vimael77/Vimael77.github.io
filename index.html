@@ -11,77 +11,82 @@
     </br>
     </br>
     </br>
-    <h1>Valores Nutricionales</h1>
-    <div>
-      <p>CARGAR ARCHIVO PREVIO</p>
-      <input type="file" id="file-input2">
-    </div>
-    <table id="valores" class="table table-striped table-hover" >
-      <thead class = 'table-primary'>
-        <tr>
-          <th class="td_principal">Alimento</th>
-          <th>Gramos</th>
-          <th>Energía calculada (Kcal)</th>
-          <th>Proteína (g)</th>
-          <th>Grasa total (g)</th>
-          <th>Carbohidratos (g)</th>
-          <th>Fibra (g)</th>      
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="font-size: 14px; font-weight: bold; width: 300px;">Total</td>
-          <td class="td_principal"></td>
-          <td class="td_principal" id="energia_calculada_total"></td>
-          <td class="td_principal" id="proteina_total"></td>
-          <td class="td_principal" id="grasa_total"></td>
-          <td class="td_principal" id="carbohidratos_total"></td>
-          <td class="td_principal" id="fibra_total"></td>       
-        </tr>
-        <tr>
-          <td style="font-size: 14px; font-weight: bold;">Requerimiento</td>
-          <td style="font-size: 14px; font-weight: bold;"></td>
-          <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-          <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-          <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-          <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-          <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-        </tr>
-        <tr>
-          <td class="td_principal">% de adecuación</td>
-          <td class="td_principal"></td>
-          <td class="td_principal" id="adecuacion_energia_calculada"></td>
-          <td class="td_principal" id="adecuacion_proteina"></td>
-          <td class="td_principal" id="adecuacion_grasa"></td>
-          <td class="td_principal" id="adecuacion_carbohidratos"></td>
-          <td class="td_principal" id="adecuacion_fibra"></td>
-        </tr>
-        <tr>
-          <td colspan="7" style="background:#dfe2ff; font-size: 18px; font-weight: bold; text-align: center;">Datos</td>
-        </tr>
-      </tbody>      
-    </table>
-    
-    <div id="buscador">
-      <h1>Buscar Alimentos</h1>   
-      <p>CARGAR ALIMENTOS</p>       
-      <input type="file" id="file-input"/>
-      </br>
-      <input type="text" id="busqueda" onkeyup="buscar()">
-      <button onclick="descargar()">Descargar</button>
-      <table id="lista" class="table table-striped table-hover table-borderless">
+    <div style="padding: 30px;">
+      <h1>Valores Nutricionales</h1>
+      <div>
+        <p>CARGAR ARCHIVO PREVIO</p>
+        <input type="file" id="file-input2">
+      </div>    
+      <table id="valores" class="table table-striped table-hover" >
         <thead class = 'table-primary'>
           <tr>
-            <th style="width: 300px;">Alimento</th>
+            <th class="td_principal">Alimento</th>
             <th>Gramos</th>
             <th>Energía calculada (Kcal)</th>
             <th>Proteína (g)</th>
             <th>Grasa total (g)</th>
             <th>Carbohidratos (g)</th>
-            <th>Fibra (g)</th>
+            <th>Fibra (g)</th>      
           </tr>
         </thead>
+        <tbody id="valores_tbody">
+          <tr>
+            <td style="font-size: 14px; font-weight: bold; width: 300px;">Total</td>
+            <td class="td_principal"></td>
+            <td class="td_principal" id="energia_calculada_total"></td>
+            <td class="td_principal" id="proteina_total"></td>
+            <td class="td_principal" id="grasa_total"></td>
+            <td class="td_principal" id="carbohidratos_total"></td>
+            <td class="td_principal" id="fibra_total"></td>       
+          </tr>
+          <tr>
+            <td style="font-size: 14px; font-weight: bold;">Requerimiento</td>
+            <td style="font-size: 14px; font-weight: bold;"></td>
+            <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+            <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+            <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+            <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+            <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+          </tr>
+          <tr>
+            <td class="td_principal">% de adecuación</td>
+            <td class="td_principal"></td>
+            <td class="td_principal" id="adecuacion_energia_calculada"></td>
+            <td class="td_principal" id="adecuacion_proteina"></td>
+            <td class="td_principal" id="adecuacion_grasa"></td>
+            <td class="td_principal" id="adecuacion_carbohidratos"></td>
+            <td class="td_principal" id="adecuacion_fibra"></td>
+          </tr>
+          <tr>
+            <td colspan="7" style="background:#dfe2ff; font-size: 18px; font-weight: bold; text-align: center;">Datos</td>
+          </tr>
+        </tbody>      
       </table>
+    </div>
+    
+    
+    <div style="padding: 30px;">
+      <div id="buscador">
+        <h1>Buscar Alimentos</h1>   
+        <p>CARGAR ALIMENTOS</p>       
+        <input type="file" id="file-input"/>
+        </br>
+        <input type="text" id="busqueda" onkeyup="buscar()">
+        <button onclick="descargar()">Descargar</button>        
+        <table id="lista" class="table table-striped table-hover table-borderless">
+          <thead class = 'table-primary'>
+            <tr>
+              <th style="width: 300px;">Alimento</th>
+              <th>Gramos</th>
+              <th>Energía calculada (Kcal)</th>
+              <th>Proteína (g)</th>
+              <th>Grasa total (g)</th>
+              <th>Carbohidratos (g)</th>
+              <th>Fibra (g)</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
     </div>
     <script src="script.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>

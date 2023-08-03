@@ -291,6 +291,11 @@ function eliminar(alimento){
 function agregar(valorGramos, alimento) {
   if (!alimentos_seleccionados.hasOwnProperty(alimento.nombre)){
     const valores = document.getElementById('valores');
+
+    const valores_tbody = document.getElementById('valores_tbody');
+
+    //valores.classList.add('table', 'table-striped', 'table-hover', 'table-borderless');
+
     //Crea una fila y le agrega un id.
     const fila = document.createElement('tr');
     fila.id = alimento.nombre;
@@ -334,7 +339,9 @@ function agregar(valorGramos, alimento) {
     fibra.textContent = alimento.fibra;
     fila.appendChild(fibra);
 
-    valores.appendChild(fila);
+    valores_tbody.appendChild(fila);
+
+    //valores.appendChild(valores_tbody);
 
     //actualizarValores2(alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra);
 
