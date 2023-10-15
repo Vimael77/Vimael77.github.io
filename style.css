@@ -73,3 +73,52 @@
     color: black; /* Cambia esto al color deseado */
 }
 
+.boton-personalizado {
+    display: inline-block;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    border: none;
+    color: #FFFFFF;
+    text-align: center;
+    font-size: 16px;
+    padding: 10px;
+    width: 200px;
+    transition: all 0.5s;
+    cursor: pointer;
+    margin: 5px;
+  }
+  
+  /* Cambio de color al pasar el cursor por encima */
+  .boton-personalizado:hover {
+    background-color: #af4522;
+  }
+  
+  /* Cambio de color al presionar el botón */
+  .boton-personalizado:active {
+    background-color: #3e8e41;
+  }
+  
+  /* Estilo para un botón deshabilitado */
+  .boton-personalizado:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+
+.contenedor-flex {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    padding-top: 10px;
+}
+
+.encabezado-fijo {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background-color: #f6f6f6;
+    padding: 10px;
+}
+
+.espacio-extra-encabezado{
+    padding-top: 150px;
+}

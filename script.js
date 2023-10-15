@@ -33,7 +33,7 @@ document.getElementById("file-input").addEventListener("change", function (event
           potasio: parseFloat(valores[14].replace(",", ".")),
           sodio: parseFloat(valores[15].replace(",", ".")),
           zinc: parseFloat(valores[16].replace(",", ".")),
-          vitamina_C: parseFloat(valores[17].replace(",", ".")),
+          vitamina_c: parseFloat(valores[17].replace(",", ".")),
           vitamina_a: parseFloat(valores[18].replace(",", ".")),
           folatos: parseFloat(valores[19].replace(",", ".")),
           vitamina_b12: parseFloat(valores[20].replace(",", ".")),
@@ -54,8 +54,6 @@ document.getElementById("file-input2").addEventListener("change", function (even
     var worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
     var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    console.log(jsonData);
 
     for (var i = 1; i < jsonData.length; i++) {
       var row = jsonData[i];
@@ -177,25 +175,25 @@ function calcular() {
   alimentos_requerimiento['vitamina_b12'] = (vitamina_b12_R);
   
 
-  const energia_calculada_A = document.getElementById('adecuacion_energia_calculada');
-  const proteina_A = document.getElementById('adecuacion_proteina');
-  const grasa_A = document.getElementById('adecuacion_grasa');
-  const carbohidratos_A = document.getElementById('adecuacion_carbohidratos');
-  const fibra_A = document.getElementById('adecuacion_fibra');
-  const ags_A = document.getElementById('adecuacion_ags');
-  const agm_A = document.getElementById('adecuacion_agm');
-  const agpi_A = document.getElementById('adecuacion_agpi');
-  const colesterol_A = document.getElementById('adecuacion_colesterol');
-  const calcio_A = document.getElementById('adecuacion_calcio');
-  const fosforo_A = document.getElementById('adecuacion_fosforo');
-  const hierro_A = document.getElementById('adecuacion_hierro');
-  const potasio_A = document.getElementById('adecuacion_potasio');
-  const sodio_A = document.getElementById('adecuacion_sodio');
-  const zinc_A = document.getElementById('adecuacion_zinc');
-  const vitamina_c_A = document.getElementById('adecuacion_vitamina_c');
-  const vitamina_a_A = document.getElementById('adecuacion_vitamina_a');
-  const folatos_A = document.getElementById('adecuacion_folatos');
-  const vitamina_b12_A = document.getElementById('adecuacion_vitamina_b12');
+  var energia_calculada_A = document.getElementById('adecuacion_energia_calculada');
+  var proteina_A = document.getElementById('adecuacion_proteina');
+  var grasa_A = document.getElementById('adecuacion_grasa');
+  var carbohidratos_A = document.getElementById('adecuacion_carbohidratos');
+  var fibra_A = document.getElementById('adecuacion_fibra');
+  var ags_A = document.getElementById('adecuacion_ags');
+  var agm_A = document.getElementById('adecuacion_agm');
+  var agpi_A = document.getElementById('adecuacion_agpi');
+  var colesterol_A = document.getElementById('adecuacion_colesterol');
+  var calcio_A = document.getElementById('adecuacion_calcio');
+  var fosforo_A = document.getElementById('adecuacion_fosforo');
+  var hierro_A = document.getElementById('adecuacion_hierro');
+  var potasio_A = document.getElementById('adecuacion_potasio');
+  var sodio_A = document.getElementById('adecuacion_sodio');
+  var zinc_A = document.getElementById('adecuacion_zinc');
+  var vitamina_c_A = document.getElementById('adecuacion_vitamina_c');
+  var vitamina_a_A = document.getElementById('adecuacion_vitamina_a');
+  var folatos_A = document.getElementById('adecuacion_folatos');
+  var vitamina_b12_A = document.getElementById('adecuacion_vitamina_b12');
 
 
   energia_calculada_A.textContent = (100*energia_calculada_T/energia_calculada_R).toFixed(2) + '%';
@@ -203,20 +201,20 @@ function calcular() {
   grasa_A.textContent = (100*grasa_T/grasa_R).toFixed(2) + '%';
   carbohidratos_A.textContent = (100*carbohidratos_T/carbohidratos_R).toFixed(2) + '%';
   fibra_A.textContent = (100*fibra_T/fibra_R).toFixed(2) + '%';
-  ags_A = (100*ags_T/ags_R).toFixed(2) + '%';
-  agm_A = (100*agm_T/agm_R).toFixed(2) + '%';
-  agpi_A = (100*agpi_T/agpi_R).toFixed(2) + '%';
-  colesterol_A = (100*colesterol_T/colesterol_R).toFixed(2) + '%';
-  calcio_A = (100*calcio_T/calcio_R).toFixed(2) + '%';
-  fosforo_A = (100*fosforo_T/fosforo_R).toFixed(2) + '%';
-  hierro_A = (100*hierro_T/hierro_R).toFixed(2) + '%';
-  potasio_A = (100*potasio_T/potasio_R).toFixed(2) + '%';
-  sodio_A = (100*sodio_T/sodio_R).toFixed(2) + '%';
-  zinc_A = (100*zinc_T/zinc_R).toFixed(2) + '%';
-  vitamina_c_A = (100*vitamina_c_T/vitamina_c_R).toFixed(2) + '%';
-  vitamina_a_A = (100*vitamina_a_T/vitamina_a_R).toFixed(2) + '%';
-  folatos_A = (100*folatos_T/folatos_R).toFixed(2) + '%';
-  vitamina_b12_A = (100*vitamina_b12_T/vitamina_b12_R).toFixed(2) + '%';
+  ags_A.textContent = (100*ags_T/ags_R).toFixed(2) + '%';
+  agm_A.textContent = (100*agm_T/agm_R).toFixed(2) + '%';
+  agpi_A.textContent = (100*agpi_T/agpi_R).toFixed(2) + '%';
+  colesterol_A.textContent = (100*colesterol_T/colesterol_R).toFixed(2) + '%';
+  calcio_A.textContent = (100*calcio_T/calcio_R).toFixed(2) + '%';
+  fosforo_A.textContent = (100*fosforo_T/fosforo_R).toFixed(2) + '%';
+  hierro_A.textContent = (100*hierro_T/hierro_R).toFixed(2) + '%';
+  potasio_A.textContent = (100*potasio_T/potasio_R).toFixed(2) + '%';
+  sodio_A.textContent = (100*sodio_T/sodio_R).toFixed(2) + '%';
+  zinc_A.textContent = (100*zinc_T/zinc_R).toFixed(2) + '%';
+  vitamina_c_A.textContent = (100*vitamina_c_T/vitamina_c_R).toFixed(2) + '%';
+  vitamina_a_A.textContent = (100*vitamina_a_T/vitamina_a_R).toFixed(2) + '%';
+  folatos_A.textContent = (100*folatos_T/folatos_R).toFixed(2) + '%';
+  vitamina_b12_A.textContent = (100*vitamina_b12_T/vitamina_b12_R).toFixed(2) + '%';
 
 
   alimentos_adecuacion['gramos'] = "";
@@ -249,7 +247,7 @@ function buscar() {
   const lista = document.getElementById('lista');
   lista.innerHTML = '';
 
-  lista.classList.add('table', 'table-striped', 'table-hover', 'table-borderless');
+  lista.classList.add('table', 'table-striped', 'table-hover', 'table-sm', 'custom-width-table');
   
   const th_nombre = document.createElement('th');
   const th_energia_calculada = document.createElement('th');
@@ -272,6 +270,29 @@ function buscar() {
   const th_folatos = document.createElement('th');
   const th_vitamina_b12 = document.createElement('th');
 
+  //Se agregan clases a cada uno de los componentes.
+  th_nombre.classList.add('ancho-alimento');
+  th_energia_calculada.classList.add('ancho-celda');
+  th_proteina.classList.add('ancho-celda');
+  th_grasa_total.classList.add('ancho-celda');
+  th_carbohidratos.classList.add('ancho-celda');
+  th_fibra.classList.add('ancho-celda');
+  th_ags.classList.add('ancho-celda');
+  th_agm.classList.add('ancho-celda');
+  th_agpi.classList.add('ancho-celda');
+  th_colesterol.classList.add('ancho-celda');
+  th_calcio.classList.add('ancho-celda');
+  th_fosforo.classList.add('ancho-celda');
+  th_hierro.classList.add('ancho-celda');
+  th_potasio.classList.add('ancho-celda');
+  th_sodio.classList.add('ancho-celda');
+  th_zinc.classList.add('ancho-celda');
+  th_vitamina_c.classList.add('ancho-celda');
+  th_vitamina_a.classList.add('ancho-celda');
+  th_folatos.classList.add('ancho-celda');
+  th_vitamina_b12.classList.add('ancho-celda');
+  
+  //
   th_nombre.textContent = "Nombre";
   th_energia_calculada.textContent = "Energía calculada";
   th_proteina.textContent = "Proteína";
@@ -409,20 +430,8 @@ function agregarAlimentos(gramos, nombreAlimento){
   }
 }
 
-function actualizarValores(event, alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
-  ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12){      
-  var inputGramos = 0;
-
-    if (isNaN(event.target.value) || event.target.value === "" || parseFloat(event.target.value) < 0) {
-      inputGramos = 0;
-    }else{
-      inputGramos = parseFloat(event.target.value);
-    }
-    if (event === null){
-      inputGramos = 0;
-    }
-
-  var factor = inputGramos / 100;
+function calculoActualizarValores(alimento, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+  ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12){
 
   var valor_energia_calculada = parseFloat(alimento.energia_calculada);
   var valor_proteina = parseFloat(alimento.proteina);
@@ -485,37 +494,30 @@ function actualizarValores(event, alimento, energia_calculada, proteina, grasa_t
   folatos.textContent = (valor_folatos*factor).toFixed(2);
   vitamina_b12.textContent = (valor_vitamina_b12*factor).toFixed(2);
 
-
   actualizarTotal(alimentos_seleccionados);
-
   calcular();
-}
-/*
-function actualizarValores2(alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra){      
-  var valor_energia_calculada = parseFloat(alimento.energia_calculada);
-  var valor_proteina = parseFloat(alimento.proteina);
-  var valor_grasa_total = parseFloat(alimento.grasa_total);
-  var valor_carbohidratos = parseFloat(alimento.carbohidratos);
-  var valor_fibra = parseFloat(alimento.fibra);
- 
-  alimentos_seleccionados[alimento.nombre]['gramos'] = parseFloat("100");
-  alimentos_seleccionados[alimento.nombre]['energia_calculada'] = valor_energia_calculada;
-  alimentos_seleccionados[alimento.nombre]["proteina"] = valor_proteina;
-  alimentos_seleccionados[alimento.nombre]["grasa_total"] = valor_grasa_total;
-  alimentos_seleccionados[alimento.nombre]["carbohidratos"] = valor_carbohidratos;
-  alimentos_seleccionados[alimento.nombre]["fibra"] = valor_fibra;
+  }
+
+
+function actualizarValores(event, alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+  ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12){      
+  var inputGramos = 0;
+
+    if (isNaN(event.target.value) || event.target.value === "" || parseFloat(event.target.value) < 0) {
+      inputGramos = 0;
+    }else{
+      inputGramos = parseFloat(event.target.value);
+    }
+    if (event === null){
+      inputGramos = 0;
+    }
+
+  var factor = inputGramos / 100;
+
+  calculoActualizarValores(alimento, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+  ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12);
   
-  energia_calculada.textContent = (valor_energia_calculada).toFixed(2);
-  proteina.textContent = (valor_proteina).toFixed(2);
-  grasa_total.textContent = (valor_grasa_total).toFixed(2);
-  carbohidratos.textContent = (valor_carbohidratos).toFixed(2);
-  fibra.textContent = (valor_fibra).toFixed(2);
-
-  actualizarTotal(alimentos_seleccionados);
-
-  calcular();
 }
-*/
 function eliminar(alimento){
   var respuesta = confirm('¿Estás seguro de eliminar el alimento?');
   if (respuesta) {
@@ -523,6 +525,7 @@ function eliminar(alimento){
     row.remove();
     delete alimentos_seleccionados[alimento];
     actualizarTotal(alimentos_seleccionados);
+    calcular();
   }
 }
 // agregar un alimento a la tabla de valores nutricionales
@@ -552,7 +555,9 @@ function agregar(valorGramos, alimento) {
     campoTexto.value = valorGramos;
     campoTexto.id = alimento.nombre + '_' + 'input';
     campoTexto.addEventListener('keyup', (event) => actualizarValores(event, 
-      alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra));
+      alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+      ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc,
+      vitamina_c, vitamina_a, folatos, vitamina_b12));
 
     gramos.appendChild(campoTexto);
     fila.appendChild(gramos);
@@ -578,70 +583,72 @@ function agregar(valorGramos, alimento) {
     fila.appendChild(fibra);
 
     const ags = document.createElement('td');
-    ags.textContent = alimento.fibra;
-    ags.appendChild(ags);
+    ags.textContent = alimento.ags;
+    fila.appendChild(ags);
 
     const agm = document.createElement('td');
     agm.textContent = alimento.fibra;
-    agm.appendChild(agm);
+    fila.appendChild(agm);
 
     const agpi = document.createElement('td');
-    agpi.textContent = alimento.fibra;
-    agpi.appendChild(agpi);
+    agpi.textContent = alimento.agm;
+    fila.appendChild(agpi);
 
     const colesterol = document.createElement('td');
-    colesterol.textContent = alimento.fibra;
-    colesterol.appendChild(colesterol);
+    colesterol.textContent = alimento.colesterol;
+    fila.appendChild(colesterol);
 
     const calcio = document.createElement('td');
-    calcio.textContent = alimento.fibra;
-    calcio.appendChild(calcio);
+    calcio.textContent = alimento.calcio;
+    fila.appendChild(calcio);
 
     const fosforo = document.createElement('td');
-    fosforo.textContent = alimento.fibra;
-    fosforo.appendChild(fosforo);
+    fosforo.textContent = alimento.fosforo;
+    fila.appendChild(fosforo);
 
     const hierro = document.createElement('td');
-    hierro.textContent = alimento.fibra;
-    hierro.appendChild(hierro);
+    hierro.textContent = alimento.hierro;
+    fila.appendChild(hierro);
 
     const potasio = document.createElement('td');
-    potasio.textContent = alimento.fibra;
-    potasio.appendChild(potasio);
+    potasio.textContent = alimento.potasio;
+    fila.appendChild(potasio);
 
     const sodio = document.createElement('td');
-    sodio.textContent = alimento.fibra;
-    sodio.appendChild(sodio);
+    sodio.textContent = alimento.sodio;
+    fila.appendChild(sodio);
 
     const zinc = document.createElement('td');
-    zinc.textContent = alimento.fibra;
-    zinc.appendChild(zinc);
+    zinc.textContent = alimento.zinc;
+    fila.appendChild(zinc);
 
     const vitamina_c = document.createElement('td');
-    vitamina_c.textContent = alimento.fibra;
-    vitamina_c.appendChild(vitamina_c);
+    vitamina_c.textContent = alimento.vitamina_c;
+    fila.appendChild(vitamina_c);
 
     const vitamina_a = document.createElement('td');
-    vitamina_a.textContent = alimento.fibra;
-    vitamina_a.appendChild(vitamina_a);
+    vitamina_a.textContent = alimento.vitamina_a;
+    fila.appendChild(vitamina_a);
 
     const folatos = document.createElement('td');
-    folatos.textContent = alimento.fibra;
-    folatos.appendChild(folatos);
+    folatos.textContent = alimento.folatos;
+    fila.appendChild(folatos);
 
     const vitamina_b12 = document.createElement('td');
-    vitamina_b12.textContent = alimento.fibra;
-    vitamina_b12.appendChild(vitamina_b12);
+    vitamina_b12.textContent = alimento.vitamina_b12;
+    fila.appendChild(vitamina_b12);
 
     valores_tbody.appendChild(fila);
 
     valores.appendChild(valores_tbody);
 
-    //actualizarValores2(alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra);
+    alimentos_seleccionados[alimento.nombre] = Object.assign({}, alimento);
+
+    calculoActualizarValores(alimento, 100, 1, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+      ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12);
 
   }
-  
-  alimentos_seleccionados[alimento.nombre] = Object.assign({}, alimento);    
+        
   actualizarTotal(alimentos_seleccionados);
   calcular();
 }
@@ -674,7 +681,6 @@ function actualizarTotal(alimentos_seleccionados){
     aux_grasa_total += parseFloat(alimentos_seleccionados[clave].grasa_total);
     aux_carbohidratos += parseFloat(alimentos_seleccionados[clave].carbohidratos);
     aux_fibra += parseFloat(alimentos_seleccionados[clave].fibra);
-    aux_fibra += parseFloat(alimentos_seleccionados[clave].fibra);
     aux_ags += parseFloat(alimentos_seleccionados[clave].ags);
     aux_agm += parseFloat(alimentos_seleccionados[clave].agm);
     aux_agpi += parseFloat(alimentos_seleccionados[clave].agpi);
@@ -697,6 +703,7 @@ function actualizarTotal(alimentos_seleccionados){
   const proteina_total = document.getElementById('proteina_total');
   const grasa_total_total = document.getElementById('grasa_total');
   const carbohidratos_total = document.getElementById('carbohidratos_total');
+  const fibra_total = document.getElementById('fibra_total');
   const ags_total = document.getElementById('ags_total');
   const agm_total = document.getElementById('agm_total');
   const agpi_total = document.getElementById('agpi_total');
