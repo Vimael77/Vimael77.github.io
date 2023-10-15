@@ -59,9 +59,29 @@ document.getElementById("file-input2").addEventListener("change", function (even
       var row = jsonData[i];
       var nombreAlimento = row[0];
       var gramos = row[20];
-      if (nombreAlimento != "Total"){
+      if (nombreAlimento != "Total" && nombreAlimento !='Requerimiento'){
         agregarAlimentos(gramos, nombreAlimento);
-      }else{
+      }else if (row[0] = 'Requerimiento'){
+        document.getElementById('input_energia_calculada_requerimiento').value = row[1];        
+        document.getElementById('input_proteina_requerimiento').value = row[2];
+        document.getElementById('input_grasa_requerimiento').value = row[3];
+        document.getElementById('input_carbohidratos_requerimiento').value = row[4];
+        document.getElementById('input_fibra_requerimiento').value = row[5];
+        document.getElementById("input_ags_requerimiento").value = row[6];
+        document.getElementById("input_agm_requerimiento").value = row[7];
+        document.getElementById("input_agpi_requerimiento").value = row[8];
+        document.getElementById("input_colesterol_requerimiento").value = row[9];
+        document.getElementById("input_calcio_requerimiento").value = row[10];
+        document.getElementById("input_fosforo_requerimiento").value = row[11];
+        document.getElementById("input_hierro_requerimiento").value = row[12];
+        document.getElementById("input_potasio_requerimiento").value = row[13];
+        document.getElementById("input_sodio_requerimiento").value = row[14];
+        document.getElementById("input_zinc_requerimiento").value = row[15];
+        document.getElementById("input_vitamina_c_requerimiento").value = row[16];
+        document.getElementById("input_vitamina_a_requerimiento").value = row[17];
+        document.getElementById("input_folatos_requerimiento").value = row[18];
+        document.getElementById("input_vitamina_b12_requerimiento").value = row[19];
+        calcular();
         break;
       }      
     }
@@ -238,8 +258,6 @@ function calcular() {
   alimentos_adecuacion['vitamina_a'] = vitamina_a_A.textContent;
   alimentos_adecuacion['folatos'] = folatos_A.textContent;
   alimentos_adecuacion['vitamina_b12'] = vitamina_b12_A.textContent;
-
-
 }
 
 function buscar() {
