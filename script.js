@@ -2,6 +2,7 @@
 const alimentos = [];
 var alimentos_seleccionados = {};
 var alimentos_total = {};
+var alimentos_total_kc = {};
 var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
@@ -92,9 +93,23 @@ document.getElementById("file-input2").addEventListener("change", function (even
 });
 
 //Descarga alimentos
+
+function total_kilocalorias(){
+
+  alimentos_total_kc['gramos'] = "";
+  alimentos_total_kc['nombre'] = "Total Kilocalorias";
+  alimentos_total_kc['energia_calculada'] = "";
+  alimentos_total_kc['proteina'] = alimentos_total['proteina']*4
+  alimentos_total_kc['grasa_total'] = alimentos_total['grasa_total']*9
+  alimentos_total_kc['carbohidratos'] = alimentos_total['carbohidratos']*4
+
+}
+
 function descargar(){
+  total_kilocalorias();
   var datos = Object.values(alimentos_seleccionados);
   datos.push(alimentos_total);
+  datos.push(alimentos_total_kc);
   datos.push(alimentos_requerimiento);
   datos.push(alimentos_adecuacion);
   console.log(datos);
@@ -108,68 +123,68 @@ function descargar(){
 
 // Buscar alimentos y mostrarlos en una lista
 function calcular() {
-  const energia_calculada_T = document.getElementById('energia_calculada_total').textContent;
-  const proteina_T = document.getElementById('proteina_total').textContent;
-  const grasa_T = document.getElementById('grasa_total').textContent;
-  const carbohidratos_T = document.getElementById('carbohidratos_total').textContent;
-  const fibra_T = document.getElementById('fibra_total').textContent;
-  const ags_T = document.getElementById('ags_total').textContent;
-  const agm_T = document.getElementById('agm_total').textContent;
-  const agpi_T = document.getElementById('agpi_total').textContent;
-  const colesterol_T = document.getElementById('colesterol_total').textContent;
-  const calcio_T = document.getElementById('calcio_total').textContent;
-  const fosforo_T = document.getElementById('fosforo_total').textContent;
-  const hierro_T = document.getElementById('hierro_total').textContent;
-  const potasio_T = document.getElementById('potasio_total').textContent;
-  const sodio_T = document.getElementById('sodio_total').textContent;
-  const zinc_T = document.getElementById('zinc_total').textContent;
-  const vitamina_c_T = document.getElementById('vitamina_c_total').textContent;
-  const vitamina_a_T = document.getElementById('vitamina_a_total').textContent;
-  const folatos_T = document.getElementById('folatos_total').textContent;
-  const vitamina_b12_T = document.getElementById('vitamina_b12_total').textContent;
+  const energia_calculada_T = parseFloat(document.getElementById('energia_calculada_total').textContent);
+  const proteina_T = parseFloat(document.getElementById('proteina_total').textContent);
+  const grasa_T = parseFloat(document.getElementById('grasa_total').textContent);
+  const carbohidratos_T = parseFloat(document.getElementById('carbohidratos_total').textContent);
+  const fibra_T = parseFloat(document.getElementById('fibra_total').textContent);
+  const ags_T = parseFloat(document.getElementById('ags_total').textContent);
+  const agm_T = parseFloat(document.getElementById('agm_total').textContent);
+  const agpi_T = parseFloat(document.getElementById('agpi_total').textContent);
+  const colesterol_T = parseFloat(document.getElementById('colesterol_total').textContent);
+  const calcio_T = parseFloat(document.getElementById('calcio_total').textContent);
+  const fosforo_T = parseFloat(document.getElementById('fosforo_total').textContent);
+  const hierro_T = parseFloat(document.getElementById('hierro_total').textContent);
+  const potasio_T = parseFloat(document.getElementById('potasio_total').textContent);
+  const sodio_T = parseFloat(document.getElementById('sodio_total').textContent);
+  const zinc_T = parseFloat(document.getElementById('zinc_total').textContent);
+  const vitamina_c_T = parseFloat(document.getElementById('vitamina_c_total').textContent);
+  const vitamina_a_T = parseFloat(document.getElementById('vitamina_a_total').textContent);
+  const folatos_T = parseFloat(document.getElementById('folatos_total').textContent);
+  const vitamina_b12_T = parseFloat(document.getElementById('vitamina_b12_total').textContent);
 
   alimentos_total['gramos'] = "";
   alimentos_total['nombre'] = "Total";
   alimentos_total['energia_calculada'] = energia_calculada_T;
-  alimentos_total['proteina'] = (proteina_T);
-  alimentos_total['grasa_total'] = (grasa_T);
-  alimentos_total['carbohidratos'] = (carbohidratos_T);
-  alimentos_total['fibra'] = (fibra_T);
-  alimentos_total['ags'] = (ags_T);
-  alimentos_total['agm'] = (agm_T);
-  alimentos_total['agpi'] = (agpi_T);
-  alimentos_total['colesterol'] = (colesterol_T);
-  alimentos_total['calcio'] = (calcio_T);
-  alimentos_total['fosforo'] = (fosforo_T);
-  alimentos_total['hierro'] = (hierro_T);
-  alimentos_total['potasio'] = (potasio_T);
-  alimentos_total['sodio'] = (sodio_T);
-  alimentos_total['zinc'] = (zinc_T);
-  alimentos_total['vitamina_c'] = (vitamina_c_T);
-  alimentos_total['vitamina_a'] = (vitamina_a_T);
-  alimentos_total['folatos'] = (folatos_T);
-  alimentos_total['vitamina_b12'] = (vitamina_b12_T);
+  alimentos_total['proteina'] = proteina_T;
+  alimentos_total['grasa_total'] = grasa_T;
+  alimentos_total['carbohidratos'] = carbohidratos_T;
+  alimentos_total['fibra'] = fibra_T;
+  alimentos_total['ags'] = ags_T;
+  alimentos_total['agm'] = agm_T;
+  alimentos_total['agpi'] = agpi_T;
+  alimentos_total['colesterol'] = colesterol_T;
+  alimentos_total['calcio'] = calcio_T;
+  alimentos_total['fosforo'] = fosforo_T;
+  alimentos_total['hierro'] = hierro_T;
+  alimentos_total['potasio'] = potasio_T;
+  alimentos_total['sodio'] = sodio_T;
+  alimentos_total['zinc'] = zinc_T;
+  alimentos_total['vitamina_c'] = vitamina_c_T;
+  alimentos_total['vitamina_a'] = vitamina_a_T;
+  alimentos_total['folatos'] = folatos_T;
+  alimentos_total['vitamina_b12'] = vitamina_b12_T;
 
 
-  const energia_calculada_R = document.getElementById('input_energia_calculada_requerimiento').value;
-  const proteina_R = document.getElementById('input_proteina_requerimiento').value;
-  const grasa_R = document.getElementById('input_grasa_requerimiento').value;
-  const carbohidratos_R = document.getElementById('input_carbohidratos_requerimiento').value;
-  const fibra_R = document.getElementById('input_fibra_requerimiento').value;
-  const ags_R = document.getElementById("input_ags_requerimiento").value;
-  const agm_R = document.getElementById("input_agm_requerimiento").value;
-  const agpi_R = document.getElementById("input_agpi_requerimiento").value;
-  const colesterol_R = document.getElementById("input_colesterol_requerimiento").value;
-  const calcio_R = document.getElementById("input_calcio_requerimiento").value;
-  const fosforo_R = document.getElementById("input_fosforo_requerimiento").value;
-  const hierro_R = document.getElementById("input_hierro_requerimiento").value;
-  const potasio_R = document.getElementById("input_potasio_requerimiento").value;
-  const sodio_R = document.getElementById("input_sodio_requerimiento").value;
-  const zinc_R = document.getElementById("input_zinc_requerimiento").value;
-  const vitamina_c_R = document.getElementById("input_vitamina_c_requerimiento").value;
-  const vitamina_a_R = document.getElementById("input_vitamina_a_requerimiento").value;
-  const folatos_R = document.getElementById("input_folatos_requerimiento").value;
-  const vitamina_b12_R = document.getElementById("input_vitamina_b12_requerimiento").value;
+  const energia_calculada_R = parseFloat(document.getElementById('input_energia_calculada_requerimiento').value);
+  const proteina_R = parseFloat(document.getElementById('input_proteina_requerimiento').value);
+  const grasa_R = parseFloat(document.getElementById('input_grasa_requerimiento').value);
+  const carbohidratos_R = parseFloat(document.getElementById('input_carbohidratos_requerimiento').value);
+  const fibra_R = parseFloat(document.getElementById('input_fibra_requerimiento').value);
+  const ags_R = parseFloat(document.getElementById("input_ags_requerimiento").value);
+  const agm_R = parseFloat(document.getElementById("input_agm_requerimiento").value);
+  const agpi_R = parseFloat(document.getElementById("input_agpi_requerimiento").value);
+  const colesterol_R = parseFloat(document.getElementById("input_colesterol_requerimiento").value);
+  const calcio_R = parseFloat(document.getElementById("input_calcio_requerimiento").value);
+  const fosforo_R = parseFloat(document.getElementById("input_fosforo_requerimiento").value);
+  const hierro_R = parseFloat(document.getElementById("input_hierro_requerimiento").value);
+  const potasio_R = parseFloat(document.getElementById("input_potasio_requerimiento").value);
+  const sodio_R = parseFloat(document.getElementById("input_sodio_requerimiento").value);
+  const zinc_R = parseFloat(document.getElementById("input_zinc_requerimiento").value);
+  const vitamina_c_R = parseFloat(document.getElementById("input_vitamina_c_requerimiento").value);
+  const vitamina_a_R = parseFloat(document.getElementById("input_vitamina_a_requerimiento").value);
+  const folatos_R = parseFloat(document.getElementById("input_folatos_requerimiento").value);
+  const vitamina_b12_R = parseFloat(document.getElementById("input_vitamina_b12_requerimiento").value);
 
 
   alimentos_requerimiento['gramos'] = "";
@@ -239,25 +254,25 @@ function calcular() {
 
   alimentos_adecuacion['gramos'] = "";
   alimentos_adecuacion['nombre'] = "Porcentaje de Adecuación";
-  alimentos_adecuacion['energia_calculada'] = energia_calculada_A.textContent;
-  alimentos_adecuacion['proteina'] = proteina_A.textContent;
-  alimentos_adecuacion['grasa_total'] = grasa_A.textContent;
-  alimentos_adecuacion['carbohidratos'] = carbohidratos_A.textContent;
-  alimentos_adecuacion['fibra'] = fibra_A.textContent;
-  alimentos_adecuacion['ags'] = ags_A.textContent;
-  alimentos_adecuacion['agm'] = agm_A.textContent;
-  alimentos_adecuacion['agpi'] = agpi_A.textContent;
-  alimentos_adecuacion['colesterol'] = colesterol_A.textContent;
-  alimentos_adecuacion['calcio'] = calcio_A.textContent;
-  alimentos_adecuacion['fosforo'] = fosforo_A.textContent;
-  alimentos_adecuacion['hierro'] = hierro_A.textContent;
-  alimentos_adecuacion['potasio'] = potasio_A.textContent;
-  alimentos_adecuacion['sodio'] = sodio_A.textContent;
-  alimentos_adecuacion['zinc'] = zinc_A.textContent;
-  alimentos_adecuacion['vitamina_c'] = vitamina_c_A.textContent;
-  alimentos_adecuacion['vitamina_a'] = vitamina_a_A.textContent;
-  alimentos_adecuacion['folatos'] = folatos_A.textContent;
-  alimentos_adecuacion['vitamina_b12'] = vitamina_b12_A.textContent;
+  alimentos_adecuacion['energia_calculada'] = parseFloat(energia_calculada_A.textContent);
+  alimentos_adecuacion['proteina'] = parseFloat(proteina_A.textContent);
+  alimentos_adecuacion['grasa_total'] = parseFloat(grasa_A.textContent);
+  alimentos_adecuacion['carbohidratos'] = parseFloat(carbohidratos_A.textContent);
+  alimentos_adecuacion['fibra'] = parseFloat(fibra_A.textContent);
+  alimentos_adecuacion['ags'] = parseFloat(ags_A.textContent);
+  alimentos_adecuacion['agm'] = parseFloat(agm_A.textContent);
+  alimentos_adecuacion['agpi'] = parseFloat(agpi_A.textContent);
+  alimentos_adecuacion['colesterol'] = parseFloat(colesterol_A.textContent);
+  alimentos_adecuacion['calcio'] = parseFloat(calcio_A.textContent);
+  alimentos_adecuacion['fosforo'] = parseFloat(fosforo_A.textContent);
+  alimentos_adecuacion['hierro'] = parseFloat(hierro_A.textContent);
+  alimentos_adecuacion['potasio'] = parseFloat(potasio_A.textContent);
+  alimentos_adecuacion['sodio'] = parseFloat(sodio_A.textContent);
+  alimentos_adecuacion['zinc'] = parseFloat(zinc_A.textContent);
+  alimentos_adecuacion['vitamina_c'] = parseFloat(vitamina_c_A.textContent);
+  alimentos_adecuacion['vitamina_a'] = parseFloat(vitamina_a_A.textContent);
+  alimentos_adecuacion['folatos'] = parseFloat(folatos_A.textContent);
+  alimentos_adecuacion['vitamina_b12'] = parseFloat(vitamina_b12_A.textContent);
 }
 
 function buscar() {
