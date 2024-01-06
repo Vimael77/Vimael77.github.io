@@ -105,20 +105,52 @@ function total_kilocalorias(){
 
 }
 
+const ordenDeseado = [
+  "nombre",
+  "gramos",
+  "energia_calculada",
+  "proteina",
+  "grasa_total",
+  "carbohidratos",
+  "fibra",
+  "ags",
+  "agm",
+  "agpi",
+  "colesterol",
+  "calcio",
+  "fosforo",
+  "hierro",
+  "potasio",
+  "sodio",
+  "zinc",
+  "vitamina_c",
+  "vitamina_a",
+  "folatos",
+  "vitamina_b12"
+];
+
 function descargar(){
   total_kilocalorias();
-  var datos = Object.values(alimentos_seleccionados);
-  datos.push(alimentos_total);
-  datos.push(alimentos_total_kc);
-  datos.push(alimentos_requerimiento);
-  datos.push(alimentos_adecuacion);
-  console.log(datos);
+  info = []
+  for (const clave in alimentos_seleccionados) {
+    aux_info = {}
+    for (let i = 0; i < ordenDeseado.length; i++) {
+      aux_info[ordenDeseado[i]] = alimentos_seleccionados[clave][ordenDeseado[i]];
+    }
+    info.push(aux_info)
+  }
+  info.push(alimentos_total);
+  info.push(alimentos_total_kc);
+  info.push(alimentos_requerimiento);
+  info.push(alimentos_adecuacion);
+    
   (async() => {
-    const worksheet = XLSX.utils.json_to_sheet(datos);
+    const worksheet = XLSX.utils.json_to_sheet(info);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dates");
     XLSX.writeFile(workbook, "datos_pacientes.xlsx", { compression: true });
   })();
+  
 }
 
 // Buscar alimentos y mostrarlos en una lista
@@ -487,7 +519,7 @@ function calculoActualizarValores(alimento, inputGramos, factor, energia_calcula
   var valor_vitamina_b12 = parseFloat(alimento.vitamina_b12);
 
   alimentos_seleccionados[alimento.nombre]['gramos'] = inputGramos;
-  alimentos_seleccionados[alimento.nombre]['energia_calculada'] = factor*valor_energia_calculada;
+  //alimentos_seleccionados[alimento.nombre]['energia_calculada'] = factor*valor_energia_calculada;
   alimentos_seleccionados[alimento.nombre]["proteina"] = factor*valor_proteina;
   alimentos_seleccionados[alimento.nombre]["grasa_total"] = factor*valor_grasa_total;
   alimentos_seleccionados[alimento.nombre]["carbohidratos"] = factor*valor_carbohidratos;
