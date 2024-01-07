@@ -519,7 +519,7 @@ function calculoActualizarValores(alimento, inputGramos, factor, energia_calcula
   var valor_vitamina_b12 = parseFloat(alimento.vitamina_b12);
 
   alimentos_seleccionados[alimento.nombre]['gramos'] = inputGramos;
-  //alimentos_seleccionados[alimento.nombre]['energia_calculada'] = factor*valor_energia_calculada;
+  alimentos_seleccionados[alimento.nombre]['energia_calculada'] = factor*valor_energia_calculada;
   alimentos_seleccionados[alimento.nombre]["proteina"] = factor*valor_proteina;
   alimentos_seleccionados[alimento.nombre]["grasa_total"] = factor*valor_grasa_total;
   alimentos_seleccionados[alimento.nombre]["carbohidratos"] = factor*valor_carbohidratos;
