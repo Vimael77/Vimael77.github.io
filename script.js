@@ -60,9 +60,12 @@ document.getElementById("file-input2").addEventListener("change", function (even
       var row = jsonData[i];
       var nombreAlimento = row[0];
       var gramos = row[1];
-      if (nombreAlimento != "Total" && nombreAlimento !='Requerimiento'){
+      if (nombreAlimento != "Total" && nombreAlimento != 'Requerimiento' 
+                                    && nombreAlimento != 'Total Kilocalorias' 
+                                    && nombreAlimento != 'Porcentaje de Adecuación'){
         agregarAlimentos(gramos, nombreAlimento);
-      }else if (row[0] = 'Requerimiento'){
+      }
+      if (nombreAlimento === 'Requerimiento'){
         document.getElementById('input_energia_calculada_requerimiento').value = row[2];        
         document.getElementById('input_proteina_requerimiento').value = row[3];
         document.getElementById('input_grasa_requerimiento').value = row[4];
