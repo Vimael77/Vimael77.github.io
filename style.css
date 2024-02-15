@@ -6,7 +6,13 @@
 
 .table-hover tbody tr:hover {
 	box-shadow: 0 0 10px #9c8f3a; /* Cambia este valor al color que desees */
+    /*cursor: move*/
 	/*transform: scale(1.015);*/
+}
+
+.drag {
+	box-shadow: 0 0 10px #9c8f3a; /* Cambia este valor al color que desees */
+    opacity: 0;
 }
 
 .ancho-alimento {

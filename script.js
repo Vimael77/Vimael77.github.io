@@ -1,11 +1,13 @@
 // leer el archivo CSV de alimentos
 const alimentos = [];
 var alimentos_seleccionados = {};
+var alimentos_seleccionados_en_orden = {};
 var alimentos_total = {};
 var alimentos_total_kc = {};
 var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
+var contador = 0
 
 document.getElementById("file-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
@@ -137,12 +139,13 @@ const ordenDeseado = [
 ];
 
 function descargar(){
+  nuevoOrden();
   total_kilocalorias();
   info = []
-  for (const clave in alimentos_seleccionados) {
+  for (const clave in alimentos_seleccionados_en_orden) {
     aux_info = {}
     for (let i = 0; i < ordenDeseado.length; i++) {
-      aux_info[ordenDeseado[i]] = alimentos_seleccionados[clave][ordenDeseado[i]];
+      aux_info[ordenDeseado[i]] = alimentos_seleccionados_en_orden[clave][ordenDeseado[i]];
     }
     info.push(aux_info)
   }
@@ -158,6 +161,24 @@ function descargar(){
     XLSX.writeFile(workbook, "datos_pacientes.xlsx", { compression: true });
   })();
   
+}
+
+function nuevoOrden(){
+  //Limpio el diccionario para cada vez que se descargue el archivo.
+  alimentos_seleccionados_en_orden = {};
+
+  // Obtener la referencia a la tabla
+  var tabla = document.getElementById("valores");
+  // Obtener todas las filas de la tabla
+  var filas = tabla.getElementsByTagName("tr");
+  // Iterar sobre cada fila
+  for (var i = 0; i < filas.length; i++) {
+    // Obtener todas las celdas de la fila actual
+    var celdas = filas[i].getElementsByTagName("td");
+    if(celdas[0]!=null){
+      alimentos_seleccionados_en_orden[celdas[0].innerText] = alimentos_seleccionados[celdas[0].innerText]
+    }    
+  }
 }
 
 // Buscar alimentos y mostrarlos en una lista
@@ -605,13 +626,19 @@ function agregar(valorGramos, alimento) {
   if (!alimentos_seleccionados.hasOwnProperty(alimento.nombre)){
     const valores = document.getElementById('valores');
 
-    //const valores_tbody = document.getElementById('valores_tbody');
+    Sortable.create(valores, {
+      animation: 150,
+      dragClass: "drag"
+    });
     var valores_tbody = document.createElement('tbody');
-    //valores.classList.add('table', 'table-striped', 'table-hover', 'table-borderless');
+
+    //Suma una nueva posicion al contador
+    //contador = contador + 1
 
     //Crea una fila y le agrega un id.
     const fila = document.createElement('tr');
     fila.id = alimento.nombre;
+    //fila.setAttribute('data-id', contador);
     fila.addEventListener('dblclick', () => eliminar(alimento.nombre));
 
     const nombre = document.createElement('td');
