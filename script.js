@@ -630,10 +630,11 @@ function agregar(valorGramos, alimento) {
       animation: 150,
       dragClass: "drag"
     });
-    var valores_tbody = document.createElement('tbody');
+    const valores_tbody = document.createElement('tbody');
 
-    //Suma una nueva posicion al contador
-    //contador = contador + 1
+    const encabezado = document.getElementById("encabezado_valores");
+    encabezado.classList.add('table-primary');
+
 
     //Crea una fila y le agrega un id.
     const fila = document.createElement('tr');
