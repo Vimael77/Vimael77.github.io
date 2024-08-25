@@ -7,206 +7,320 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   </head>
   <body>
-    
-    <div style="padding-left: 30px; padding-bottom: 10px;">      
-      <div style="padding-bottom: 10px;">
-        <div class="encabezado-fijo">   
-          <div class="centered-div">
-            <h3>MUY ALIMENTADO</h3>
-          </div>
-          <div class="contenedor-flex">            
-            <div>
-              <h6>CARGAR BASE DE DATOS</h6>
-              <input type="file" id="file-input"/>
-            </div>                 
-            <button class="boton-personalizado" onclick="descargar()">Descargar</button>          
-            <div>
-              <h6>CARGAR ARCHIVO PREVIO</h6>
-              <input type="file" id="file-input2">
+    <!-- Nav tabs -->
+  <div class="container-fluid mt-3">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item">
+          <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Pestaña 1</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">Pestaña 2</a>
+      </li>
+    </ul>
+    <!-- Tab content -->
+    <div class="tab-content" id="myTabContent">
+      <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+        <div style="padding-left: 30px; padding-bottom: 10px;">
+          <div style="padding-bottom: 10px;">
+            <div class="encabezado-fijo">   
+              <div class="centered-div">
+                <h3>MUY ALIMENTADO</h3>
+              </div>
+              <div class="contenedor-flex">            
+                <div>
+                  <h6>CARGAR BASE DE DATOS</h6>
+                  <input type="file" id="file-input"/>
+                </div>                 
+                <button class="boton-personalizado" onclick="descargar()">Descargar</button>          
+                <div>
+                  <h6>CARGAR ARCHIVO PREVIO</h6>
+                  <input type="file" id="file-input2">
+                </div>
+              </div>
             </div>
+            <!-- BUSCADOR -->
+            <div class="espacio-extra-encabezado">          
+              <div class="centered-div">
+                <h3>ALIMENTOS</h3>
+              </div>
+              <h6>BÚSQUEDA:</h6>
+              <input type="text" id="busqueda" onkeyup="buscar()"/>
+            </div>        
+          </div>                        
+          <div id="buscador" class="scrollable-div">                        
+            <table id="lista" class="table table-striped table-hover table-sm custom-width-table">
+              <thead class = 'table-primary'>
+                <tr>
+                  <th class="ancho-alimento">Alimento</th>
+                  <th class="ancho-celda">Gramos</th>
+                  <th class="ancho-celda">Energía calculada (Kcal)</th>
+                  <th class="ancho-celda">Proteína (g)</th>
+                  <th class="ancho-celda">Grasa total (g)</th>
+                  <th class="ancho-celda">Carbohidratos (g)</th>
+                  <th class="ancho-celda">Fibra (g)</th>
+                  <th class="ancho-celda">AGS (g)</th>
+                  <th class="ancho-celda">AGM (g)</th>
+                  <th class="ancho-celda">AGPI (g)</th>
+                  <th class="ancho-celda">Colesterol (mg)</th> 
+                  <th class="ancho-celda">Calcio (mg)</th>
+                  <th class="ancho-celda">Fosforo (mg)</th>
+                  <th class="ancho-celda">Hierro (mg)</th>
+                  <th class="ancho-celda">Potasio (mg)</th>
+                  <th class="ancho-celda">Sodio (mg)</th>
+                  <th class="ancho-celda">Zinc (mg)</th>
+                  <th class="ancho-celda">Vitamina C (mg)</th>
+                  <th class="ancho-celda">Vitamina A (µg ERE)</th>
+                  <th class="ancho-celda">Folatos (µg)</th>
+                  <th class="ancho-celda">Vitamina B12 (µg)</th>   
+                </tr>
+              </thead>
+            </table>
           </div>
         </div>
-        <!-- BUSCADOR -->
-        <div class="espacio-extra-encabezado">          
+        <!-- ALIMENTOS SELECCIONADOS -->
+        <div style="padding-left: 30px; padding-bottom: 10px;"> 
           <div class="centered-div">
-            <h3>ALIMENTOS</h3>
+            <h3>ALIMENTOS SELECCIONADOS</h3>
           </div>
-          <h6>BÚSQUEDA:</h6>
-          <input type="text" id="busqueda" onkeyup="buscar()"/>
-        </div>        
-      </div>
-                    
-      <div id="buscador" class="scrollable-div">                        
-        <table id="lista" class="table table-striped table-hover table-sm custom-width-table">
-          <thead class = 'table-primary'>
-            <tr>
-              <th class="ancho-alimento">Alimento</th>
-              <th class="ancho-celda">Gramos</th>
-              <th class="ancho-celda">Energía calculada (Kcal)</th>
-              <th class="ancho-celda">Proteína (g)</th>
-              <th class="ancho-celda">Grasa total (g)</th>
-              <th class="ancho-celda">Carbohidratos (g)</th>
-              <th class="ancho-celda">Fibra (g)</th>
-              <th class="ancho-celda">AGS (g)</th>
-              <th class="ancho-celda">AGM (g)</th>
-              <th class="ancho-celda">AGPI (g)</th>
-              <th class="ancho-celda">Colesterol (mg)</th> 
-              <th class="ancho-celda">Calcio (mg)</th>
-              <th class="ancho-celda">Fosforo (mg)</th>
-              <th class="ancho-celda">Hierro (mg)</th>
-              <th class="ancho-celda">Potasio (mg)</th>
-              <th class="ancho-celda">Sodio (mg)</th>
-              <th class="ancho-celda">Zinc (mg)</th>
-              <th class="ancho-celda">Vitamina C (mg)</th>
-              <th class="ancho-celda">Vitamina A (µg ERE)</th>
-              <th class="ancho-celda">Folatos (µg)</th>
-              <th class="ancho-celda">Vitamina B12 (µg)</th>   
-            </tr>
-          </thead>
-        </table>
-      </div>
-    </div>
-    <!-- ALIMENTOS SELECCIONADOS -->
-    <div style="padding-left: 30px; padding-bottom: 10px;"> 
-      <div class="centered-div">
-        <h3>ALIMENTOS SELECCIONADOS</h3>
-      </div>
-      <div id = "seleccionados" class="scrollable-div">
-        <table id="valores" class="table table-striped table-hover table-sm custom-width-table">
-          <thead id="encabezado_valores" class = 'table-primary'>
-            <tr>
-              <th class="ancho-alimento">Alimento</th>
-              <th class="ancho-celda">Gramos</th>
-              <th class="ancho-celda">Energía calculada (Kcal)</th>
-              <th class="ancho-celda">Proteína (g)</th>
-              <th class="ancho-celda">Grasa total (g)</th>
-              <th class="ancho-celda">Carbohidratos (g)</th>
-              <th class="ancho-celda">Fibra (g)</th>
-              <th class="ancho-celda">AGS (g)</th>
-              <th class="ancho-celda">AGM (g)</th>
-              <th class="ancho-celda">AGPI (g)</th>
-              <th class="ancho-celda">Colesterol (mg)</th> 
-              <th class="ancho-celda">Calcio (mg)</th>
-              <th class="ancho-celda">Fosforo (mg)</th>
-              <th class="ancho-celda">Hierro (mg)</th>
-              <th class="ancho-celda">Potasio (mg)</th>
-              <th class="ancho-celda">Sodio (mg)</th>
-              <th class="ancho-celda">Zinc (mg)</th>
-              <th class="ancho-celda">Vitamina C (mg)</th>
-              <th class="ancho-celda">Vitamina A (µg ERE)</th>
-              <th class="ancho-celda">Folatos (µg)</th>
-              <th class="ancho-celda">Vitamina B12 (µg)</th>   
-            </tr>
-          </thead>
-        </table>
-      </div>
-    </div>
-    <!-- TOTALES -->
-    <div style="padding-left: 30px; padding-bottom: 10px;">            
-        <div class="centered-div">
-          <h3>TOTALES</h3>
+          <div id = "seleccionados" class="scrollable-div">
+            <table id="valores" class="table table-striped table-hover table-sm custom-width-table">
+              <thead id="encabezado_valores" class = 'table-primary'>
+                <tr>
+                  <th class="ancho-alimento">Alimento</th>
+                  <th class="ancho-celda">Gramos</th>
+                  <th class="ancho-celda">Energía calculada (Kcal)</th>
+                  <th class="ancho-celda">Proteína (g)</th>
+                  <th class="ancho-celda">Grasa total (g)</th>
+                  <th class="ancho-celda">Carbohidratos (g)</th>
+                  <th class="ancho-celda">Fibra (g)</th>
+                  <th class="ancho-celda">AGS (g)</th>
+                  <th class="ancho-celda">AGM (g)</th>
+                  <th class="ancho-celda">AGPI (g)</th>
+                  <th class="ancho-celda">Colesterol (mg)</th> 
+                  <th class="ancho-celda">Calcio (mg)</th>
+                  <th class="ancho-celda">Fosforo (mg)</th>
+                  <th class="ancho-celda">Hierro (mg)</th>
+                  <th class="ancho-celda">Potasio (mg)</th>
+                  <th class="ancho-celda">Sodio (mg)</th>
+                  <th class="ancho-celda">Zinc (mg)</th>
+                  <th class="ancho-celda">Vitamina C (mg)</th>
+                  <th class="ancho-celda">Vitamina A (µg ERE)</th>
+                  <th class="ancho-celda">Folatos (µg)</th>
+                  <th class="ancho-celda">Vitamina B12 (µg)</th>   
+                </tr>
+              </thead>
+            </table>
+          </div>
         </div>
-        <div class="scrollable-div-totales">
-          <table class="table table-striped table-sm" >
-            <thead class = 'table-primary'>
-              <tr>
-                <th style="width: 300px;">Totales</th>
-                <th>Energía calculada (Kcal)</th>
-                <th>Proteína (g)</th>
-                <th>Grasa total (g)</th>
-                <th>Carbohidratos (g)</th>
-                <th>Fibra (g)</th>
-                <th>AGS (g)</th>
-                <th>AGM (g)</th>
-                <th>AGPI (g)</th>
-                <th>Colesterol (mg)</th>
-                <th>Calcio (mg)</th>
-                <th>Fosforo (mg)</th>
-                <th>Hierro (mg)</th>
-                <th>Potasio (mg)</th>
-                <th>Sodio (mg)</th>
-                <th>Zinc (mg)</th>
-                <th>Vitamina C (mg)</th>
-                <th>Vitamina A (µg ERE)</th>
-                <th>Folatos (µg)</th>
-                <th>Vitamina B12 (µg)</th>    
-              </tr>
-            </thead>
-            <tbody id="encabezado_valores_tbody">
-              <tr>
-                <td style="width: 300px;">Total</td>
-                <td class="td_principal" id="energia_calculada_total"></td>
-                <td class="td_principal" id="proteina_total"></td>
-                <td class="td_principal" id="grasa_total"></td>
-                <td class="td_principal" id="carbohidratos_total"></td>
-                <td class="td_principal" id="fibra_total"></td>
-                <td class="td_principal" id="ags_total"></td>
-                <td class="td_principal" id="agm_total"></td>
-                <td class="td_principal" id="agpi_total"></td>
-                <td class="td_principal" id="colesterol_total"></td>
-                <td class="td_principal" id="calcio_total"></td>
-                <td class="td_principal" id="fosforo_total"></td>
-                <td class="td_principal" id="hierro_total"></td>
-                <td class="td_principal" id="potasio_total"></td>
-                <td class="td_principal" id="sodio_total"></td>
-                <td class="td_principal" id="zinc_total"></td>
-                <td class="td_principal" id="vitamina_c_total"></td>
-                <td class="td_principal" id="vitamina_a_total"></td>
-                <td class="td_principal" id="folatos_total"></td>
-                <td class="td_principal" id="vitamina_b12_total"></td>  
-              </tr>
-              <tr>
-                <td style="width: 300px;">Requerimiento</td>
-                <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_ags_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_agm_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular() "type="number" id="input_agpi_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_colesterol_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_calcio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_fosforo_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_hierro_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_potasio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_sodio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_zinc_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_vitamina_c_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_vitamina_a_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_folatos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                <td><input onkeyup="calcular()" type="number" id="input_vitamina_b12_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-              </tr>
-              <tr>
-                <td style="width: 300px;">% de adecuación</td>
-                <td id="adecuacion_energia_calculada"></td>
-                <td id="adecuacion_proteina"></td>
-                <td id="adecuacion_grasa"></td>
-                <td id="adecuacion_carbohidratos"></td>
-                <td id="adecuacion_fibra"></td>
-                <td id="adecuacion_ags"></td>
-                <td id="adecuacion_agm"></td>
-                <td id="adecuacion_agpi"></td>
-                <td id="adecuacion_colesterol"></td>
-                <td id="adecuacion_calcio"></td>
-                <td id="adecuacion_fosforo"></td>
-                <td id="adecuacion_hierro"></td>
-                <td id="adecuacion_potasio"></td>
-                <td id="adecuacion_sodio"></td>
-                <td id="adecuacion_zinc"></td>
-                <td id="adecuacion_vitamina_c"></td>
-                <td id="adecuacion_vitamina_a"></td>
-                <td id="adecuacion_folatos"></td>
-                <td id="adecuacion_vitamina_b12"></td>
-              </tr>
-            </tbody>      
-          </table>
-        </div>        
-    </div>    
-    
+        <!-- TOTALES -->
+        <div style="padding-left: 30px; padding-bottom: 10px;">            
+            <div class="centered-div">
+              <h3>TOTALES</h3>
+            </div>
+            <div class="scrollable-div-totales">
+              <table class="table table-striped table-sm" >
+                <thead class = 'table-primary'>
+                  <tr>
+                    <th style="width: 300px;">Totales</th>
+                    <th>Energía calculada (Kcal)</th>
+                    <th>Proteína (g)</th>
+                    <th>Grasa total (g)</th>
+                    <th>Carbohidratos (g)</th>
+                    <th>Fibra (g)</th>
+                    <th>AGS (g)</th>
+                    <th>AGM (g)</th>
+                    <th>AGPI (g)</th>
+                    <th>Colesterol (mg)</th>
+                    <th>Calcio (mg)</th>
+                    <th>Fosforo (mg)</th>
+                    <th>Hierro (mg)</th>
+                    <th>Potasio (mg)</th>
+                    <th>Sodio (mg)</th>
+                    <th>Zinc (mg)</th>
+                    <th>Vitamina C (mg)</th>
+                    <th>Vitamina A (µg ERE)</th>
+                    <th>Folatos (µg)</th>
+                    <th>Vitamina B12 (µg)</th>    
+                  </tr>
+                </thead>
+                <tbody id="encabezado_valores_tbody">
+                  <tr>
+                    <td style="width: 300px;">Total</td>
+                    <td class="td_principal" id="energia_calculada_total"></td>
+                    <td class="td_principal" id="proteina_total"></td>
+                    <td class="td_principal" id="grasa_total"></td>
+                    <td class="td_principal" id="carbohidratos_total"></td>
+                    <td class="td_principal" id="fibra_total"></td>
+                    <td class="td_principal" id="ags_total"></td>
+                    <td class="td_principal" id="agm_total"></td>
+                    <td class="td_principal" id="agpi_total"></td>
+                    <td class="td_principal" id="colesterol_total"></td>
+                    <td class="td_principal" id="calcio_total"></td>
+                    <td class="td_principal" id="fosforo_total"></td>
+                    <td class="td_principal" id="hierro_total"></td>
+                    <td class="td_principal" id="potasio_total"></td>
+                    <td class="td_principal" id="sodio_total"></td>
+                    <td class="td_principal" id="zinc_total"></td>
+                    <td class="td_principal" id="vitamina_c_total"></td>
+                    <td class="td_principal" id="vitamina_a_total"></td>
+                    <td class="td_principal" id="folatos_total"></td>
+                    <td class="td_principal" id="vitamina_b12_total"></td>  
+                  </tr>
+                  <tr>
+                    <td style="width: 300px;">Requerimiento</td>
+                    <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_ags_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_agm_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular() "type="number" id="input_agpi_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_colesterol_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_calcio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_fosforo_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_hierro_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_potasio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_sodio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_zinc_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_c_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_a_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_folatos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_b12_requerimiento" min="1" value="1" style="width: 100px;" ></td>
+                  </tr>
+                  <tr>
+                    <td style="width: 300px;">% de adecuación</td>
+                    <td id="adecuacion_energia_calculada"></td>
+                    <td id="adecuacion_proteina"></td>
+                    <td id="adecuacion_grasa"></td>
+                    <td id="adecuacion_carbohidratos"></td>
+                    <td id="adecuacion_fibra"></td>
+                    <td id="adecuacion_ags"></td>
+                    <td id="adecuacion_agm"></td>
+                    <td id="adecuacion_agpi"></td>
+                    <td id="adecuacion_colesterol"></td>
+                    <td id="adecuacion_calcio"></td>
+                    <td id="adecuacion_fosforo"></td>
+                    <td id="adecuacion_hierro"></td>
+                    <td id="adecuacion_potasio"></td>
+                    <td id="adecuacion_sodio"></td>
+                    <td id="adecuacion_zinc"></td>
+                    <td id="adecuacion_vitamina_c"></td>
+                    <td id="adecuacion_vitamina_a"></td>
+                    <td id="adecuacion_folatos"></td>
+                    <td id="adecuacion_vitamina_b12"></td>
+                  </tr>
+                </tbody>      
+              </table>
+            </div>        
+        </div>                    
+      </div>
+      <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+          <div class="container mt-5">
+              <h2>Selecciona las cartas</h2>
+              <div class="card-container">
+                  <div class="card bg-light text-center" data-name="LN" data-tazas="2">
+                      <div class="card-body">LN (2tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="P(1-3)" data-tazas="2">
+                      <div class="card-body">P(1-3) (2tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="P(3-5)" data-tazas="2">
+                      <div class="card-body">P(3-5) (2tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="BG" data-tazas="2">
+                      <div class="card-body">BG (2tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="BI" data-tazas="1">
+                      <div class="card-body">BI (1tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="O" data-tazas="1">
+                      <div class="card-body">O (1tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="D" data-tazas="2">
+                      <div class="card-body">D (2tz)</div>
+                  </div>
+                  <div class="card bg-light text-center" data-name="M" data-tazas="2">
+                      <div class="card-body">M (2tz)</div>
+                  </div>
+              </div>
+      
+              <h3 class="mt-5">Elementos seleccionados</h3>
+              <table class="table">
+                  <thead>
+                      <tr>
+                          <th>Nombre</th>
+                          <th>Tazas</th>
+                          <th></th>
+                      </tr>
+                  </thead>
+                  <tbody id="selected-items">
+                  </tbody>
+                  <tfoot>
+                      <tr>
+                          <td><strong>Total Tazas</strong></td>
+                          <td id="total-tazas">0</td>
+                          <td></td>
+                      </tr>
+                      <tr>
+                          <td><strong>Total Litros</strong></td>
+                          <td id="total-litros">0</td>
+                          <td></td>
+                      </tr>
+                  </tfoot>
+              </table>
+          </div>
+      
+          <script>
+              const cards = document.querySelectorAll('.card');
+              const selectedItems = document.getElementById('selected-items');
+              const totalTazasEl = document.getElementById('total-tazas');
+              const totalLitrosEl = document.getElementById('total-litros');
+              let totalTazas = 0;
+      
+              cards.forEach(card => {
+                  card.addEventListener('click', () => {
+                      const name = card.getAttribute('data-name');
+                      const tazas = parseInt(card.getAttribute('data-tazas'));
+                      
+                      const row = document.createElement('tr');
+                      row.innerHTML = `
+                          <td>${name}</td>
+                          <td>${tazas}</td>
+                          <td><span class="trash-icon">&#128465;</span></td>
+                      `;
+                      
+                      // Eliminar elemento al hacer clic en el icono de basurero
+                      row.querySelector('.trash-icon').addEventListener('click', () => {
+                          row.remove();
+                          totalTazas -= tazas;
+                          updateTotals();
+                      });
+      
+                      selectedItems.appendChild(row);
+                      totalTazas += tazas;
+                      updateTotals();
+                  });
+              });
+      
+              function updateTotals() {
+                  totalTazasEl.textContent = totalTazas;
+                  totalLitrosEl.textContent = (totalTazas / 5).toFixed(2);
+              }
+          </script>
+      </div>
+    </div>
+  </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>  
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
     <script src="script.js"></script>
+  
   </body>
+
 </html>

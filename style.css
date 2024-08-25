@@ -135,3 +135,17 @@ table td {
     background-color: #f6f6f6;
     padding: 10px;
 }
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.card {
+    width: 120px;
+    cursor: pointer;
+}
+.trash-icon {
+    color: red;
+    cursor: pointer;
+}
