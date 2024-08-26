@@ -8,7 +8,7 @@ var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
 var contador = 0
-
+/*
 document.getElementById("file-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
   const reader = new FileReader();
@@ -46,6 +46,8 @@ document.getElementById("file-input").addEventListener("change", function (event
   };
   reader.readAsText(file);
 });
+*/
+
 
 document.getElementById("file-input2").addEventListener("change", function (event) {
   const file = event.target.files[0];
@@ -839,4 +841,136 @@ function actualizarTotal(alimentos_seleccionados){
   folatos_total.textContent = aux_folatos.toFixed(2);
   vitamina_b12_total.textContent = aux_vitamina_b12.toFixed(2);
 
+}
+
+
+// Información de los alimentos con gramos por paquete
+const foods = [
+  {name: 'Queso fresco', quantity: 100, energy: 260, proteins: 17.5, fats: 20, carbs: 2.5, pricePerUnit: 0.00450, packageGrams: 450, packageName: 'libra'},
+  {name: 'Leche descremada', quantity: 100, energy: 44.58, proteins: 3.33, fats: 1.25, carbs: 2.5, pricePerUnit: 0.002, packageGrams: 1000, packageName: 'funda'},
+  {name: 'Yogurt', quantity: 100, energy: 44.58, proteins: 3.33, fats: 1.25, carbs: 5, pricePerUnit: 0.004, packageGrams: 5000, packageName: 'botella'},
+  {name: 'Almendras/nueces', quantity: 100, energy: 610, proteins: 20, fats: 50, carbs: 20, pricePerUnit: 0.009, packageGrams: 900, packageName: 'funda'},
+  {name: 'Aceite', quantity: 100, energy: 900, proteins: 0, fats: 100, carbs: 0, pricePerUnit: 0.0035, packageGrams: 5000, packageName: 'tarro'},
+  {name: 'Pan integral', quantity: 100, energy: 270, proteins: 10, fats: 3.33, carbs: 50, pricePerUnit: 0.005, packageGrams: 450, packageName: 'funda'},
+  {name: 'Pollo-pechuga', quantity: 100, energy: 61.11, proteins: 7.78, fats: 3.33, carbs: 0, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+  {name: 'Pollo-presa', quantity: 100, energy: 83.11, proteins: 7.78, fats: 5.78, carbs: 0, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+  {name: 'Res lomo', quantity: 100, energy: 61.11, proteins: 7.78, fats: 3.33, carbs: 0.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Huevo', quantity: 100, energy: 124.67, proteins: 11.67, fats: 8.67, carbs: 0.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Arroz crudo', quantity: 100, energy: 348.00, proteins: 12.00, fats: 0.00, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Papas', quantity: 100, energy: 72.00, proteins: 3.00, fats: 0.00, carbs: 15.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Avena', quantity: 100, energy: 397.78, proteins: 17.78, fats: 6.67, carbs: 66.67, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Harina de maíz', quantity: 100, energy: 362.50, proteins: 10.00, fats: 2.50, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Maíz para mote', quantity: 100, energy: 362.50, proteins: 10.00, fats: 2.50, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Plátano maduro', quantity: 100, energy: 132.50, proteins: 2.00, fats: 0.50, carbs: 30.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
+{name: 'Plátano verde', quantity: 100, energy: 147.22, proteins: 2.22, fats: 0.56, carbs: 33.33, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'}
+];
+
+let selectedFoods = [];
+
+// Crear tarjetas de alimentos
+const foodCardsContainer = document.getElementById('food-cards');
+
+function renderFoodCards(filteredFoods = foods) {
+  foodCardsContainer.innerHTML = '';
+  filteredFoods.forEach((food, index) => {
+      const card = document.createElement('div');
+      card.className = 'col-md-2';
+      card.innerHTML = `
+          <div class="card mb-4" onclick="addFood(${index})">
+              <div class="card-body">
+                  <h5 class="card-title">${food.name}</h5>
+                  <p class="card-text">Cantidad: ${food.quantity} gr/ml</p>
+                  <p class="card-text">Energía: ${food.energy} kcal</p>
+                  <p class="card-text">Proteínas: ${food.proteins} g</p>
+                  <p class="card-text">Grasas: ${food.fats} g</p>
+                  <p class="card-text">Carbohidratos: ${food.carbs} g</p>
+                  <p class="card-text"><strong>Precio: ${(food.pricePerUnit * food.quantity).toFixed(4)} $ por 100 gr/ml</strong></p>
+              </div>
+          </div>
+      `;
+      foodCardsContainer.appendChild(card);
+  });
+}
+
+// Llamar a la función para renderizar todas las tarjetas inicialmente
+renderFoodCards();
+
+// Filtrar alimentos por nombre
+function filterFoods() {
+  const query = document.getElementById('search-bar').value.toLowerCase();
+  const filteredFoods = foods.filter(food => food.name.toLowerCase().includes(query));
+  renderFoodCards(filteredFoods);
+}
+
+// Agregar alimento seleccionado a la tabla
+function addFood(index) {
+  const food = {...foods[index]}; // Crear una copia del alimento seleccionado
+  selectedFoods.push(food);
+  renderSelectedFoods();
+  renderSummary();
+}
+
+// Renderizar tabla de alimentos seleccionados
+function renderSelectedFoods() {
+  const tableBody = document.querySelector('#selected-foods-table tbody');
+  tableBody.innerHTML = '';
+
+  selectedFoods.forEach((food, index) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+          <td>${food.name}</td>
+          <td><input type="number" class="form-control" value="${food.quantity}" min="1" onchange="updateQuantity(${index}, this.value)"></td>
+          <td>${(food.pricePerUnit * food.quantity).toFixed(4)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="removeFood(${index})">🗑️</button></td>
+      `;
+      tableBody.appendChild(row);
+  });
+}
+
+// Actualizar la cantidad de un alimento
+function updateQuantity(index, newQuantity) {
+  newQuantity = Math.max(1, newQuantity); // Evitar cantidades negativas o cero
+  selectedFoods[index].quantity = newQuantity;
+  renderSelectedFoods();
+  renderSummary();
+}
+
+// Eliminar un alimento de la tabla
+function removeFood(index) {
+  selectedFoods.splice(index, 1);
+  renderSelectedFoods();
+  renderSummary();
+}
+
+// Renderizar tabla resumen
+function renderSummary() {
+  const summaryTableBody = document.querySelector('#summary-table tbody');
+  const totalPriceElement = document.getElementById('total-price');
+  summaryTableBody.innerHTML = '';
+
+  const foodSummary = selectedFoods.reduce((summary, food) => {
+      if (!summary[food.name]) {
+          summary[food.name] = {quantity: 0, price: 0, packageGrams: food.packageGrams, packageName: food.packageName};
+      }
+      summary[food.name].quantity += parseFloat(food.quantity);
+      summary[food.name].price += food.pricePerUnit * food.quantity;
+      return summary;
+  }, {});
+
+  let totalPrice = 0;
+
+  for (const [name, details] of Object.entries(foodSummary)) {
+      const packages = (details.quantity / details.packageGrams).toFixed(2);
+      const row = document.createElement('tr');
+      row.innerHTML = `
+          <td>${name}</td>
+          <td>${details.quantity}</td>
+          <td>${packages} ${details.packageName}(s)</td>
+          <td>${details.price.toFixed(4)}</td>
+      `;
+      summaryTableBody.appendChild(row);
+      totalPrice += details.price;
+  }
+
+  totalPriceElement.textContent = totalPrice.toFixed(4);
 }

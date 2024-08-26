@@ -141,11 +141,22 @@ table td {
     flex-wrap: wrap;
     gap: 10px;
 }
-.card {
-    width: 120px;
-    cursor: pointer;
-}
+
 .trash-icon {
     color: red;
     cursor: pointer;
+}
+
+.card {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+#food-cards {
+    max-height: 300px;
+    overflow-y: auto;
 }

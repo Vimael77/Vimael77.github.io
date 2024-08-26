@@ -5,6 +5,7 @@
     <title>Alimentos</title>
     <link rel="stylesheet" href="style.css" type="text/css">    
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
   </head>
   <body>
     <!-- Nav tabs -->
@@ -16,6 +17,9 @@
       <li class="nav-item">
           <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">Pestaña 2</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="contact-tab" data-toggle="tab" href="#contact" role="tab" aria-controls="contact" aria-selected="false">Pestaña 3</a>
+    </li>
     </ul>
     <!-- Tab content -->
     <div class="tab-content" id="myTabContent">
@@ -305,6 +309,64 @@
                   totalLitrosEl.textContent = (totalTazas / 5).toFixed(2);
               }
           </script>
+      </div>
+      <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+        <div class="container mt-4">
+          <!-- Sección 1: Búsqueda y tarjetas de alimentos -->
+          <div class="row mb-4">
+              <div class="col-12">
+                  <input type="text" id="search-bar" class="form-control mb-3" placeholder="Buscar alimento por nombre..." onkeyup="filterFoods()">
+              </div>
+          </div>
+          <div class="row mb-4" id="food-cards" style="max-height: 500px; overflow-y: auto;">
+              <!-- Tarjetas se generarán dinámicamente aquí -->
+          </div>
+  
+          <!-- Sección 2: Tabla de alimentos seleccionados -->
+          <div class="row mb-4">
+              <div class="col">
+                  <h2>Alimentos seleccionados</h2>
+                  <table class="table table-bordered" id="selected-foods-table">
+                      <thead>
+                          <tr>
+                              <th>Nombre</th>
+                              <th>Cantidad (gr/ml)</th>
+                              <th>Precio</th>
+                              <th>Acciones</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <!-- Filas se generarán dinámicamente aquí -->
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+  
+  <!-- Sección 3: Suma total de alimentos -->
+  <div class="row">
+      <div class="col">
+          <h2>Suma total de alimentos</h2>
+          <table class="table table-bordered" id="summary-table">
+              <thead>
+                  <tr>
+                      <th>Nombre</th>
+                      <th>Cantidad Total (gr/ml)</th>
+                      <th>Paquetes</th>
+                      <th>Precio Total</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <!-- Resumen se generará dinámicamente aquí -->
+              </tbody>
+              <tfoot>
+                  <tr class="table-primary">
+                      <td colspan="3"><strong>Total Precio</strong></td>
+                      <td id="total-price"></td>
+                  </tr>
+              </tfoot>
+          </table>
+      </div>
+  </div>
       </div>
     </div>
   </div>
