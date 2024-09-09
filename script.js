@@ -8,7 +8,7 @@ var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
 var contador = 0
-/*
+
 document.getElementById("file-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
   const reader = new FileReader();
@@ -46,7 +46,7 @@ document.getElementById("file-input").addEventListener("change", function (event
   };
   reader.readAsText(file);
 });
-*/
+
 
 
 document.getElementById("file-input2").addEventListener("change", function (event) {
@@ -879,12 +879,7 @@ function renderFoodCards(filteredFoods = foods) {
           <div class="card mb-4" onclick="addFood(${index})">
               <div class="card-body">
                   <h5 class="card-title">${food.name}</h5>
-                  <p class="card-text">Cantidad: ${food.quantity} gr/ml</p>
-                  <p class="card-text">Energía: ${food.energy} kcal</p>
-                  <p class="card-text">Proteínas: ${food.proteins} g</p>
-                  <p class="card-text">Grasas: ${food.fats} g</p>
-                  <p class="card-text">Carbohidratos: ${food.carbs} g</p>
-                  <p class="card-text"><strong>Precio: ${(food.pricePerUnit * food.quantity).toFixed(4)} $ por 100 gr/ml</strong></p>
+                  <p class="card-text mb-1"><strong>Precio: ${(food.pricePerUnit * food.quantity).toFixed(4)} $ por 100 gr/ml</strong></p>
               </div>
           </div>
       `;
