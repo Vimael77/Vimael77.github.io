@@ -1,13 +1,14 @@
 // leer el archivo CSV de alimentos
 const alimentos = [];
-var alimentos_seleccionados = {};
+var alimentos_seleccionados = [];
 var alimentos_seleccionados_en_orden = {};
 var alimentos_total = {};
 var alimentos_total_kc = {};
 var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
-var contador = 0
+let contadorFila = 0;
+let contadorAlimento = 0;
 /*
 document.getElementById("file-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
@@ -149,7 +150,7 @@ function descargar(){
     for (let i = 0; i < ordenDeseado.length; i++) {
       aux_info[ordenDeseado[i]] = alimentos_seleccionados_en_orden[clave][ordenDeseado[i]];
     }
-    info.push(aux_info)
+    info.push(aux_info);
   }
   info.push(alimentos_total);
   info.push(alimentos_total_kc);
@@ -165,22 +166,35 @@ function descargar(){
   
 }
 
-function nuevoOrden(){
-  //Limpio el diccionario para cada vez que se descargue el archivo.
+function nuevoOrden() {
+  // Mantenemos el destino como diccionario (objeto)
   alimentos_seleccionados_en_orden = {};
 
-  // Obtener la referencia a la tabla
   var tabla = document.getElementById("valores");
-  // Obtener todas las filas de la tabla
   var filas = tabla.getElementsByTagName("tr");
-  // Iterar sobre cada fila
+
   for (var i = 0; i < filas.length; i++) {
-    // Obtener todas las celdas de la fila actual
     var celdas = filas[i].getElementsByTagName("td");
-    if(celdas[0]!=null){
-      alimentos_seleccionados_en_orden[celdas[0].innerText] = alimentos_seleccionados[celdas[0].innerText]
-    }    
+    
+    if (celdas[0] != null) {
+      var nombreEnTabla = celdas[0].innerText;
+      console.log("*** nombreEnTabla", nombreEnTabla);
+      // Buscamos en el array 'alimentos_seleccionados' el sub-array 
+      // cuyo segundo elemento (índice 1) sea el nombre del producto.
+      var datosAlimento = alimentos_seleccionados.find(function(item) {
+        console.log("*** item[1].nombre", item[1].nombre);
+        console.log("*** item[1]", item[1]);
+        return item[1].nombre === nombreEnTabla;
+      });
+      console.log("*** datosAlimento", datosAlimento);
+      // Si lo encontramos, lo asignamos al diccionario
+      if (datosAlimento) {
+        // Guardamos el sub-array [código, nombre] bajo la clave del nombre
+        alimentos_seleccionados_en_orden[nombreEnTabla] = datosAlimento[1];
+      }
+    }
   }
+  console.log("*** alimentos_seleccionados_en_orden", alimentos_seleccionados_en_orden);
 }
 
 // Buscar alimentos y mostrarlos en una lista
@@ -517,6 +531,7 @@ function buscar() {
 
 }
 
+//De lo que se observa, esto es para agregar un elemento cuando se lo carga desde un archivo excel.
 function agregarAlimentos(gramos, nombreAlimento){
   for (let i = 0; i < alimentos.length; i++) {
     if (alimentos[i].nombre.includes(nombreAlimento)) {
@@ -525,9 +540,10 @@ function agregarAlimentos(gramos, nombreAlimento){
   }
 }
 
-function calculoActualizarValores(alimento, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+function calculoActualizarValores(alimento, id, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
   ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12){
 
+  var valor_nombre = alimento.nombre;
   var valor_energia_calculada = parseFloat(alimento.energia_calculada);
   var valor_proteina = parseFloat(alimento.proteina);
   var valor_grasa_total = parseFloat(alimento.grasa_total);
@@ -548,27 +564,36 @@ function calculoActualizarValores(alimento, inputGramos, factor, energia_calcula
   var valor_folatos = parseFloat(alimento.folatos);
   var valor_vitamina_b12 = parseFloat(alimento.vitamina_b12);
 
-  alimentos_seleccionados[alimento.nombre]['gramos'] = inputGramos;
-  alimentos_seleccionados[alimento.nombre]['energia_calculada'] = factor*valor_energia_calculada;
-  alimentos_seleccionados[alimento.nombre]["proteina"] = factor*valor_proteina;
-  alimentos_seleccionados[alimento.nombre]["grasa_total"] = factor*valor_grasa_total;
-  alimentos_seleccionados[alimento.nombre]["carbohidratos"] = factor*valor_carbohidratos;
-  alimentos_seleccionados[alimento.nombre]["fibra"] = factor*valor_fibra;
-  alimentos_seleccionados[alimento.nombre]["ags"] = factor*valor_ags;
-  alimentos_seleccionados[alimento.nombre]["agm"] = factor*valor_agm;
-  alimentos_seleccionados[alimento.nombre]["agpi"] = factor*valor_agpi;
-  alimentos_seleccionados[alimento.nombre]["colesterol"] = factor*valor_colesterol;
-  alimentos_seleccionados[alimento.nombre]["calcio"] = factor*valor_calcio;
-  alimentos_seleccionados[alimento.nombre]["fosforo"] = factor*valor_fosforo;
-  alimentos_seleccionados[alimento.nombre]["hierro"] = factor*valor_hierro;
-  alimentos_seleccionados[alimento.nombre]["potasio"] = factor*valor_potasio;
-  alimentos_seleccionados[alimento.nombre]["sodio"] = factor*valor_sodio;
-  alimentos_seleccionados[alimento.nombre]["zinc"] = factor*valor_zinc;
-  alimentos_seleccionados[alimento.nombre]["vitamina_c"] = factor*valor_vitamina_c;
-  alimentos_seleccionados[alimento.nombre]["vitamina_a"] = factor*valor_vitamina_a;
-  alimentos_seleccionados[alimento.nombre]["folatos"] = factor*valor_folatos;
-  alimentos_seleccionados[alimento.nombre]["vitamina_b12"] = factor*valor_vitamina_b12;
-  
+  for (const clave in alimentos_seleccionados) {    
+    codigo_producto = alimentos_seleccionados[clave][0];
+    if (id === codigo_producto + ""){
+      console.log("***valor_nombre: " + valor_nombre);
+      alimentos_seleccionados[clave][1].nombre = valor_nombre;
+      alimentos_seleccionados[clave][1].gramos = factor*inputGramos;
+      alimentos_seleccionados[clave][1].energia_calculada = factor*valor_energia_calculada;
+      alimentos_seleccionados[clave][1].proteina = factor*valor_proteina;
+      alimentos_seleccionados[clave][1].grasa_total = factor*valor_grasa_total;
+      alimentos_seleccionados[clave][1].carbohidratos = factor*valor_carbohidratos;
+      alimentos_seleccionados[clave][1].fibra = factor*valor_fibra;
+      alimentos_seleccionados[clave][1].ags = factor*valor_ags;
+      alimentos_seleccionados[clave][1].agm = factor*valor_agm;
+      alimentos_seleccionados[clave][1].agpi = factor*valor_agpi;
+      alimentos_seleccionados[clave][1].colesterol = factor*valor_colesterol;
+      alimentos_seleccionados[clave][1].calcio = factor*valor_calcio;
+      alimentos_seleccionados[clave][1].fosforo = factor*valor_fosforo;
+      alimentos_seleccionados[clave][1].hierro = factor*valor_hierro;
+      alimentos_seleccionados[clave][1].potasio = factor*valor_potasio;
+      alimentos_seleccionados[clave][1].sodio = factor*valor_sodio;
+      alimentos_seleccionados[clave][1].zinc = factor*valor_zinc;
+      alimentos_seleccionados[clave][1].vitamina_c = factor*valor_vitamina_c;
+      alimentos_seleccionados[clave][1].vitamina_a = factor*valor_vitamina_a;
+      alimentos_seleccionados[clave][1].folatos = factor*valor_folatos;
+      alimentos_seleccionados[clave][1].vitamina_b12 = factor*valor_vitamina_b12;
+      break;
+    }
+  }
+
+  //Elementos html para cada fila en los elementos seleccionados, se están enviando como parámetros.
   energia_calculada.textContent = (valor_energia_calculada*factor).toFixed(2);
   proteina.textContent = (valor_proteina*factor).toFixed(2);
   grasa_total.textContent = (valor_grasa_total*factor).toFixed(2);
@@ -609,23 +634,28 @@ function actualizarValores(event, alimento, energia_calculada, proteina, grasa_t
 
   var factor = inputGramos / 100;
 
-  calculoActualizarValores(alimento, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+  calculoActualizarValores(alimento, event.target.id, inputGramos, factor, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
   ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12);
   
 }
-function eliminar(alimento){
+function eliminar(alimento, id){
   var respuesta = confirm('¿Estás seguro de eliminar el alimento?');
-  if (respuesta) {
-    var row = document.getElementById(alimento);
-    row.remove();
-    delete alimentos_seleccionados[alimento];
+  if (respuesta) {    
+    for (const clave in alimentos_seleccionados) {
+      if (id + "" === alimentos_seleccionados[clave][0] + ""){
+        var row = document.getElementById(id);
+        row.remove();
+        alimentos_seleccionados.pop(clave);
+      }
+    }
+    //delete alimentos_seleccionados[alimento];
     actualizarTotal(alimentos_seleccionados);
     calcular();
   }
 }
 // agregar un alimento a la tabla de valores nutricionales
 function agregar(valorGramos, alimento) {
-  if (!alimentos_seleccionados.hasOwnProperty(alimento.nombre)){
+  //if (!alimentos_seleccionados.hasOwnProperty(alimento.nombre)){
     const valores = document.getElementById('valores');
 
     Sortable.create(valores, {
@@ -640,9 +670,11 @@ function agregar(valorGramos, alimento) {
 
     //Crea una fila y le agrega un id.
     const fila = document.createElement('tr');
-    fila.id = alimento.nombre;
+    //fila.id = alimento.nombre;
+    fila.id = contadorFila;
     //fila.setAttribute('data-id', contador);
-    fila.addEventListener('dblclick', () => eliminar(alimento.nombre));
+    let valor_enviar = contadorFila
+    fila.addEventListener('dblclick', () => eliminar(contadorFila, valor_enviar));
 
     const nombre = document.createElement('td');
     nombre.textContent = alimento.nombre;
@@ -655,8 +687,9 @@ function agregar(valorGramos, alimento) {
     campoTexto.type = 'text';
     campoTexto.style.maxWidth = "80px";
     campoTexto.value = valorGramos;
-    campoTexto.id = alimento.nombre + '_' + 'input';
-    campoTexto.addEventListener('keyup', (event) => actualizarValores(event, 
+    campoTexto.id = contadorFila;
+    contadorFila++;
+    campoTexto.addEventListener('input', (event) => actualizarValores(event, 
       alimento, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
       ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc,
       vitamina_c, vitamina_a, folatos, vitamina_b12));
@@ -744,12 +777,15 @@ function agregar(valorGramos, alimento) {
 
     valores.appendChild(valores_tbody);
 
-    alimentos_seleccionados[alimento.nombre] = Object.assign({}, alimento);
+    let alimentoCopia = { ...alimento };
 
-    calculoActualizarValores(alimento, 100, 1, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
+    alimentos_seleccionados.push(Object.assign({}, [contadorAlimento, alimentoCopia]));
+    contadorAlimento++;
+
+    calculoActualizarValores(alimento, campoTexto.id, 100, 1, energia_calculada, proteina, grasa_total, carbohidratos, fibra,
       ags, agm, agpi, colesterol, calcio, fosforo, hierro, potasio, sodio, zinc, vitamina_c, vitamina_a, folatos, vitamina_b12);
 
-  }
+  //}
         
   actualizarTotal(alimentos_seleccionados);
   calcular();
@@ -778,28 +814,29 @@ function actualizarTotal(alimentos_seleccionados){
   aux_vitamina_b12 = 0.0;
 
   for (const clave in alimentos_seleccionados) {
-    aux_energia_calculada += parseFloat(alimentos_seleccionados[clave].energia_calculada);
-    aux_proteina += parseFloat(alimentos_seleccionados[clave].proteina);
-    aux_grasa_total += parseFloat(alimentos_seleccionados[clave].grasa_total);
-    aux_carbohidratos += parseFloat(alimentos_seleccionados[clave].carbohidratos);
-    aux_fibra += parseFloat(alimentos_seleccionados[clave].fibra);
-    aux_ags += parseFloat(alimentos_seleccionados[clave].ags);
-    aux_agm += parseFloat(alimentos_seleccionados[clave].agm);
-    aux_agpi += parseFloat(alimentos_seleccionados[clave].agpi);
-    aux_colesterol += parseFloat(alimentos_seleccionados[clave].colesterol);
-    aux_calcio += parseFloat(alimentos_seleccionados[clave].calcio);
-    aux_fosforo += parseFloat(alimentos_seleccionados[clave].fosforo);
-    aux_hierro += parseFloat(alimentos_seleccionados[clave].hierro);
-    aux_potasio += parseFloat(alimentos_seleccionados[clave].potasio);
-    aux_sodio += parseFloat(alimentos_seleccionados[clave].sodio);
-    aux_zinc += parseFloat(alimentos_seleccionados[clave].zinc);
-    aux_vitamina_c += parseFloat(alimentos_seleccionados[clave].vitamina_c);
-    aux_vitamina_a += parseFloat(alimentos_seleccionados[clave].vitamina_a);
-    aux_folatos += parseFloat(alimentos_seleccionados[clave].folatos);
-    aux_vitamina_b12 += parseFloat(alimentos_seleccionados[clave].vitamina_b12);
+    codigo_producto = alimentos_seleccionados[clave][0];
+    
+    aux_energia_calculada += parseFloat(alimentos_seleccionados[codigo_producto][1].energia_calculada);
+    aux_proteina += parseFloat(alimentos_seleccionados[codigo_producto][1].proteina);
+    aux_grasa_total += parseFloat(alimentos_seleccionados[codigo_producto][1].grasa_total);
+    aux_carbohidratos += parseFloat(alimentos_seleccionados[codigo_producto][1].carbohidratos);
+    aux_fibra += parseFloat(alimentos_seleccionados[codigo_producto][1].fibra);
+    aux_ags += parseFloat(alimentos_seleccionados[codigo_producto][1].ags);
+    aux_agm += parseFloat(alimentos_seleccionados[codigo_producto][1].agm);
+    aux_agpi += parseFloat(alimentos_seleccionados[codigo_producto][1].agpi);
+    aux_colesterol += parseFloat(alimentos_seleccionados[codigo_producto][1].colesterol);
+    aux_calcio += parseFloat(alimentos_seleccionados[codigo_producto][1].calcio);
+    aux_fosforo += parseFloat(alimentos_seleccionados[codigo_producto][1].fosforo);
+    aux_hierro += parseFloat(alimentos_seleccionados[codigo_producto][1].hierro);
+    aux_potasio += parseFloat(alimentos_seleccionados[codigo_producto][1].potasio);
+    aux_sodio += parseFloat(alimentos_seleccionados[codigo_producto][1].sodio);
+    aux_zinc += parseFloat(alimentos_seleccionados[codigo_producto][1].zinc);
+    aux_vitamina_c += parseFloat(alimentos_seleccionados[codigo_producto][1].vitamina_c);
+    aux_vitamina_a += parseFloat(alimentos_seleccionados[codigo_producto][1].vitamina_a);
+    aux_folatos += parseFloat(alimentos_seleccionados[codigo_producto][1].folatos);
+    aux_vitamina_b12 += parseFloat(alimentos_seleccionados[codigo_producto][1].vitamina_b12);
 
   }
-
 
   const energia_calculada_total = document.getElementById('energia_calculada_total');
   const proteina_total = document.getElementById('proteina_total');
@@ -843,132 +880,6 @@ function actualizarTotal(alimentos_seleccionados){
 
 }
 
-
-// Información de los alimentos con gramos por paquete
-const foods = [
-  {name: 'Queso fresco', quantity: 100, energy: 260, proteins: 17.5, fats: 20, carbs: 2.5, pricePerUnit: 0.00450, packageGrams: 450, packageName: 'libra'},
-  {name: 'Leche descremada', quantity: 100, energy: 44.58, proteins: 3.33, fats: 1.25, carbs: 2.5, pricePerUnit: 0.002, packageGrams: 1000, packageName: 'funda'},
-  {name: 'Yogurt', quantity: 100, energy: 44.58, proteins: 3.33, fats: 1.25, carbs: 5, pricePerUnit: 0.004, packageGrams: 5000, packageName: 'botella'},
-  {name: 'Almendras/nueces', quantity: 100, energy: 610, proteins: 20, fats: 50, carbs: 20, pricePerUnit: 0.009, packageGrams: 900, packageName: 'funda'},
-  {name: 'Aceite', quantity: 100, energy: 900, proteins: 0, fats: 100, carbs: 0, pricePerUnit: 0.0035, packageGrams: 5000, packageName: 'tarro'},
-  {name: 'Pan integral', quantity: 100, energy: 270, proteins: 10, fats: 3.33, carbs: 50, pricePerUnit: 0.005, packageGrams: 450, packageName: 'funda'},
-  {name: 'Pollo-pechuga', quantity: 100, energy: 61.11, proteins: 7.78, fats: 3.33, carbs: 0, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-  {name: 'Pollo-presa', quantity: 100, energy: 83.11, proteins: 7.78, fats: 5.78, carbs: 0, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-  {name: 'Res lomo', quantity: 100, energy: 61.11, proteins: 7.78, fats: 3.33, carbs: 0.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Huevo', quantity: 100, energy: 124.67, proteins: 11.67, fats: 8.67, carbs: 0.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Arroz crudo', quantity: 100, energy: 348.00, proteins: 12.00, fats: 0.00, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Papas', quantity: 100, energy: 72.00, proteins: 3.00, fats: 0.00, carbs: 15.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Avena', quantity: 100, energy: 397.78, proteins: 17.78, fats: 6.67, carbs: 66.67, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Harina de maíz', quantity: 100, energy: 362.50, proteins: 10.00, fats: 2.50, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Maíz para mote', quantity: 100, energy: 362.50, proteins: 10.00, fats: 2.50, carbs: 75.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Plátano maduro', quantity: 100, energy: 132.50, proteins: 2.00, fats: 0.50, carbs: 30.00, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'},
-{name: 'Plátano verde', quantity: 100, energy: 147.22, proteins: 2.22, fats: 0.56, carbs: 33.33, pricePerUnit: 0.005, packageGrams: 452, packageName: 'libra'}
-];
-
-let selectedFoods = [];
-
-// Crear tarjetas de alimentos
-const foodCardsContainer = document.getElementById('food-cards');
-
-function renderFoodCards(filteredFoods = foods) {
-  foodCardsContainer.innerHTML = '';
-  filteredFoods.forEach((food, index) => {
-      const card = document.createElement('div');
-      card.className = 'col-md-2';
-      card.innerHTML = `
-          <div class="card mb-4" onclick="addFood(${index})">
-              <div class="card-body">
-                  <h5 class="card-title">${food.name}</h5>
-                  <p class="card-text mb-1"><strong>Precio: ${(food.pricePerUnit * food.quantity).toFixed(4)} $ por 100 gr/ml</strong></p>
-              </div>
-          </div>
-      `;
-      foodCardsContainer.appendChild(card);
-  });
-}
-
-// Llamar a la función para renderizar todas las tarjetas inicialmente
-renderFoodCards();
-
-// Filtrar alimentos por nombre
-function filterFoods() {
-  const query = document.getElementById('search-bar').value.toLowerCase();
-  const filteredFoods = foods.filter(food => food.name.toLowerCase().includes(query));
-  renderFoodCards(filteredFoods);
-}
-
-// Agregar alimento seleccionado a la tabla
-function addFood(index) {
-  const food = {...foods[index]}; // Crear una copia del alimento seleccionado
-  selectedFoods.push(food);
-  renderSelectedFoods();
-  renderSummary();
-}
-
-// Renderizar tabla de alimentos seleccionados
-function renderSelectedFoods() {
-  const tableBody = document.querySelector('#selected-foods-table tbody');
-  tableBody.innerHTML = '';
-
-  selectedFoods.forEach((food, index) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-          <td>${food.name}</td>
-          <td><input type="number" class="form-control" value="${food.quantity}" min="1" onchange="updateQuantity(${index}, this.value)"></td>
-          <td>${(food.pricePerUnit * food.quantity).toFixed(4)}</td>
-          <td><button class="btn btn-danger btn-sm" onclick="removeFood(${index})">🗑️</button></td>
-      `;
-      tableBody.appendChild(row);
-  });
-}
-
-// Actualizar la cantidad de un alimento
-function updateQuantity(index, newQuantity) {
-  newQuantity = Math.max(1, newQuantity); // Evitar cantidades negativas o cero
-  selectedFoods[index].quantity = newQuantity;
-  renderSelectedFoods();
-  renderSummary();
-}
-
-// Eliminar un alimento de la tabla
-function removeFood(index) {
-  selectedFoods.splice(index, 1);
-  renderSelectedFoods();
-  renderSummary();
-}
-
-// Renderizar tabla resumen
-function renderSummary() {
-  const summaryTableBody = document.querySelector('#summary-table tbody');
-  const totalPriceElement = document.getElementById('total-price');
-  summaryTableBody.innerHTML = '';
-
-  const foodSummary = selectedFoods.reduce((summary, food) => {
-      if (!summary[food.name]) {
-          summary[food.name] = {quantity: 0, price: 0, packageGrams: food.packageGrams, packageName: food.packageName};
-      }
-      summary[food.name].quantity += parseFloat(food.quantity);
-      summary[food.name].price += food.pricePerUnit * food.quantity;
-      return summary;
-  }, {});
-
-  let totalPrice = 0;
-
-  for (const [name, details] of Object.entries(foodSummary)) {
-      const packages = (details.quantity / details.packageGrams).toFixed(2);
-      const row = document.createElement('tr');
-      row.innerHTML = `
-          <td>${name}</td>
-          <td>${details.quantity}</td>
-          <td>${packages} ${details.packageName}(s)</td>
-          <td>${details.price.toFixed(4)}</td>
-      `;
-      summaryTableBody.appendChild(row);
-      totalPrice += details.price;
-  }
-
-  totalPriceElement.textContent = totalPrice.toFixed(4);
-}
 
 //datos
 alimentos.push({
