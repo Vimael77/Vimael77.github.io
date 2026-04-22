@@ -12,7 +12,10 @@
   <div class="container-fluid mt-3">
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
-          <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Pestaña 1</a>
+          <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Calculadora</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" id="generador-tab" data-toggle="tab" href="#generador" role="tab" aria-controls="generador" aria-selected="false">Generador Semanal</a>
       </li>
     </ul>
     <!-- Tab content -->
@@ -343,6 +346,61 @@
         </div>
       </div>
 
+      <!-- PESTAÑA GENERADOR SEMANAL -->
+      <div class="tab-pane fade" id="generador" role="tabpanel" aria-labelledby="generador-tab">
+        <div style="padding: 30px;">
+          <div class="centered-div" style="padding-bottom: 20px;">
+            <h3>GENERADOR SEMANAL DE DIETA</h3>
+          </div>
+          
+          <div class="card p-3 mb-4">
+            <h5>Configuración del Generador</h5>
+            <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label">Número de Comidas</label>
+                <select id="gen_comidas" class="form-select">
+                  <option value="3">3 Comidas</option>
+                  <option value="4">4 Comidas</option>
+                  <option value="5" selected>5 Comidas</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Entrenamiento</label>
+                <select id="gen_entrenamiento" class="form-select">
+                  <option value="Mañana">Mañana</option>
+                  <option value="Tarde" selected>Tarde</option>
+                  <option value="Noche">Noche</option>
+                  <option value="No entrena">No entrena</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <button class="btn btn-success w-100" onclick="ejecutarGenerador()">Generar Automático</button>
+              </div>
+              <div class="col-md-3">
+                <button class="btn btn-outline-primary w-100" onclick="$('#modalCrearReceta').modal('show')">Crear Receta Personalizada</button>
+              </div>
+            </div>
+            <div class="mt-2 text-muted" style="font-size: 0.9em;">
+              *Asegúrese de haber calculado los requerimientos en la pestaña "Calculadora" antes de generar.
+            </div>
+          </div>
+
+          <!-- Resultados del Calendario Semanal -->
+          <div id="contenedor_calendario" style="display:none;">
+            <h4>Menú Semanal</h4>
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm" id="tabla_semanal">
+                <thead class="table-primary" id="thead_semanal">
+                </thead>
+                <tbody id="tbody_semanal">
+                </tbody>
+              </table>
+            </div>
+            <button class="btn btn-danger mt-3" onclick="generarPDFSemanal()">Descargar PDF Semanal</button>
+          </div>
+        </div>
+      </div>
+
     <!-- Modal Selection -->
     <div class="modal fade" id="mealSelectionModal" tabindex="-1" role="dialog" aria-labelledby="mealModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
@@ -368,6 +426,53 @@
     </div>
 
   </div>
+
+    <!-- Modal Crear Receta -->
+    <div class="modal fade" id="modalCrearReceta" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">Crear Receta Personalizada</h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-2 mb-3">
+              <div class="col-md-8">
+                <label>Nombre de la Receta</label>
+                <input type="text" id="nueva_receta_nombre" class="form-control" placeholder="Ej. Panqueques de avena">
+              </div>
+              <div class="col-md-4">
+                <label>Tipo de Comida</label>
+                <select id="nueva_receta_tipo" class="form-select">
+                  <option value="Desayuno">Desayuno</option>
+                  <option value="Almuerzo">Almuerzo</option>
+                  <option value="Cena">Cena</option>
+                  <option value="Snack">Snack</option>
+                </select>
+              </div>
+            </div>
+            <h6>Ingredientes (Buscar y añadir)</h6>
+            <div class="input-group mb-2">
+              <input type="text" id="buscador_ingrediente" class="form-control" placeholder="Buscar alimento..." onkeyup="buscarIngredienteParaReceta()">
+            </div>
+            <div id="lista_busqueda_ingredientes" class="list-group mb-3" style="max-height: 150px; overflow-y: auto;">
+            </div>
+            
+            <h6>Ingredientes Seleccionados</h6>
+            <ul class="list-group" id="ingredientes_seleccionados_lista">
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="guardarNuevaReceta()">Guardar Receta</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>  
@@ -379,6 +484,8 @@
 
     <script src="script.js"></script>
     <script src="alimentos.js"></script>
+    <script src="recetas.js"></script>
+    <script src="generador.js"></script>
   
   </body>
 
