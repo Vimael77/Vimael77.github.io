@@ -71,6 +71,23 @@ document.getElementById("file-input2").addEventListener("change", function (even
         var nombreAlimento = row[1];
         var gramos = row[2];
 
+        if (tiempoComida === "Identificacion") {
+          let idInput = document.getElementById("calc_id");
+          if(idInput) idInput.value = nombreAlimento || "";
+          continue;
+        }
+        if (tiempoComida === "Fecha") {
+          let fInput = document.getElementById("calc_fecha");
+          if(fInput) fInput.value = nombreAlimento || "";
+          continue;
+        }
+        if (tiempoComida === "NombrePaciente") {
+          let nInput = document.getElementById("calc_nombre");
+          if(nInput) nInput.value = nombreAlimento || "";
+          continue;
+        }
+        if (tiempoComida === "Paciente Info") continue;
+
         if (nombreAlimento && nombreAlimento !== "Total" && nombreAlimento !== 'Requerimiento'
           && nombreAlimento !== 'Total Kilocalorias'
           && nombreAlimento !== 'Porcentaje de Adecuación') {
@@ -154,6 +171,12 @@ function descargar() {
   total_kilocalorias();
   let info = [];
   
+  info.push({ "Tiempo de Comida": "Paciente Info", "nombre": "" });
+  info.push({ "Tiempo de Comida": "Identificacion", "nombre": document.getElementById('calc_id') ? document.getElementById('calc_id').value : "" });
+  info.push({ "Tiempo de Comida": "Fecha", "nombre": document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "" });
+  info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
+  info.push({}); // spacing
+  
   let itemsPorTiempo = { "Desayuno": [], "Media Mañana": [], "Almuerzo": [], "Media Tarde": [], "Merienda": [] };
   
   for (const clave in alimentos_seleccionados_en_orden) {
@@ -203,7 +226,9 @@ function descargar() {
     const worksheet = XLSX.utils.json_to_sheet(info);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
-    XLSX.writeFile(workbook, "datos_pacientes.xlsx", { compression: true });
+    let nombrePaciente = document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value.trim() : "";
+    let filename = nombrePaciente ? "Dieta_" + nombrePaciente.replace(/\s+/g, '_') + ".xlsx" : "datos_pacientes.xlsx";
+    XLSX.writeFile(workbook, filename, { compression: true });
   })();
 }
 
@@ -952,3 +977,292 @@ function actualizarTotal(alimentos_seleccionados) {
   });
 }
 
+function calcularReqEnergia() {
+  const peso = parseFloat(document.getElementById('calc_peso').value) || 0;
+  const estatura = parseFloat(document.getElementById('calc_estatura').value) || 0;
+  const edad = parseFloat(document.getElementById('calc_edad').value) || 0;
+  const genero = document.getElementById('calc_genero').value;
+  const actividad = parseFloat(document.getElementById('calc_actividad').value) || 1.2;
+
+  if (peso <= 0 || estatura <= 0 || edad <= 0) {
+    alert("Por favor, ingrese valores válidos para peso, estatura y edad.");
+    return;
+  }
+
+  let harris = 0;
+  let mifflin = 0;
+  let oms = 0;
+
+  // 1. Harris-Benedict (revised)
+  if (genero === 'M') {
+    harris = 88.362 + (13.397 * peso) + (4.799 * estatura) - (5.677 * edad);
+  } else {
+    harris = 447.593 + (9.247 * peso) + (3.098 * estatura) - (4.330 * edad);
+  }
+  harris = harris * actividad;
+
+  // 2. Mifflin-St Jeor
+  if (genero === 'M') {
+    mifflin = (10 * peso) + (6.25 * estatura) - (5 * edad) + 5;
+  } else {
+    mifflin = (10 * peso) + (6.25 * estatura) - (5 * edad) - 161;
+  }
+  mifflin = mifflin * actividad;
+
+  // 3. OMS / FAO (1985)
+  let bmr_oms = 0;
+  if (genero === 'M') {
+    if (edad >= 18 && edad <= 30) {
+      bmr_oms = (15.3 * peso) + 679;
+    } else if (edad > 30 && edad <= 60) {
+      bmr_oms = (11.6 * peso) + 879;
+    } else if (edad > 60) {
+      bmr_oms = (13.5 * peso) + 487;
+    } else {
+      bmr_oms = (17.5 * peso) + 651; // approx para menores
+    }
+  } else {
+    if (edad >= 18 && edad <= 30) {
+      bmr_oms = (14.7 * peso) + 496;
+    } else if (edad > 30 && edad <= 60) {
+      bmr_oms = (8.7 * peso) + 829;
+    } else if (edad > 60) {
+      bmr_oms = (10.5 * peso) + 596;
+    } else {
+      bmr_oms = (12.2 * peso) + 746; // approx para menores
+    }
+  }
+  oms = bmr_oms * actividad;
+
+  // Limpiar y mostrar los resultados
+  document.getElementById('res_harris').textContent = harris.toFixed(2);
+  document.getElementById('res_mifflin').textContent = mifflin.toFixed(2);
+  document.getElementById('res_oms').textContent = oms.toFixed(2);
+
+  document.getElementById('resultados_calc').style.display = 'block';
+
+  // Calcular el promedio e inyectarlo en la celda de Requerimientos Totales
+  let promedio = (harris + mifflin + oms) / 3;
+  document.getElementById('res_promedio').textContent = promedio.toFixed(2);
+  
+  const reqInput = document.getElementById('input_energia_calculada_requerimiento');
+  if (reqInput) {
+    reqInput.value = promedio.toFixed(2);
+    
+    // Calcular macros estándar sugeridos: 50% Carbs, 20% Proteína, 30% Grasas
+    let reqCarb = (promedio * 0.50) / 4; // 4 kcal por gramo
+    let reqProt = (promedio * 0.20) / 4; // 4 kcal por gramo
+    let reqGrasa = (promedio * 0.30) / 9; // 9 kcal por gramo
+
+    const reqProtInput = document.getElementById('input_proteina_requerimiento');
+    const reqGrasaInput = document.getElementById('input_grasa_requerimiento');
+    const reqCarbInput = document.getElementById('input_carbohidratos_requerimiento');
+
+    if (reqProtInput) reqProtInput.value = reqProt.toFixed(2);
+    if (reqGrasaInput) reqGrasaInput.value = reqGrasa.toFixed(2);
+    if (reqCarbInput) reqCarbInput.value = reqCarb.toFixed(2);
+
+    // Disparar las funciones regulares para actualizar el porcentaje de adecuación en la tabla inferior
+    calcular();
+  }
+}
+
+function generarPDF() {
+  const nombre = document.getElementById('calc_nombre').value || "Paciente";
+  const id = document.getElementById('calc_id').value || "N/A";
+  const fecha = document.getElementById('calc_fecha').value || "N/A";
+  const peso = document.getElementById('calc_peso').value || "";
+  const estatura = document.getElementById('calc_estatura').value || "";
+  const edad = document.getElementById('calc_edad').value || "";
+  
+  const reqEnergia = document.getElementById('input_energia_calculada_requerimiento').value || "0";
+  const adecEnergia = document.getElementById('adecuacion_energia_calculada').textContent || "0%";
+  const adecProt = document.getElementById('adecuacion_proteina').textContent || "0%";
+  const adecGrasa = document.getElementById('adecuacion_grasa').textContent || "0%";
+  const adecCarb = document.getElementById('adecuacion_carbohidratos').textContent || "0%";
+
+  // Custom helper to parse percentage safely
+  const parsePct = (str) => {
+    let val = parseFloat(str);
+    if (isNaN(val)) return 0;
+    if (val > 100) return 100;
+    return val;
+  };
+
+  let html = `
+    <div style="padding: 40px; background-color: #ffffff; font-family: Arial, sans-serif; color: #333;">
+      <div style="text-align: center; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-bottom: 20px;">
+        <h1 style="color: #4CAF50; margin: 0;">Reporte Nutricional</h1>
+        <p style="margin: 5px 0; color: #777;">Plan de Alimentación y Requerimientos</p>
+      </div>
+      
+      <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+        <h4 style="margin-top:0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Datos del Paciente</h4>
+        <table style="width: 100%; font-size: 14px;">
+          <tr>
+            <td style="padding: 4px;"><strong>Nombre:</strong> ${nombre}</td>
+            <td style="padding: 4px;"><strong>Identificación:</strong> ${id}</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px;"><strong>Fecha:</strong> ${fecha}</td>
+            <td style="padding: 4px;"><strong>Edad:</strong> ${edad} años</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px;"><strong>Peso:</strong> ${peso} kg</td>
+            <td style="padding: 4px;"><strong>Estatura:</strong> ${estatura} cm</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h4 style="border-bottom: 1px solid #ccc; padding-bottom: 5px;">Adecuación de Requerimientos</h4>
+        
+        <div style="margin-bottom: 15px;">
+          <div style="display:flex; justify-content: space-between; font-size: 14px; margin-bottom:3px;">
+            <span><strong>Energía (Kcal):</strong> Sugerida ${parseFloat(reqEnergia).toFixed(2)} Kcal</span>
+            <span>${adecEnergia}</span>
+          </div>
+          <div style="height: 12px; background: #eee; border-radius: 6px; overflow: hidden;">
+            <div style="height: 100%; width: ${parsePct(adecEnergia)}%; background: #007bff;"></div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <div style="display:flex; justify-content: space-between; font-size: 14px; margin-bottom:3px;">
+            <span><strong>Proteína:</strong></span>
+            <span>${adecProt}</span>
+          </div>
+          <div style="height: 12px; background: #eee; border-radius: 6px; overflow: hidden;">
+            <div style="height: 100%; width: ${parsePct(adecProt)}%; background: #28a745;"></div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <div style="display:flex; justify-content: space-between; font-size: 14px; margin-bottom:3px;">
+            <span><strong>Grasa Total:</strong></span>
+            <span>${adecGrasa}</span>
+          </div>
+          <div style="height: 12px; background: #eee; border-radius: 6px; overflow: hidden;">
+            <div style="height: 100%; width: ${parsePct(adecGrasa)}%; background: #ffc107;"></div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <div style="display:flex; justify-content: space-between; font-size: 14px; margin-bottom:3px;">
+            <span><strong>Carbohidratos:</strong></span>
+            <span>${adecCarb}</span>
+          </div>
+          <div style="height: 12px; background: #eee; border-radius: 6px; overflow: hidden;">
+            <div style="height: 100%; width: ${parsePct(adecCarb)}%; background: #dc3545;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="border-bottom: 1px solid #ccc; padding-bottom: 5px;">Detalle de Comidas Seleccionadas</h4>
+  `;
+
+  nuevoOrden();
+  let itemsPorTiempo = { "Desayuno": [], "Media Mañana": [], "Almuerzo": [], "Media Tarde": [], "Merienda": [] };
+  
+  for (const clave in alimentos_seleccionados_en_orden) {
+    let item = alimentos_seleccionados_en_orden[clave];
+    let tiempo = item.tiempo || "Desayuno";
+    if (itemsPorTiempo[tiempo]) {
+       itemsPorTiempo[tiempo].push(item);
+    }
+  }
+
+  const tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
+  for (let t of tiempos) {
+    if (itemsPorTiempo[t].length > 0) {
+      html += `
+        <div style="margin-bottom: 15px;">
+          <h5 style="background-color: #f1f1f1; padding: 5px; margin: 0; color: #333;">${t}</h5>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid #ddd;">
+                <th style="text-align: left; padding: 4px;">Alimento</th>
+                <th style="text-align: right; padding: 4px; width: 100px;">Gramos</th>
+                <th style="text-align: right; padding: 4px; width: 100px;">Kcal</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      for (let item of itemsPorTiempo[t]) {
+        html += `
+          <tr>
+            <td style="padding: 4px; border-bottom: 1px solid #eee;">${item.nombre}</td>
+            <td style="text-align: right; padding: 4px; border-bottom: 1px solid #eee;">${item.gramos} g</td>
+            <td style="text-align: right; padding: 4px; border-bottom: 1px solid #eee;">${parseFloat(item.energia_calculada).toFixed(2)}</td>
+          </tr>
+        `;
+      }
+      
+      if (window.alimentos_subtotales && window.alimentos_subtotales[t]) {
+         let subKcal = parseFloat(window.alimentos_subtotales[t]["energia_calculada"]).toFixed(2);
+         html += `
+          <tr>
+            <td style="padding: 4px; font-weight: bold; text-align: right;" colspan="2">Subtotal ${t}:</td>
+            <td style="text-align: right; padding: 4px; font-weight: bold;">${subKcal} Kcal</td>
+          </tr>
+         `;
+      }
+      
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  }
+
+  html += `</div></div>`; // Close the detailing div, and the wrapper div.
+  
+  var opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     'Reporte_' + nombre.replace(/\s+/g, '_') + '.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(html).save().catch(err => {
+    console.error("Error generando PDF", err);
+  });
+}
+
+// Limpiar el formulario cuando la página se recarga o se abre
+document.addEventListener('DOMContentLoaded', function() {
+  const nombre = document.getElementById('calc_nombre');
+  const id = document.getElementById('calc_id');
+  const fecha = document.getElementById('calc_fecha');
+  const peso = document.getElementById('calc_peso');
+  const estatura = document.getElementById('calc_estatura');
+  const edad = document.getElementById('calc_edad');
+  const genero = document.getElementById('calc_genero');
+  const actividad = document.getElementById('calc_actividad');
+  
+  if (nombre) nombre.value = '';
+  if (id) id.value = '';
+  if (fecha) fecha.value = '';
+  if (peso) peso.value = '70';
+  if (estatura) estatura.value = '170';
+  if (edad) edad.value = '30';
+  if (genero) genero.value = 'M';
+  if (actividad) actividad.value = '1.55';
+
+  // Limpiar requerimientos de la tabla de totales (restablecer a 1 por defecto)
+  const reqInputs = document.querySelectorAll('input[id$="_requerimiento"]');
+  reqInputs.forEach(input => {
+    input.value = '1';
+  });
+  
+  // Ocultar resultados de la calculadora anterior
+  const resDiv = document.getElementById('resultados_calc');
+  if (resDiv) resDiv.style.display = 'none';
+  
+  // Recalcular para blanquear porcentajes
+  calcular();
+});

@@ -24,7 +24,10 @@
               <h3>MUY ALIMENTADO</h3>
             </div>
             <div class="contenedor-flex">                           
-              <button class="boton-personalizado" onclick="descargar()">Descargar</button>          
+              <div>
+                <button class="boton-personalizado" onclick="descargar()">Descargar Excel</button>          
+                <button class="boton-personalizado" style="background-color: #dc3545;" onclick="generarPDF()">Descargar PDF</button>          
+              </div>
               <div>
                 <h6>CARGAR ARCHIVO PREVIO</h6>
                 <input type="file" id="file-input2">
@@ -32,6 +35,75 @@
             </div>
           </div>
         </div>
+        <!-- SECCIÓN 0: CALCULADORA DE REQUERIMIENTOS -->
+        <div class="row w-100 m-0 mb-4">
+          <div class="col-md-12">
+            <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
+              <div class="centered-div" style="padding-bottom: 10px;">
+                <h3>CALCULADORA DE REQUERIMIENTO ENERGÉTICO</h3>
+              </div>
+              <div class="card p-3 mb-3">
+                <div class="row g-3">
+                  <div class="col-md-5">
+                    <label class="form-label">Nombre (Opcional)</label>
+                    <input type="text" id="calc_nombre" class="form-control" placeholder="Ej. Juan Pérez">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Cédula / Pasaporte</label>
+                    <input type="text" id="calc_id" class="form-control" placeholder="Ej. 123456789">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Fecha de Evaluación</label>
+                    <input type="date" id="calc_fecha" class="form-control">
+                  </div>
+                  <div class="col-md-2 mt-3">
+                    <label class="form-label">Peso (kg)</label>
+                    <input type="number" id="calc_peso" class="form-control" min="1" step="0.1" value="70">
+                  </div>
+                  <div class="col-md-2 mt-3">
+                    <label class="form-label">Estatura (cm)</label>
+                    <input type="number" id="calc_estatura" class="form-control" min="1" step="0.1" value="170">
+                  </div>
+                  <div class="col-md-2 mt-3">
+                    <label class="form-label">Edad (años)</label>
+                    <input type="number" id="calc_edad" class="form-control" min="1" value="30">
+                  </div>
+                  <div class="col-md-2 mt-3">
+                    <label class="form-label">Género</label>
+                    <select id="calc_genero" class="form-select" style="height: 38px;">
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mt-3">
+                    <label class="form-label">Nivel de Actividad Física</label>
+                    <select id="calc_actividad" class="form-select" style="height: 38px;">
+                      <option value="1.2">Sedentario (Poco o ningún ejercicio)</option>
+                      <option value="1.375">Ligero (Ejercicio ligero 1-3 días/sem)</option>
+                      <option value="1.55" selected>Moderado (Ejercicio moderado 3-5 días/sem)</option>
+                      <option value="1.725">Activo (Ejercicio intenso 6-7 días/sem)</option>
+                      <option value="1.9">Muy Activo (Atletas profesionales / Entrenamiento físico duro diario)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mt-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" style="height: 38px; background-color: #4CAF50; border-color: #4CAF50;" onclick="calcularReqEnergia()">Calcular Requerimiento</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="resultados_calc" class="alert alert-info" style="display: none;">
+                <h5>Resultados de Energía Calculada (Kcal/día)</h5>
+                <ul>
+                  <li><strong>Harris-Benedict:</strong> <span id="res_harris"></span> kcal</li>
+                  <li><strong>Mifflin-St Jeor:</strong> <span id="res_mifflin"></span> kcal</li>
+                  <li><strong>OMS/FAO:</strong> <span id="res_oms"></span> kcal</li>
+                </ul>
+                <p class="mb-0 mt-2 text-success" id="res_msg_success" style="font-weight: 500;">✓ Se ha autocompletado un promedio (<span id="res_promedio"></span> kcal) en el requerimiento de energía total abajo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- SECCIÓN 1: BUSCADOR -->
         <div class="row w-100 m-0 mb-4">
           <div class="col-md-12">
@@ -303,6 +375,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script src="script.js"></script>
     <script src="alimentos.js"></script>
