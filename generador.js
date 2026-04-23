@@ -138,7 +138,11 @@ function generarComidaParaBucket(bucketTarget, tipoComida) {
         }
     }
 
-    return { nombre_receta: recetaElegida.nombre, items: comidaFinal };
+    return {
+        nombre_receta: recetaElegida.nombre,
+        elaboracion_receta: recetaElegida.elaboracion || "",
+        items: comidaFinal
+    };
 }
 
 /**
@@ -177,6 +181,15 @@ function generarPlanSemanal(reqEnergia, reqProt, reqGrasa, reqCarb, numComidas, 
 // ==========================================
 
 let planGeneradoGlobal = null;
+
+function escaparHtml(texto) {
+    return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 function ejecutarGenerador() {
     // 1. Obtener requerimientos de la calculadora
@@ -229,13 +242,17 @@ function renderizarCalendarioSemanal(plan, tiempos) {
             }
             
             let celdaHtml = `<div class="receta-box">
-                <strong class="text-primary">${comida.nombre_receta}</strong><br>
+                <strong class="text-primary">${escaparHtml(comida.nombre_receta)}</strong><br>
                 <ul class="list-unstyled mb-0" style="font-size:0.85em;">`;
             
             comida.items.forEach(item => {
-                celdaHtml += `<li>- ${item.nombre} (${item.gramos}g)</li>`;
+                celdaHtml += `<li>- ${escaparHtml(item.nombre)} (${escaparHtml(item.gramos)}g)</li>`;
             });
-            celdaHtml += `</ul></div>`;
+            celdaHtml += `</ul>`;
+            if (comida.elaboracion_receta) {
+                celdaHtml += `<div class="receta-elaboracion"><strong>Elaboración:</strong> ${escaparHtml(comida.elaboracion_receta)}</div>`;
+            }
+            celdaHtml += `</div>`;
             tbodyHtml += `<td>${celdaHtml}</td>`;
         });
         tbodyHtml += `</tr>`;
@@ -292,6 +309,7 @@ function quitarIngredienteTemp(index) {
 function guardarNuevaReceta() {
     let nombre = document.getElementById('nueva_receta_nombre').value.trim();
     let tipo = document.getElementById('nueva_receta_tipo').value;
+    let elaboracion = document.getElementById('nueva_receta_elaboracion').value.trim();
 
     if (!nombre) {
         alert("Por favor ingrese un nombre para la receta.");
@@ -305,7 +323,8 @@ function guardarNuevaReceta() {
     let receta = {
         nombre: nombre,
         tipo: tipo,
-        ingredientes: [...ingredientesTemp]
+        ingredientes: [...ingredientesTemp],
+        elaboracion: elaboracion || "Preparar los ingredientes indicados, cocinarlos segun corresponda y servir la receta."
     };
 
     guardarRecetaPersonalizada(receta);
@@ -313,6 +332,7 @@ function guardarNuevaReceta() {
     
     // Limpiar
     document.getElementById('nueva_receta_nombre').value = '';
+    document.getElementById('nueva_receta_elaboracion').value = '';
     ingredientesTemp = [];
     actualizarListaIngredientes();
     $('#modalCrearReceta').modal('hide');
@@ -349,12 +369,16 @@ function generarPDFSemanal() {
                 return;
             }
             html += `<td style="border: 1px solid #ccc; padding: 5px; vertical-align: top;">
-                <strong style="color:#007bff;">${comida.nombre_receta}</strong><br>
+                <strong style="color:#007bff;">${escaparHtml(comida.nombre_receta)}</strong><br>
                 <ul style="padding-left: 15px; margin: 5px 0;">`;
             comida.items.forEach(item => {
-                html += `<li>${item.nombre} (${item.gramos}g)</li>`;
+                html += `<li>${escaparHtml(item.nombre)} (${escaparHtml(item.gramos)}g)</li>`;
             });
-            html += `</ul></td>`;
+            html += `</ul>`;
+            if (comida.elaboracion_receta) {
+                html += `<div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #ddd; line-height: 1.4;"><strong>Elaboración:</strong> ${escaparHtml(comida.elaboracion_receta)}</div>`;
+            }
+            html += `</td>`;
         });
         html += `</tr>`;
     });
