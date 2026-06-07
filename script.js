@@ -11,6 +11,188 @@ let contadorFila = 0;
 let contadorAlimento = 0;
 let alimentoPendiente = null;
 window.alimentos_subtotales = {};
+const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
+
+function obtenerFechaActualInput() {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+
+  return `${anio}-${mes}-${dia}`;
+}
+
+function obtenerValorNumerico(id) {
+  const elemento = document.getElementById(id);
+  if (!elemento) return 0;
+
+  const valor = (elemento.value || "").replace(",", ".");
+  const numero = parseFloat(valor);
+  return isNaN(numero) ? 0 : numero;
+}
+
+function actualizarTextoMacro(id, valor, unidad) {
+  const elemento = document.getElementById(id);
+  if (elemento) elemento.textContent = `${valor.toFixed(2)} ${unidad}`;
+}
+
+function establecerPorcentajesMacronutrientes(proteina, grasa) {
+  const proteinaInput = document.getElementById('macro_proteina_porcentaje');
+  const grasaInput = document.getElementById('macro_grasa_porcentaje');
+  const proteinaValor = proteina === undefined || proteina === null ? "" : proteina;
+  const grasaValor = grasa === undefined || grasa === null ? "" : grasa;
+  const proteinaNumero = parseFloat(proteinaValor.toString().replace(",", "."));
+  const grasaNumero = parseFloat(grasaValor.toString().replace(",", "."));
+
+  if (proteinaInput && !isNaN(proteinaNumero)) proteinaInput.value = proteinaNumero.toFixed(2);
+  if (grasaInput && !isNaN(grasaNumero)) grasaInput.value = grasaNumero.toFixed(2);
+}
+
+function inferirPorcentajesMacronutrientesDesdeRequerimiento() {
+  const energia = obtenerValorNumerico('input_energia_calculada_requerimiento');
+  const gramosProteina = obtenerValorNumerico('input_proteina_requerimiento');
+  const gramosGrasa = obtenerValorNumerico('input_grasa_requerimiento');
+
+  if (energia <= 0) return;
+
+  establecerPorcentajesMacronutrientes(
+    (gramosProteina * 4 / energia) * 100,
+    (gramosGrasa * 9 / energia) * 100
+  );
+}
+
+function actualizarRequerimientoMacronutrientes() {
+  const energia = obtenerValorNumerico('input_energia_calculada_requerimiento');
+  const peso = obtenerValorNumerico('calc_peso');
+  const porcentajeProteina = obtenerValorNumerico('macro_proteina_porcentaje');
+  const porcentajeGrasa = obtenerValorNumerico('macro_grasa_porcentaje');
+  const porcentajeCarbohidratos = 100 - porcentajeProteina - porcentajeGrasa;
+
+  const kcalProteina = energia * (porcentajeProteina / 100);
+  const kcalGrasa = energia * (porcentajeGrasa / 100);
+  const kcalCarbohidratos = energia * (porcentajeCarbohidratos / 100);
+  const gramosProteina = kcalProteina / 4;
+  const gramosGrasa = kcalGrasa / 9;
+  const gramosCarbohidratos = kcalCarbohidratos / 4;
+
+  const carbohidratosPorcentaje = document.getElementById('macro_carbohidratos_porcentaje');
+  if (carbohidratosPorcentaje) {
+    carbohidratosPorcentaje.textContent = `${porcentajeCarbohidratos.toFixed(2)}%`;
+  }
+
+  actualizarTextoMacro('macro_proteina_kcal', kcalProteina, 'kcal');
+  actualizarTextoMacro('macro_grasa_kcal', kcalGrasa, 'kcal');
+  actualizarTextoMacro('macro_carbohidratos_kcal', kcalCarbohidratos, 'kcal');
+  actualizarTextoMacro('macro_proteina_gramos', gramosProteina, 'g');
+  actualizarTextoMacro('macro_grasa_gramos', gramosGrasa, 'g');
+  actualizarTextoMacro('macro_carbohidratos_gramos', gramosCarbohidratos, 'g');
+  actualizarTextoMacro('macro_proteina_gkg', peso > 0 ? gramosProteina / peso : 0, 'g/kg');
+  actualizarTextoMacro('macro_grasa_gkg', peso > 0 ? gramosGrasa / peso : 0, 'g/kg');
+  actualizarTextoMacro('macro_carbohidratos_gkg', peso > 0 ? gramosCarbohidratos / peso : 0, 'g/kg');
+
+  const porcentajeInvalido = porcentajeProteina < 0 || porcentajeGrasa < 0 || porcentajeCarbohidratos < 0;
+  const error = document.getElementById('macro_porcentaje_error');
+  if (error) error.style.display = porcentajeInvalido ? 'block' : 'none';
+
+  if (porcentajeInvalido || energia <= 0) return;
+
+  const reqProtInput = document.getElementById('input_proteina_requerimiento');
+  const reqGrasaInput = document.getElementById('input_grasa_requerimiento');
+  const reqCarbInput = document.getElementById('input_carbohidratos_requerimiento');
+
+  if (reqProtInput) reqProtInput.value = gramosProteina.toFixed(2);
+  if (reqGrasaInput) reqGrasaInput.value = gramosGrasa.toFixed(2);
+  if (reqCarbInput) reqCarbInput.value = gramosCarbohidratos.toFixed(2);
+
+  calcular();
+}
+
+function configurarEventosMacronutrientes() {
+  [
+    'macro_proteina_porcentaje',
+    'macro_grasa_porcentaje',
+    'input_energia_calculada_requerimiento',
+    'calc_peso'
+  ].forEach(id => {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.addEventListener('input', actualizarRequerimientoMacronutrientes);
+  });
+}
+
+function formatearFechaNombreArchivo(fechaValor) {
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  let fecha = fechaValor || obtenerFechaActualInput();
+  let partes = fecha.split("-");
+
+  if (partes.length !== 3) {
+    partes = obtenerFechaActualInput().split("-");
+  }
+
+  const anio = partes[0];
+  const mes = parseInt(partes[1], 10) - 1;
+  const dia = partes[2].padStart(2, "0");
+
+  return `${dia} ${meses[mes] || meses[0]} ${anio}`;
+}
+
+function limpiarNombreArchivo(valor) {
+  const nombre = (valor || "").trim().replace(/[<>:"/\\|?*]+/g, "");
+  return nombre || "Paciente";
+}
+
+function obtenerNombreArchivoDescarga(extension) {
+  const nombre = limpiarNombreArchivo(document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "");
+  const fecha = formatearFechaNombreArchivo(document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "");
+
+  return `${nombre} ${fecha}.${extension}`;
+}
+
+function obtenerTiempoDesdeTbody(tbody) {
+  if (!tbody || !tbody.id || !tbody.id.startsWith("valores_")) return "Desayuno";
+  return tbody.id.replace("valores_", "").replace(/_/g, " ");
+}
+
+function obtenerAlimentoSeleccionadoPorId(id) {
+  return alimentos_seleccionados.find(function (item) {
+    return item[0] + "" === id + "";
+  });
+}
+
+function actualizarTiemposDesdeTabla() {
+  document.querySelectorAll('#valores tbody[id^="valores_"] tr[id]').forEach(function (fila) {
+    var datosAlimento = obtenerAlimentoSeleccionadoPorId(fila.id);
+    if (datosAlimento) {
+      datosAlimento[1].tiempo = obtenerTiempoDesdeTbody(fila.parentElement);
+    }
+  });
+}
+
+function configurarOrdenamientoTbody(valores_tbody) {
+  if (!valores_tbody || valores_tbody.dataset.sortableInitialized) return;
+
+  Sortable.create(valores_tbody, {
+    animation: 150,
+    dragClass: "drag",
+    group: "alimentos-seleccionados",
+    emptyInsertThreshold: 30,
+    onEnd: function () {
+      actualizarTiemposDesdeTabla();
+      actualizarTotal(alimentos_seleccionados);
+      calcular();
+    }
+  });
+
+  valores_tbody.dataset.sortableInitialized = "true";
+}
+
+function inicializarOrdenamientoSeleccionados() {
+  tiemposComida.forEach(function (tiempo) {
+    configurarOrdenamientoTbody(document.getElementById("valores_" + tiempo.replace(" ", "_")));
+  });
+}
 /*
 document.getElementById("file-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
@@ -54,6 +236,12 @@ document.getElementById("file-input").addEventListener("change", function (event
 
 document.getElementById("file-input2").addEventListener("change", function (event) {
   const file = event.target.files[0];
+  const fileName = document.getElementById("file-input2-name");
+  if (fileName) {
+    fileName.textContent = file ? file.name : "Sin archivos seleccionados";
+  }
+  if (!file) return;
+
   const reader = new FileReader();
 
   reader.onload = function (e) {
@@ -62,14 +250,22 @@ document.getElementById("file-input2").addEventListener("change", function (even
     var worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
     var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    var headerRow = jsonData[0] || [];
+    var macroPorcentajesCargados = false;
+    function obtenerValorFila(row, columna, indiceFallback) {
+      var indice = headerRow.indexOf(columna);
+      if (indice !== -1) return row[indice];
+      return row[indiceFallback];
+    }
+
     if (alimentos.length > 0) {
       for (var i = 1; i < jsonData.length; i++) {
         var row = jsonData[i];
         if (!row || row.length === 0) continue;
         
-        var tiempoComida = row[0];
-        var nombreAlimento = row[1];
-        var gramos = row[2];
+        var tiempoComida = obtenerValorFila(row, "Tiempo de Comida", 0);
+        var nombreAlimento = obtenerValorFila(row, "nombre", 1);
+        var gramos = obtenerValorFila(row, "gramos", 2);
 
         if (tiempoComida === "Identificacion") {
           let idInput = document.getElementById("calc_id");
@@ -86,6 +282,40 @@ document.getElementById("file-input2").addEventListener("change", function (even
           if(nInput) nInput.value = nombreAlimento || "";
           continue;
         }
+        if (tiempoComida === "Peso") {
+          let pesoInput = document.getElementById("calc_peso");
+          if(pesoInput) pesoInput.value = nombreAlimento || "70";
+          continue;
+        }
+        if (tiempoComida === "Estatura") {
+          let estaturaInput = document.getElementById("calc_estatura");
+          if(estaturaInput) estaturaInput.value = nombreAlimento || "170";
+          continue;
+        }
+        if (tiempoComida === "Edad") {
+          let edadInput = document.getElementById("calc_edad");
+          if(edadInput) edadInput.value = nombreAlimento || "30";
+          continue;
+        }
+        if (tiempoComida === "Genero") {
+          let generoInput = document.getElementById("calc_genero");
+          if(generoInput && nombreAlimento) generoInput.value = nombreAlimento;
+          continue;
+        }
+        if (tiempoComida === "Actividad") {
+          let actividadInput = document.getElementById("calc_actividad");
+          if(actividadInput && nombreAlimento) actividadInput.value = nombreAlimento;
+          continue;
+        }
+        if (tiempoComida === "Macronutrientes") {
+          establecerPorcentajesMacronutrientes(
+            obtenerValorFila(row, "macro_proteina_porcentaje", 4),
+            obtenerValorFila(row, "macro_grasa_porcentaje", 5)
+          );
+          macroPorcentajesCargados = true;
+          actualizarRequerimientoMacronutrientes();
+          continue;
+        }
         if (tiempoComida === "Paciente Info") continue;
 
         if (nombreAlimento && nombreAlimento !== "Total" && nombreAlimento !== 'Requerimiento'
@@ -96,27 +326,28 @@ document.getElementById("file-input2").addEventListener("change", function (even
         }
         
         if (nombreAlimento === 'Requerimiento') {
-          document.getElementById('input_energia_calculada_requerimiento').value = row[3];
-          document.getElementById('input_proteina_requerimiento').value = row[4];
-          document.getElementById('input_grasa_requerimiento').value = row[5];
-          document.getElementById('input_carbohidratos_requerimiento').value = row[6];
-          document.getElementById('input_fibra_requerimiento').value = row[7];
-          document.getElementById("input_ags_requerimiento").value = row[8];
-          document.getElementById("input_agm_requerimiento").value = row[9];
-          document.getElementById("input_agpi_requerimiento").value = row[10];
-          document.getElementById("input_colesterol_requerimiento").value = row[11];
-          document.getElementById("input_calcio_requerimiento").value = row[12];
-          document.getElementById("input_fosforo_requerimiento").value = row[13];
-          document.getElementById("input_hierro_requerimiento").value = row[14];
-          document.getElementById("input_potasio_requerimiento").value = row[15];
-          document.getElementById("input_sodio_requerimiento").value = row[16];
-          document.getElementById("input_zinc_requerimiento").value = row[17];
-          document.getElementById("input_vitamina_c_requerimiento").value = row[18];
-          document.getElementById("input_vitamina_a_requerimiento").value = row[19];
-          document.getElementById("input_folatos_requerimiento").value = row[20];
-          document.getElementById("input_vitamina_b12_requerimiento").value = row[21];
-          calcular();
-          break;
+          document.getElementById('input_energia_calculada_requerimiento').value = obtenerValorFila(row, "energia_calculada", 3);
+          document.getElementById('input_proteina_requerimiento').value = obtenerValorFila(row, "proteina", 4);
+          document.getElementById('input_grasa_requerimiento').value = obtenerValorFila(row, "grasa_total", 5);
+          document.getElementById('input_carbohidratos_requerimiento').value = obtenerValorFila(row, "carbohidratos", 6);
+          document.getElementById('input_fibra_requerimiento').value = obtenerValorFila(row, "fibra", 7);
+          document.getElementById("input_ags_requerimiento").value = obtenerValorFila(row, "ags", 8);
+          document.getElementById("input_agm_requerimiento").value = obtenerValorFila(row, "agm", 9);
+          document.getElementById("input_agpi_requerimiento").value = obtenerValorFila(row, "agpi", 10);
+          document.getElementById("input_colesterol_requerimiento").value = obtenerValorFila(row, "colesterol", 11);
+          document.getElementById("input_calcio_requerimiento").value = obtenerValorFila(row, "calcio", 12);
+          document.getElementById("input_fosforo_requerimiento").value = obtenerValorFila(row, "fosforo", 13);
+          document.getElementById("input_hierro_requerimiento").value = obtenerValorFila(row, "hierro", 14);
+          document.getElementById("input_potasio_requerimiento").value = obtenerValorFila(row, "potasio", 15);
+          document.getElementById("input_sodio_requerimiento").value = obtenerValorFila(row, "sodio", 16);
+          document.getElementById("input_zinc_requerimiento").value = obtenerValorFila(row, "zinc", 17);
+          document.getElementById("input_vitamina_c_requerimiento").value = obtenerValorFila(row, "vitamina_c", 18);
+          document.getElementById("input_vitamina_a_requerimiento").value = obtenerValorFila(row, "vitamina_a", 19);
+          document.getElementById("input_folatos_requerimiento").value = obtenerValorFila(row, "folatos", 20);
+          document.getElementById("input_vitamina_b12_requerimiento").value = obtenerValorFila(row, "vitamina_b12", 21);
+          if (!macroPorcentajesCargados) inferirPorcentajesMacronutrientesDesdeRequerimiento();
+          actualizarRequerimientoMacronutrientes();
+          continue;
         }
       }
     } else {
@@ -175,6 +406,18 @@ function descargar() {
   info.push({ "Tiempo de Comida": "Identificacion", "nombre": document.getElementById('calc_id') ? document.getElementById('calc_id').value : "" });
   info.push({ "Tiempo de Comida": "Fecha", "nombre": document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "" });
   info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
+  info.push({ "Tiempo de Comida": "Peso", "nombre": document.getElementById('calc_peso') ? document.getElementById('calc_peso').value : "" });
+  info.push({ "Tiempo de Comida": "Estatura", "nombre": document.getElementById('calc_estatura') ? document.getElementById('calc_estatura').value : "" });
+  info.push({ "Tiempo de Comida": "Edad", "nombre": document.getElementById('calc_edad') ? document.getElementById('calc_edad').value : "" });
+  info.push({ "Tiempo de Comida": "Genero", "nombre": document.getElementById('calc_genero') ? document.getElementById('calc_genero').value : "" });
+  info.push({ "Tiempo de Comida": "Actividad", "nombre": document.getElementById('calc_actividad') ? document.getElementById('calc_actividad').value : "" });
+  info.push({
+    "Tiempo de Comida": "Macronutrientes",
+    "nombre": "Porcentajes",
+    "macro_proteina_porcentaje": obtenerValorNumerico('macro_proteina_porcentaje'),
+    "macro_grasa_porcentaje": obtenerValorNumerico('macro_grasa_porcentaje'),
+    "macro_carbohidratos_porcentaje": 100 - obtenerValorNumerico('macro_proteina_porcentaje') - obtenerValorNumerico('macro_grasa_porcentaje')
+  });
   info.push({}); // spacing
   
   let itemsPorTiempo = { "Desayuno": [], "Media Mañana": [], "Almuerzo": [], "Media Tarde": [], "Merienda": [] };
@@ -226,13 +469,13 @@ function descargar() {
     const worksheet = XLSX.utils.json_to_sheet(info);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
-    let nombrePaciente = document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value.trim() : "";
-    let filename = nombrePaciente ? "Dieta_" + nombrePaciente.replace(/\s+/g, '_') + ".xlsx" : "datos_pacientes.xlsx";
+    let filename = obtenerNombreArchivoDescarga("xlsx");
     XLSX.writeFile(workbook, filename, { compression: true });
   })();
 }
 
 function nuevoOrden() {
+  actualizarTiemposDesdeTabla();
   // Mantenemos el destino como arreglo para asegurar orden correcto y permitir repetidos
   alimentos_seleccionados_en_orden = [];
 
@@ -796,13 +1039,7 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
   let tbody_id = "valores_" + tiempo.replace(" ", "_");
   const valores_tbody = document.getElementById(tbody_id);
 
-  if (!valores_tbody.dataset.sortableInitialized) {
-    Sortable.create(valores_tbody, {
-      animation: 150,
-      dragClass: "drag"
-    });
-    valores_tbody.dataset.sortableInitialized = "true";
-  }
+  configurarOrdenamientoTbody(valores_tbody);
 
   const encabezado = document.getElementById("encabezado_valores");
   encabezado.classList.add('table-primary');
@@ -1049,21 +1286,7 @@ function calcularReqEnergia() {
   if (reqInput) {
     reqInput.value = promedio.toFixed(2);
     
-    // Calcular macros estándar sugeridos: 50% Carbs, 20% Proteína, 30% Grasas
-    let reqCarb = (promedio * 0.50) / 4; // 4 kcal por gramo
-    let reqProt = (promedio * 0.20) / 4; // 4 kcal por gramo
-    let reqGrasa = (promedio * 0.30) / 9; // 9 kcal por gramo
-
-    const reqProtInput = document.getElementById('input_proteina_requerimiento');
-    const reqGrasaInput = document.getElementById('input_grasa_requerimiento');
-    const reqCarbInput = document.getElementById('input_carbohidratos_requerimiento');
-
-    if (reqProtInput) reqProtInput.value = reqProt.toFixed(2);
-    if (reqGrasaInput) reqGrasaInput.value = reqGrasa.toFixed(2);
-    if (reqCarbInput) reqCarbInput.value = reqCarb.toFixed(2);
-
-    // Disparar las funciones regulares para actualizar el porcentaje de adecuación en la tabla inferior
-    calcular();
+    actualizarRequerimientoMacronutrientes();
   }
 }
 
@@ -1222,7 +1445,7 @@ function generarPDF() {
   
   var opt = {
     margin:       [10, 10, 10, 10],
-    filename:     'Reporte_' + nombre.replace(/\s+/g, '_') + '.pdf',
+    filename:     obtenerNombreArchivoDescarga("pdf"),
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2 },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -1235,6 +1458,8 @@ function generarPDF() {
 
 // Limpiar el formulario cuando la página se recarga o se abre
 document.addEventListener('DOMContentLoaded', function() {
+  inicializarOrdenamientoSeleccionados();
+
   const nombre = document.getElementById('calc_nombre');
   const id = document.getElementById('calc_id');
   const fecha = document.getElementById('calc_fecha');
@@ -1246,12 +1471,17 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (nombre) nombre.value = '';
   if (id) id.value = '';
-  if (fecha) fecha.value = '';
+  if (fecha) fecha.value = obtenerFechaActualInput();
   if (peso) peso.value = '70';
   if (estatura) estatura.value = '170';
   if (edad) edad.value = '30';
   if (genero) genero.value = 'M';
   if (actividad) actividad.value = '1.55';
+
+  const macroProteina = document.getElementById('macro_proteina_porcentaje');
+  const macroGrasa = document.getElementById('macro_grasa_porcentaje');
+  if (macroProteina) macroProteina.value = '20';
+  if (macroGrasa) macroGrasa.value = '30';
 
   // Limpiar requerimientos de la tabla de totales (restablecer a 1 por defecto)
   const reqInputs = document.querySelectorAll('input[id$="_requerimiento"]');
@@ -1264,5 +1494,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (resDiv) resDiv.style.display = 'none';
   
   // Recalcular para blanquear porcentajes
-  calcular();
+  configurarEventosMacronutrientes();
+  actualizarRequerimientoMacronutrientes();
 });

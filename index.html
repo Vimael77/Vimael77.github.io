@@ -31,9 +31,13 @@
                 <button class="boton-personalizado" onclick="descargar()">Descargar Excel</button>          
                 <button class="boton-personalizado" style="background-color: #dc3545;" onclick="generarPDF()">Descargar PDF</button>          
               </div>
-              <div>
+              <div class="cargar-archivo">
                 <h6>CARGAR ARCHIVO PREVIO</h6>
-                <input type="file" id="file-input2">
+                <div class="archivo-control">
+                  <label for="file-input2" class="archivo-boton">Seleccionar archivo</label>
+                  <span id="file-input2-name" class="archivo-nombre">Sin archivos seleccionados</span>
+                  <input type="file" id="file-input2" class="archivo-input">
+                </div>
               </div>
             </div>
           </div>
@@ -103,6 +107,54 @@
                 </ul>
                 <p class="mb-0 mt-2 text-success" id="res_msg_success" style="font-weight: 500;">✓ Se ha autocompletado un promedio (<span id="res_promedio"></span> kcal) en el requerimiento de energía total abajo.</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row w-100 m-0 mb-4">
+          <div class="col-md-12">
+            <div class="macro-requerimiento-panel">
+              <div class="table-responsive">
+                <table class="table table-sm macro-requerimiento-tabla mb-0">
+                  <thead>
+                    <tr>
+                      <th>Macronutriente</th>
+                      <th>%</th>
+                      <th>Kcal</th>
+                      <th>Gramos Totales</th>
+                      <th>g/kg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Proteínas</td>
+                      <td>
+                        <input type="number" id="macro_proteina_porcentaje" class="form-control macro-porcentaje-input" min="0" max="100" step="0.1" value="20">
+                      </td>
+                      <td id="macro_proteina_kcal">0.00 kcal</td>
+                      <td id="macro_proteina_gramos" class="macro-gramos">0.00 g</td>
+                      <td id="macro_proteina_gkg">0.00 g/kg</td>
+                    </tr>
+                    <tr>
+                      <td>Grasas</td>
+                      <td>
+                        <input type="number" id="macro_grasa_porcentaje" class="form-control macro-porcentaje-input" min="0" max="100" step="0.1" value="30">
+                      </td>
+                      <td id="macro_grasa_kcal">0.00 kcal</td>
+                      <td id="macro_grasa_gramos" class="macro-gramos">0.00 g</td>
+                      <td id="macro_grasa_gkg">0.00 g/kg</td>
+                    </tr>
+                    <tr>
+                      <td>Carbohidratos</td>
+                      <td><span id="macro_carbohidratos_porcentaje">50.00%</span></td>
+                      <td id="macro_carbohidratos_kcal">0.00 kcal</td>
+                      <td id="macro_carbohidratos_gramos" class="macro-gramos">0.00 g</td>
+                      <td id="macro_carbohidratos_gkg">0.00 g/kg</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="macro_porcentaje_error" class="text-danger mt-2" style="display: none;">La suma de proteínas y grasas no debe superar 100%.</div>
             </div>
           </div>
         </div>
