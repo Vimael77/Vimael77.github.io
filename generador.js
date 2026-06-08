@@ -339,7 +339,7 @@ function guardarNuevaReceta() {
 }
 
 // Descargar el plan semanal como PDF
-function generarPDFSemanal() {
+function generarPDFSemanalTablaOriginal() {
     if (!planGeneradoGlobal) {
         alert("Genere un menú primero.");
         return;
@@ -396,4 +396,465 @@ function generarPDFSemanal() {
     html2pdf().set(opt).from(html).save().catch(err => {
         console.error("Error generando PDF semanal", err);
     });
+}
+
+// Version HTML previa. Se conserva como referencia, pero el boton usa la version jsPDF directa de abajo.
+function generarPDFSemanalHtmlAnterior() {
+    if (!planGeneradoGlobal) {
+        alert("Genere un menu primero.");
+        return;
+    }
+
+    const nombre = document.getElementById('calc_nombre').value || "Paciente";
+    const nombreSeguro = escaparHtml(nombre);
+    const dias = Object.keys(planGeneradoGlobal.plan);
+
+    let html = `
+        <div style="font-family: Arial, sans-serif; color: #222; font-size: 10.5px; line-height: 1.35;">
+            <style>
+                .pdf-header {
+                    text-align: center;
+                    margin: 0 0 10px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #4CAF50;
+                }
+                .pdf-header h1 {
+                    margin: 0;
+                    color: #4CAF50;
+                    font-size: 20px;
+                }
+                .pdf-day {
+                    margin: 0 0 10px;
+                }
+                .pdf-day-title {
+                    margin: 0;
+                    padding: 6px 8px;
+                    background: #cfe2ff;
+                    color: #111;
+                    border: 1px solid #8bbcff;
+                    font-size: 14px;
+                }
+                .pdf-meal {
+                    display: table;
+                    width: 100%;
+                    border-collapse: collapse;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+                .pdf-time,
+                .pdf-content {
+                    display: table-cell;
+                    border: 1px solid #cfd7e3;
+                    padding: 6px;
+                    vertical-align: top;
+                    overflow-wrap: anywhere;
+                }
+                .pdf-time {
+                    width: 21%;
+                    background: #f4f6f8;
+                    font-weight: bold;
+                }
+                .pdf-recipe {
+                    color: #0066ff;
+                    display: block;
+                    font-size: 12px;
+                    margin-bottom: 4px;
+                }
+                .pdf-items {
+                    margin: 0;
+                    padding-left: 14px;
+                }
+                .pdf-elab {
+                    margin-top: 5px;
+                    padding-top: 5px;
+                    border-top: 1px solid #e1e5ea;
+                    color: #444;
+                }
+            </style>
+            <div class="pdf-header">
+                <h1>Menu Semanal</h1>
+                <div>${nombreSeguro}</div>
+            </div>`;
+
+    dias.forEach(dia => {
+        html += `
+            <section class="pdf-day">
+                <h2 class="pdf-day-title">${escaparHtml(dia)}</h2>`;
+
+        planGeneradoGlobal.tiempos.forEach(t => {
+            const comida = planGeneradoGlobal.plan[dia][t];
+            html += `<div class="pdf-meal"><div class="pdf-time">${escaparHtml(t)}</div><div class="pdf-content">`;
+
+            if (!comida || !comida.items) {
+                html += `-`;
+            } else {
+                html += `<strong class="pdf-recipe">${escaparHtml(comida.nombre_receta)}</strong>
+                    <ul class="pdf-items">`;
+
+                comida.items.forEach(item => {
+                    html += `<li>${escaparHtml(item.nombre)} (${escaparHtml(item.gramos)}g)</li>`;
+                });
+
+                html += `</ul>`;
+                if (comida.elaboracion_receta) {
+                    html += `<div class="pdf-elab"><strong>Elaboracion:</strong> ${escaparHtml(comida.elaboracion_receta)}</div>`;
+                }
+            }
+
+            html += `</div></div>`;
+        });
+
+        html += `
+            </section>`;
+    });
+
+    html += `</div>`;
+
+    const nombreArchivo = 'Menu_Semanal_' + nombre.replace(/\s+/g, '_') + '.pdf';
+    const opt = {
+        margin:       [8, 8, 8, 8],
+        filename:     nombreArchivo,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.pdf-meal'] }
+    };
+
+    html2pdf().set(opt).from(html).save().catch(err => {
+        console.error("Error generando PDF semanal", err);
+    });
+}
+
+function generarPDFSemanal() {
+    if (!planGeneradoGlobal) {
+        alert("Genere un menu primero.");
+        return;
+    }
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : window.jsPDF;
+    if (!JsPDF) {
+        alert("No se pudo cargar jsPDF para generar el PDF semanal.");
+        return;
+    }
+
+    const nombre = document.getElementById('calc_nombre').value || "Paciente";
+    const nombreArchivo = 'Menu_Semanal_' + nombre.replace(/\s+/g, '_') + '.pdf';
+    const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const usableWidth = pageWidth - (margin * 2);
+    const timeWidth = 34;
+    const contentWidth = usableWidth - timeWidth;
+    const lineHeight = 4.2;
+    const padding = 3;
+    let y = margin;
+
+    function limpiarTextoPdf(valor) {
+        return String(valor || "")
+            .replace(/<[^>]*>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function agregarPagina() {
+        doc.addPage();
+        y = margin;
+    }
+
+    function asegurarEspacio(alto) {
+        if (y + alto > pageHeight - margin) {
+            agregarPagina();
+        }
+    }
+
+    function escribirEncabezado() {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(76, 175, 80);
+        doc.text('Menu Semanal', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(70, 70, 70);
+        doc.text(limpiarTextoPdf(nombre), pageWidth / 2, y, { align: 'center' });
+        y += 6;
+
+        doc.setDrawColor(76, 175, 80);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 7;
+    }
+
+    function escribirTituloDia(dia) {
+        asegurarEspacio(12);
+        doc.setFillColor(207, 226, 255);
+        doc.setDrawColor(139, 188, 255);
+        doc.rect(margin, y, usableWidth, 8, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(20, 20, 20);
+        doc.text(limpiarTextoPdf(dia), margin + 3, y + 5.5);
+        y += 10;
+    }
+
+    function prepararLineasComida(comida) {
+        const lineas = [];
+        if (!comida || !comida.items) {
+            lineas.push({ texto: "-", estilo: "normal", color: [30, 30, 30] });
+            return lineas;
+        }
+
+        const receta = limpiarTextoPdf(comida.nombre_receta);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.splitTextToSize(receta, contentWidth - (padding * 2)).forEach(linea => {
+            lineas.push({ texto: linea, estilo: "bold", color: [0, 102, 255] });
+        });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        comida.items.forEach(item => {
+            const itemTexto = `- ${limpiarTextoPdf(item.nombre)} (${limpiarTextoPdf(item.gramos)}g)`;
+            doc.splitTextToSize(itemTexto, contentWidth - (padding * 2)).forEach(linea => {
+                lineas.push({ texto: linea, estilo: "normal", color: [30, 30, 30] });
+            });
+        });
+
+        if (comida.elaboracion_receta) {
+            lineas.push({ texto: "", estilo: "normal", color: [30, 30, 30] });
+            const elaboracion = `Elaboracion: ${limpiarTextoPdf(comida.elaboracion_receta)}`;
+            doc.splitTextToSize(elaboracion, contentWidth - (padding * 2)).forEach(linea => {
+                lineas.push({ texto: linea, estilo: "normal", color: [70, 70, 70] });
+            });
+        }
+
+        return lineas;
+    }
+
+    function escribirComida(tiempo, comida) {
+        const lineas = prepararLineasComida(comida);
+        const altoContenido = Math.max(12, (lineas.length * lineHeight) + (padding * 2));
+        const altoDisponible = pageHeight - margin - y;
+        if (altoContenido > altoDisponible && altoContenido < pageHeight - (margin * 2)) {
+            agregarPagina();
+        }
+
+        const bloqueY = y;
+        doc.setDrawColor(207, 215, 227);
+        doc.setFillColor(244, 246, 248);
+        doc.rect(margin, bloqueY, timeWidth, altoContenido, 'FD');
+        doc.rect(margin + timeWidth, bloqueY, contentWidth, altoContenido);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(30, 30, 30);
+        const tiempoLineas = doc.splitTextToSize(limpiarTextoPdf(tiempo), timeWidth - (padding * 2));
+        doc.text(tiempoLineas, margin + padding, bloqueY + padding + 3);
+
+        let textoY = bloqueY + padding + 3;
+        lineas.forEach(linea => {
+            doc.setFont('helvetica', linea.estilo);
+            doc.setFontSize(linea.estilo === "bold" ? 10 : 9);
+            doc.setTextColor(linea.color[0], linea.color[1], linea.color[2]);
+            if (linea.texto) {
+                doc.text(linea.texto, margin + timeWidth + padding, textoY);
+            }
+            textoY += lineHeight;
+        });
+
+        y += altoContenido;
+    }
+
+    escribirEncabezado();
+
+    Object.keys(planGeneradoGlobal.plan).forEach((dia, indexDia) => {
+        if (indexDia > 0) {
+            y += 3;
+        }
+        escribirTituloDia(dia);
+
+        planGeneradoGlobal.tiempos.forEach(tiempo => {
+            escribirComida(tiempo, planGeneradoGlobal.plan[dia][tiempo]);
+        });
+    });
+
+    doc.save(nombreArchivo);
+}
+
+function generarPDFSemanalHorizontal() {
+    if (!planGeneradoGlobal) {
+        alert("Genere un menu primero.");
+        return;
+    }
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : window.jsPDF;
+    if (!JsPDF) {
+        alert("No se pudo cargar jsPDF para generar el PDF semanal.");
+        return;
+    }
+
+    const nombre = document.getElementById('calc_nombre').value || "Paciente";
+    const nombreArchivo = 'Menu_Semanal_Horizontal_' + nombre.replace(/\s+/g, '_') + '.pdf';
+    const doc = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 6;
+    const usableWidth = pageWidth - (margin * 2);
+    const timeWidth = 24;
+    const dayWidth = (usableWidth - timeWidth) / 7;
+    const padding = 1.8;
+    const lineHeight = 2.55;
+    const headerHeight = 9;
+    const rowMinHeight = 16;
+    let y = margin;
+
+    function limpiarTextoPdf(valor) {
+        return String(valor || "")
+            .replace(/<[^>]*>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function escribirTitulo() {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(76, 175, 80);
+        doc.text('Menu Semanal', pageWidth / 2, y, { align: 'center' });
+        y += 5.5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(70, 70, 70);
+        doc.text(limpiarTextoPdf(nombre), pageWidth / 2, y, { align: 'center' });
+        y += 5;
+
+        doc.setDrawColor(76, 175, 80);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 7;
+    }
+
+    function escribirEncabezadoTabla(dias) {
+        let x = margin;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+
+        doc.setFillColor(207, 226, 255);
+        doc.setDrawColor(139, 188, 255);
+        doc.rect(x, y, timeWidth, headerHeight, 'F');
+        doc.rect(x, y, timeWidth, headerHeight, 'S');
+        doc.setTextColor(20, 20, 20);
+        doc.text('Tiempo', x + timeWidth / 2, y + 5.8, { align: 'center' });
+        x += timeWidth;
+
+        dias.forEach(dia => {
+            doc.setFillColor(207, 226, 255);
+            doc.setDrawColor(139, 188, 255);
+            doc.rect(x, y, dayWidth, headerHeight, 'F');
+            doc.rect(x, y, dayWidth, headerHeight, 'S');
+            doc.setTextColor(20, 20, 20);
+            doc.text(limpiarTextoPdf(dia), x + dayWidth / 2, y + 5.8, { align: 'center' });
+            x += dayWidth;
+        });
+
+        y += headerHeight;
+    }
+
+    function nuevaPagina(dias) {
+        doc.addPage('a4', 'landscape');
+        y = margin;
+        escribirTitulo();
+        escribirEncabezadoTabla(dias);
+    }
+
+    function construirLineasCelda(comida) {
+        const lineas = [];
+        const anchoTexto = dayWidth - (padding * 2);
+
+        if (!comida || !comida.items) {
+            lineas.push({ texto: '-', estilo: 'normal', color: [30, 30, 30], size: 5.2 });
+            return lineas;
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.8);
+        doc.splitTextToSize(limpiarTextoPdf(comida.nombre_receta), anchoTexto).forEach(linea => {
+            lineas.push({ texto: linea, estilo: 'bold', color: [0, 102, 255], size: 5.8 });
+        });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.2);
+        comida.items.forEach(item => {
+            const texto = `- ${limpiarTextoPdf(item.nombre)} (${limpiarTextoPdf(item.gramos)}g)`;
+            doc.splitTextToSize(texto, anchoTexto).forEach(linea => {
+                lineas.push({ texto: linea, estilo: 'normal', color: [30, 30, 30], size: 5.2 });
+            });
+        });
+
+        return lineas;
+    }
+
+    function dibujarLineasCelda(lineas, x, yInicio, altoFila) {
+        let textoY = yInicio + padding + 2.6;
+        const limiteY = yInicio + altoFila - padding;
+
+        for (let i = 0; i < lineas.length; i++) {
+            if (textoY > limiteY) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(5.2);
+                doc.setTextColor(80, 80, 80);
+                doc.text('...', x + padding, limiteY);
+                break;
+            }
+
+            const linea = lineas[i];
+            doc.setFont('helvetica', linea.estilo);
+            doc.setFontSize(linea.size);
+            doc.setTextColor(linea.color[0], linea.color[1], linea.color[2]);
+            doc.text(linea.texto, x + padding, textoY);
+            textoY += lineHeight;
+        }
+    }
+
+    function dibujarFila(tiempo, dias) {
+        const lineasPorDia = dias.map(dia => construirLineasCelda(planGeneradoGlobal.plan[dia][tiempo]));
+        const maxLineas = Math.max(...lineasPorDia.map(lineas => lineas.length), 1);
+        let altoFila = Math.max(rowMinHeight, (maxLineas * lineHeight) + (padding * 2) + 2);
+        const altoMaximoFila = pageHeight - margin - y;
+
+        if (altoFila > altoMaximoFila && y > margin + 20) {
+            nuevaPagina(dias);
+        }
+
+        altoFila = Math.min(altoFila, pageHeight - margin - y);
+        const yFila = y;
+        let x = margin;
+
+        doc.setDrawColor(207, 215, 227);
+        doc.setFillColor(244, 246, 248);
+        doc.rect(x, yFila, timeWidth, altoFila, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(30, 30, 30);
+        doc.text(doc.splitTextToSize(limpiarTextoPdf(tiempo), timeWidth - (padding * 2)), x + padding, yFila + padding + 3);
+        x += timeWidth;
+
+        lineasPorDia.forEach(lineas => {
+            doc.rect(x, yFila, dayWidth, altoFila);
+            dibujarLineasCelda(lineas, x, yFila, altoFila);
+            x += dayWidth;
+        });
+
+        y += altoFila;
+    }
+
+    const dias = Object.keys(planGeneradoGlobal.plan);
+    escribirTitulo();
+    escribirEncabezadoTabla(dias);
+
+    planGeneradoGlobal.tiempos.forEach(tiempo => {
+        dibujarFila(tiempo, dias);
+    });
+
+    doc.save(nombreArchivo);
 }

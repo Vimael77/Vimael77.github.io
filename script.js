@@ -1313,7 +1313,7 @@ function generarPDF() {
   };
 
   let html = `
-    <div style="padding: 40px; background-color: #ffffff; font-family: Arial, sans-serif; color: #333;">
+    <div style="padding: 24px; background-color: #ffffff; font-family: Arial, sans-serif; color: #333;">
       <div style="text-align: center; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-bottom: 20px;">
         <h1 style="color: #4CAF50; margin: 0;">Reporte Nutricional</h1>
         <p style="margin: 5px 0; color: #777;">Plan de Alimentación y Requerimientos</p>
@@ -1400,9 +1400,9 @@ function generarPDF() {
   for (let t of tiempos) {
     if (itemsPorTiempo[t].length > 0) {
       html += `
-        <div style="margin-bottom: 15px;">
+        <div class="pdf-meal-section" style="margin-bottom: 15px; page-break-inside: avoid; break-inside: avoid;">
           <h5 style="background-color: #f1f1f1; padding: 5px; margin: 0; color: #333;">${t}</h5>
-          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
             <thead>
               <tr style="border-bottom: 1px solid #ddd;">
                 <th style="text-align: left; padding: 4px;">Alimento</th>
@@ -1448,7 +1448,8 @@ function generarPDF() {
     filename:     obtenerNombreArchivoDescarga("pdf"),
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2 },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['css', 'legacy'], avoid: ['.pdf-meal-section'] }
   };
 
   html2pdf().set(opt).from(html).save().catch(err => {
