@@ -4,6 +4,23 @@
     /* Centrado horizontal */
     align-items: center;
     /* Centrado vertical */
+    text-align: center;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+img,
+input,
+select,
+textarea,
+button {
+    max-width: 100%;
 }
 
 .table-hover tbody tr:hover {
@@ -33,11 +50,11 @@ table td {
 }
 
 .ancho-alimento {
-    width: 500px;
+    width: 320px;
 }
 
 .ancho-celda {
-    width: 90px;
+    width: 86px;
 }
 
 #lista thead th,
@@ -56,7 +73,7 @@ table td {
 }
 
 .macro-requerimiento-tabla {
-    min-width: 760px;
+    min-width: 620px;
     table-layout: fixed;
 }
 
@@ -66,7 +83,8 @@ table td {
 }
 
 .macro-porcentaje-input {
-    max-width: 90px;
+    width: 84px;
+    max-width: 100%;
 }
 
 .macro-gramos {
@@ -79,6 +97,7 @@ table td {
     height: 500px;
     overflow: auto;
     border: 1px solid #ccc;
+    -webkit-overflow-scrolling: touch;
 }
 
 .scrollable-div::-webkit-scrollbar {
@@ -102,6 +121,16 @@ table td {
     overflow: auto;
     border: 1px solid #ccc;
     padding: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-div-totales table {
+    min-width: 2100px;
+    table-layout: fixed;
+}
+
+.scrollable-div-totales input[type="number"] {
+    width: 86px !important;
 }
 
 .scrollable-div-totales::-webkit-scrollbar {
@@ -121,10 +150,32 @@ table td {
 
 
 .custom-width-table {
-    width: 1500px;
+    width: 2040px;
     /* Establece el ancho deseado para la tabla */
     table-layout: fixed;
     /* Fuerza la distribución de columnas según el ancho definido */
+}
+
+#lista td,
+#valores td,
+.scrollable-div-totales td,
+#tabla_semanal td,
+#tabla_semanal th,
+.list-group-item,
+.receta-box {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+#lista td,
+#valores td,
+.scrollable-div-totales td {
+    vertical-align: middle;
+}
+
+#lista td:first-child,
+#valores td:first-child {
+    white-space: normal;
 }
 
 .table-hover tbody tr:hover .column-highlight {
@@ -287,7 +338,12 @@ body {
 }
 
 .receta-box {
-    min-width: 220px;
+    min-width: 190px;
+}
+
+#tabla_semanal {
+    min-width: 1320px;
+    table-layout: fixed;
 }
 
 .receta-elaboracion {
@@ -302,4 +358,255 @@ body {
 
 .receta-elaboracion strong {
     color: #212529;
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    #home .card .row > [class*="col-md-"],
+    #generador .card .row > [class*="col-md-"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .container-fluid {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    #home > div[style*="padding-left"],
+    #home > .row > .col-md-12 > div[style*="padding-left"],
+    #generador > div[style*="padding"] {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+    }
+
+    .macro-requerimiento-panel {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    body {
+        padding-bottom: 18vh;
+    }
+
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .nav-tabs {
+        flex-wrap: wrap;
+    }
+
+    .nav-tabs .nav-link {
+        padding: 8px 10px;
+        font-size: 0.92rem;
+        white-space: normal;
+    }
+
+    h3 {
+        font-size: 1.25rem;
+        line-height: 1.25;
+    }
+
+    h4,
+    h5 {
+        line-height: 1.25;
+    }
+
+    #home > div[style*="padding-left"],
+    #home > .row > .col-md-12 > div[style*="padding-left"],
+    #generador > div[style*="padding"] {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    .encabezado-fijo {
+        padding: 8px;
+    }
+
+    .contenedor-flex {
+        gap: 12px;
+    }
+
+    .contenedor-flex > div:first-child {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .boton-personalizado {
+        width: 100%;
+        min-height: 44px;
+        margin: 0;
+        padding: 9px 10px;
+        font-size: 0.95rem;
+    }
+
+    .cargar-archivo {
+        width: 100%;
+    }
+
+    .archivo-control {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .archivo-boton {
+        text-align: center;
+    }
+
+    .card {
+        border-radius: 6px;
+    }
+
+    .form-label,
+    label {
+        margin-bottom: 4px;
+    }
+
+    #calc_genero,
+    #calc_actividad,
+    #gen_comidas,
+    #gen_entrenamiento,
+    .form-control,
+    .form-select,
+    .btn {
+        min-height: 42px;
+    }
+
+    #busqueda,
+    #filtros-nutrientes {
+        max-width: 100% !important;
+    }
+
+    #filtros-nutrientes {
+        gap: 4px;
+    }
+
+    .btn-filtro {
+        margin: 2px !important;
+        white-space: normal;
+    }
+
+    .macro-requerimiento-panel {
+        padding: 0 8px 8px;
+    }
+
+    .macro-requerimiento-tabla {
+        min-width: 560px;
+        font-size: 0.9rem;
+    }
+
+    .macro-requerimiento-tabla th,
+    .macro-requerimiento-tabla td {
+        padding: 7px 6px;
+    }
+
+    .macro-porcentaje-input {
+        width: 76px;
+    }
+
+    .scrollable-div {
+        height: 58vh;
+    }
+
+    .custom-width-table {
+        width: 1740px;
+    }
+
+    .ancho-alimento {
+        width: 260px;
+    }
+
+    .ancho-celda {
+        width: 82px;
+    }
+
+    #lista th,
+    #valores th,
+    #lista td,
+    #valores td,
+    .scrollable-div-totales th,
+    .scrollable-div-totales td {
+        padding: 6px 5px;
+        font-size: 0.82rem;
+        line-height: 1.2;
+    }
+
+    .scrollable-div-totales {
+        padding: 6px;
+    }
+
+    .scrollable-div-totales table {
+        min-width: 1880px;
+    }
+
+    .scrollable-div-totales input[type="number"] {
+        width: 78px !important;
+        min-height: 34px;
+        padding: 4px;
+    }
+
+    #tabla_semanal {
+        min-width: 1050px;
+        font-size: 0.82rem;
+    }
+
+    .receta-box {
+        min-width: 150px;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+    }
+
+    .modal-body {
+        padding: 12px;
+    }
+
+    .modal-footer {
+        gap: 8px;
+    }
+
+    .modal-footer .btn {
+        flex: 1 1 140px;
+    }
+
+    #ingredientes_seleccionados_lista .list-group-item {
+        align-items: flex-start !important;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 380px) {
+    .container-fluid {
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .macro-requerimiento-tabla {
+        min-width: 520px;
+        font-size: 0.84rem;
+    }
+
+    .custom-width-table {
+        width: 1660px;
+    }
+
+    .ancho-alimento {
+        width: 230px;
+    }
+
+    .ancho-celda {
+        width: 79px;
+    }
+
+    .scrollable-div-totales table {
+        min-width: 1800px;
+    }
 }
