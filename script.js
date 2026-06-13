@@ -1,4 +1,3 @@
-// leer el archivo CSV de alimentos
 const alimentos = [];
 var alimentos_seleccionados = [];
 var alimentos_seleccionados_en_orden = {};
@@ -10,6 +9,59 @@ const baseGramos = 100;
 let contadorFila = 0;
 let contadorAlimento = 0;
 let alimentoPendiente = null;
+let pesoIdealEditadoManualmente = false;
+let pesoIdealStorageScope = "anonimo";
+let pesoIdealSesionActiva = null;
+let pesoIdealGuardadoRemotoTimer = 0;
+let medidasAntropometricasGuardadoRemotoTimer = 0;
+let columnasAlimentosGuardadoRemotoTimer = 0;
+const PESO_IDEAL_STORAGE_PREFIX = "muyAlimentado:pesoIdeal";
+const MEDIDAS_ANTROPOMETRICAS_STORAGE_PREFIX = "muyAlimentado:medidasAntropometricas";
+const COLUMNAS_ALIMENTOS_STORAGE_PREFIX = "muyAlimentado:columnasAlimentosVisibles";
+const MEDIDAS_ANTROPOMETRICAS_CAMPOS = [
+  { id: "medida_brazo_izquierdo", key: "brazo_izquierdo" },
+  { id: "medida_brazo_derecho", key: "brazo_derecho" },
+  { id: "medida_abdomen", key: "abdomen" },
+  { id: "medida_abdomen_bajo", key: "abdomen_bajo" },
+  { id: "medida_muslo_izquierdo", key: "muslo_izquierdo" },
+  { id: "medida_muslo_derecho", key: "muslo_derecho" },
+  { id: "medida_pantorrilla_izquierda", key: "pantorrilla_izquierda" },
+  { id: "medida_pantorrilla_derecha", key: "pantorrilla_derecha" }
+];
+const COLUMNAS_NUTRIENTES_ALIMENTOS = [
+  { key: "energia_calculada", label: "Energía calculada", fija: true },
+  { key: "proteina", label: "Proteína", fija: true },
+  { key: "grasa_total", label: "Grasa total", fija: true },
+  { key: "carbohidratos", label: "Carbohidratos", fija: true },
+  { key: "fibra", label: "Fibra" },
+  { key: "ags", label: "AGS" },
+  { key: "agm", label: "AGM" },
+  { key: "agpi", label: "AGPI" },
+  { key: "colesterol", label: "Colesterol" },
+  { key: "calcio", label: "Calcio" },
+  { key: "fosforo", label: "Fósforo" },
+  { key: "hierro", label: "Hierro" },
+  { key: "potasio", label: "Potasio" },
+  { key: "sodio", label: "Sodio" },
+  { key: "zinc", label: "Zinc" },
+  { key: "vitamina_c", label: "Vitamina C" },
+  { key: "vitamina_a", label: "Vitamina A" },
+  { key: "folatos", label: "Folatos" },
+  { key: "vitamina_b12", label: "Vitamina B12" }
+];
+const COLUMNAS_ALIMENTOS_OPCIONALES = COLUMNAS_NUTRIENTES_ALIMENTOS.filter(function (columna) {
+  return !columna.fija;
+});
+const COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES = [
+  "fibra",
+  "colesterol",
+  "calcio",
+  "fosforo",
+  "hierro",
+  "potasio",
+  "sodio"
+];
+let columnasAlimentosVisibles = new Set(COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES);
 window.alimentos_subtotales = {};
 const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
 
@@ -34,6 +86,617 @@ function obtenerValorNumerico(id) {
 function actualizarTextoMacro(id, valor, unidad) {
   const elemento = document.getElementById(id);
   if (elemento) elemento.textContent = `${valor.toFixed(2)} ${unidad}`;
+}
+
+function obtenerPesoIdealMacronutrientes() {
+  const pesoIdeal = obtenerValorNumerico('macro_peso_ideal');
+  return pesoIdeal > 0 ? Math.trunc(pesoIdeal) : 0;
+}
+
+function sincronizarPesoIdealConPesoActual(forzar = false) {
+  const pesoInput = document.getElementById('calc_peso');
+  const pesoIdealInput = document.getElementById('macro_peso_ideal');
+  if (!pesoInput || !pesoIdealInput || (!forzar && pesoIdealEditadoManualmente)) return;
+
+  const peso = obtenerValorNumerico('calc_peso');
+  if (peso > 0) {
+    pesoIdealInput.value = String(Math.round(peso));
+    guardarPesoIdealPersistido();
+  }
+}
+
+function normalizarInputPesoIdeal() {
+  const pesoIdealInput = document.getElementById('macro_peso_ideal');
+  if (!pesoIdealInput) return;
+
+  const valor = pesoIdealInput.value.trim();
+  if (!valor) return;
+
+  const numero = Number(valor);
+  if (Number.isFinite(numero)) {
+    const entero = Math.trunc(Math.abs(numero));
+    pesoIdealInput.value = entero > 0 ? String(entero) : "";
+    return;
+  }
+
+  const digitos = valor.match(/\d+/);
+  pesoIdealInput.value = digitos ? digitos[0] : "";
+}
+
+function establecerPesoIdealManual(valor) {
+  const pesoIdealInput = document.getElementById("macro_peso_ideal");
+  if (!pesoIdealInput) return;
+
+  pesoIdealInput.value = valor == null ? "" : String(valor);
+  normalizarInputPesoIdeal();
+  pesoIdealEditadoManualmente = Boolean(pesoIdealInput.value);
+  if (!pesoIdealEditadoManualmente) {
+    sincronizarPesoIdealConPesoActual(true);
+  }
+  guardarPesoIdealPersistido();
+  programarGuardarPesoIdealSupabase();
+}
+
+function obtenerClaveMedidasAntropometricasPersistidas() {
+  return `${MEDIDAS_ANTROPOMETRICAS_STORAGE_PREFIX}:${pesoIdealStorageScope}`;
+}
+
+function normalizarNumeroMedidaAntropometrica(valor) {
+  const numero = Number(String(valor || "").replace(",", "."));
+  if (!Number.isFinite(numero) || numero <= 0) return null;
+  return Number(numero.toFixed(1));
+}
+
+function formatearMedidaAntropometrica(valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero <= 0) return "";
+  return Number.isInteger(numero) ? String(numero) : String(Number(numero.toFixed(1)));
+}
+
+function obtenerMedidasAntropometricas() {
+  const medidas = {};
+
+  MEDIDAS_ANTROPOMETRICAS_CAMPOS.forEach(function (campo) {
+    const elemento = document.getElementById(campo.id);
+    medidas[campo.key] = elemento ? normalizarNumeroMedidaAntropometrica(elemento.value) : null;
+  });
+
+  const observaciones = document.getElementById("medidas_observaciones");
+  medidas.observaciones = observaciones ? observaciones.value.trim() : "";
+
+  return medidas;
+}
+
+function medidasAntropometricasTieneContenido(medidas) {
+  if (!medidas || typeof medidas !== "object") return false;
+
+  const tieneMedidas = MEDIDAS_ANTROPOMETRICAS_CAMPOS.some(function (campo) {
+    return normalizarNumeroMedidaAntropometrica(medidas[campo.key]) !== null;
+  });
+
+  return tieneMedidas || Boolean(String(medidas.observaciones || "").trim());
+}
+
+function aplicarMedidasAntropometricas(medidas) {
+  const datos = medidas && typeof medidas === "object" ? medidas : {};
+
+  MEDIDAS_ANTROPOMETRICAS_CAMPOS.forEach(function (campo) {
+    const elemento = document.getElementById(campo.id);
+    if (elemento) elemento.value = formatearMedidaAntropometrica(datos[campo.key]);
+  });
+
+  const observaciones = document.getElementById("medidas_observaciones");
+  if (observaciones) observaciones.value = String(datos.observaciones || "");
+}
+
+function guardarMedidasAntropometricasPersistidas() {
+  try {
+    if (!window.localStorage) return;
+
+    const medidas = obtenerMedidasAntropometricas();
+    const clave = obtenerClaveMedidasAntropometricasPersistidas();
+
+    if (medidasAntropometricasTieneContenido(medidas)) {
+      window.localStorage.setItem(clave, JSON.stringify(medidas));
+    } else {
+      window.localStorage.removeItem(clave);
+    }
+  } catch (error) {
+    // Las medidas deben seguir disponibles aunque el navegador bloquee localStorage.
+  }
+}
+
+function cargarMedidasAntropometricasPersistidas() {
+  try {
+    if (!window.localStorage) return false;
+
+    const valor = window.localStorage.getItem(obtenerClaveMedidasAntropometricasPersistidas());
+    if (!valor) return false;
+
+    const medidas = JSON.parse(valor);
+    if (!medidas || typeof medidas !== "object") return false;
+
+    aplicarMedidasAntropometricas(medidas);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function restaurarMedidasAntropometricasOLimpiar() {
+  if (cargarMedidasAntropometricasPersistidas()) return true;
+
+  aplicarMedidasAntropometricas({});
+  return false;
+}
+
+function setMedidasAntropometricasEstado(mensaje, tipo) {
+  const estado = document.getElementById("medidas_antropometricas_estado");
+  if (!estado) return;
+
+  estado.textContent = mensaje || "";
+  estado.className = `ideal-save-status ${tipo || ""}`.trim();
+}
+
+function programarGuardarMedidasAntropometricasSupabase() {
+  guardarMedidasAntropometricasPersistidas();
+  setMedidasAntropometricasEstado("");
+
+  if (medidasAntropometricasGuardadoRemotoTimer) {
+    clearTimeout(medidasAntropometricasGuardadoRemotoTimer);
+  }
+
+  medidasAntropometricasGuardadoRemotoTimer = setTimeout(guardarMedidasAntropometricasSupabase, 600);
+}
+
+async function guardarMedidasAntropometricasSupabase() {
+  medidasAntropometricasGuardadoRemotoTimer = 0;
+
+  const client = window.supabaseClient;
+  const userId = pesoIdealSesionActiva && pesoIdealSesionActiva.user
+    ? pesoIdealSesionActiva.user.id
+    : "";
+  if (!client || !userId) return;
+
+  const { error } = await client
+    .from("profiles")
+    .upsert({
+      user_id: userId,
+      medidas_antropometricas: obtenerMedidasAntropometricas()
+    }, { onConflict: "user_id" });
+
+  if (error) {
+    console.warn("No se pudieron guardar las medidas antropometricas en Supabase.", error.message);
+    setMedidasAntropometricasEstado("No se pudieron guardar las medidas en Supabase.", "error");
+  }
+}
+
+async function cargarMedidasAntropometricasSupabase(session) {
+  const client = window.supabaseClient;
+  if (!client || !session || !session.user) return false;
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("medidas_antropometricas")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("No se pudieron cargar las medidas antropometricas desde Supabase.", error.message);
+    return false;
+  }
+
+  if (!data) {
+    return false;
+  }
+
+  const medidas = data.medidas_antropometricas && typeof data.medidas_antropometricas === "object"
+    ? data.medidas_antropometricas
+    : {};
+
+  aplicarMedidasAntropometricas(medidas);
+  guardarMedidasAntropometricasPersistidas();
+  setMedidasAntropometricasEstado("");
+  return true;
+}
+
+function obtenerColumnasNutrientesKeys() {
+  return COLUMNAS_NUTRIENTES_ALIMENTOS.map(function (columna) {
+    return columna.key;
+  });
+}
+
+function obtenerColumnasAlimentosVisiblesArray() {
+  return COLUMNAS_ALIMENTOS_OPCIONALES
+    .map(function (columna) { return columna.key; })
+    .filter(function (key) { return columnasAlimentosVisibles.has(key); });
+}
+
+function normalizarColumnasAlimentosVisibles(valor) {
+  const permitidas = new Set(COLUMNAS_ALIMENTOS_OPCIONALES.map(function (columna) {
+    return columna.key;
+  }));
+  const origen = Array.isArray(valor) ? valor : [];
+  const columnas = origen.filter(function (key) {
+    return permitidas.has(key);
+  });
+
+  return new Set(columnas);
+}
+
+function usarColumnasAlimentosPredeterminadas() {
+  columnasAlimentosVisibles = new Set(COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES);
+}
+
+function obtenerClaveColumnasAlimentosPersistidas() {
+  return `${COLUMNAS_ALIMENTOS_STORAGE_PREFIX}:${pesoIdealStorageScope}`;
+}
+
+function guardarColumnasAlimentosPersistidas() {
+  try {
+    if (!window.localStorage) return;
+    window.localStorage.setItem(
+      obtenerClaveColumnasAlimentosPersistidas(),
+      JSON.stringify(obtenerColumnasAlimentosVisiblesArray())
+    );
+  } catch (error) {
+    // La vista debe seguir funcionando aunque el navegador bloquee localStorage.
+  }
+}
+
+function cargarColumnasAlimentosPersistidas() {
+  try {
+    if (!window.localStorage) return false;
+
+    const valor = window.localStorage.getItem(obtenerClaveColumnasAlimentosPersistidas());
+    if (!valor) return false;
+
+    const columnas = JSON.parse(valor);
+    columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(columnas);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function restaurarColumnasAlimentosOPredeterminadas() {
+  if (cargarColumnasAlimentosPersistidas()) return true;
+  usarColumnasAlimentosPredeterminadas();
+  guardarColumnasAlimentosPersistidas();
+  return false;
+}
+
+function setConfigColumnasMensaje(mensaje, tipo) {
+  const elemento = document.getElementById("config_columnas_mensaje");
+  if (!elemento) return;
+
+  elemento.textContent = mensaje || "";
+  elemento.className = `config-message ${tipo || ""}`.trim();
+}
+
+function esColumnaAlimentosVisible(key) {
+  if (key === "nombre" || key === "gramos" || key === "etiqueta") return true;
+
+  const columna = COLUMNAS_NUTRIENTES_ALIMENTOS.find(function (item) {
+    return item.key === key;
+  });
+
+  if (!columna) return true;
+  return columna.fija || columnasAlimentosVisibles.has(key);
+}
+
+function aplicarAtributosColumnasTabla(tabla, columnas) {
+  if (!tabla) return;
+
+  const aplicar = function (celdas) {
+    Array.from(celdas).forEach(function (celda, index) {
+      if (celda.colSpan > 1) return;
+      const columna = columnas[index];
+      if (columna) celda.dataset.foodCol = columna;
+    });
+  };
+
+  aplicar(tabla.querySelectorAll("thead > th"));
+  tabla.querySelectorAll("tr").forEach(function (fila) {
+    aplicar(fila.children);
+  });
+}
+
+function contarColumnasVisiblesSeleccionados() {
+  const nutrientesVisibles = COLUMNAS_NUTRIENTES_ALIMENTOS.filter(function (columna) {
+    return esColumnaAlimentosVisible(columna.key);
+  }).length;
+  return 2 + nutrientesVisibles;
+}
+
+function actualizarAnchosTablasAlimentos() {
+  const nutrientesVisibles = COLUMNAS_NUTRIENTES_ALIMENTOS.filter(function (columna) {
+    return esColumnaAlimentosVisible(columna.key);
+  }).length;
+  const lista = document.getElementById("lista");
+  const valores = document.getElementById("valores");
+  const totales = document.querySelector(".scrollable-div-totales table");
+  const listaTieneGramos = lista && lista.querySelectorAll("thead th").length === (2 + COLUMNAS_NUTRIENTES_ALIMENTOS.length);
+
+  if (lista) lista.style.width = `${320 + (listaTieneGramos ? 86 : 0) + (nutrientesVisibles * 86)}px`;
+  if (valores) valores.style.width = `${320 + 86 + (nutrientesVisibles * 86)}px`;
+  if (totales) totales.style.minWidth = `${300 + (nutrientesVisibles * 100)}px`;
+}
+
+function aplicarVisibilidadColumnasAlimentos() {
+  const columnasSeleccionados = ["nombre", "gramos"].concat(obtenerColumnasNutrientesKeys());
+  const lista = document.getElementById("lista");
+  const listaTieneGramos = lista && lista.querySelectorAll("thead th").length === columnasSeleccionados.length;
+  const columnasLista = listaTieneGramos
+    ? columnasSeleccionados
+    : ["nombre"].concat(obtenerColumnasNutrientesKeys());
+  const columnasTotales = ["etiqueta"].concat(obtenerColumnasNutrientesKeys());
+
+  aplicarAtributosColumnasTabla(lista, columnasLista);
+  aplicarAtributosColumnasTabla(document.getElementById("valores"), columnasSeleccionados);
+  aplicarAtributosColumnasTabla(document.querySelector(".scrollable-div-totales table"), columnasTotales);
+
+  document.querySelectorAll("[data-food-col]").forEach(function (elemento) {
+    elemento.classList.toggle("food-column-hidden", !esColumnaAlimentosVisible(elemento.dataset.foodCol));
+  });
+
+  document.querySelectorAll("#valores tr.table-info td[colspan]").forEach(function (celda) {
+    celda.colSpan = contarColumnasVisiblesSeleccionados();
+  });
+
+  actualizarAnchosTablasAlimentos();
+  sincronizarConfigColumnasUI();
+}
+
+function renderizarConfiguracionColumnasAlimentos() {
+  const contenedor = document.getElementById("config_columnas_alimentos");
+  if (!contenedor || contenedor.dataset.rendered === "1") return;
+
+  COLUMNAS_ALIMENTOS_OPCIONALES.forEach(function (columna) {
+    const label = document.createElement("label");
+    label.className = "config-column-option";
+    label.setAttribute("for", `config_columna_${columna.key}`);
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.id = `config_columna_${columna.key}`;
+    input.value = columna.key;
+    input.addEventListener("change", function () {
+      if (input.checked) {
+        columnasAlimentosVisibles.add(columna.key);
+      } else {
+        columnasAlimentosVisibles.delete(columna.key);
+      }
+
+      guardarColumnasAlimentosPersistidas();
+      aplicarVisibilidadColumnasAlimentos();
+      programarGuardarColumnasAlimentosSupabase();
+    });
+
+    const texto = document.createElement("span");
+    texto.textContent = columna.label;
+
+    label.appendChild(input);
+    label.appendChild(texto);
+    contenedor.appendChild(label);
+  });
+
+  contenedor.dataset.rendered = "1";
+}
+
+function sincronizarConfigColumnasUI() {
+  renderizarConfiguracionColumnasAlimentos();
+  COLUMNAS_ALIMENTOS_OPCIONALES.forEach(function (columna) {
+    const input = document.getElementById(`config_columna_${columna.key}`);
+    if (input) input.checked = columnasAlimentosVisibles.has(columna.key);
+  });
+}
+
+function programarGuardarColumnasAlimentosSupabase() {
+  setConfigColumnasMensaje("");
+
+  if (columnasAlimentosGuardadoRemotoTimer) {
+    clearTimeout(columnasAlimentosGuardadoRemotoTimer);
+  }
+
+  columnasAlimentosGuardadoRemotoTimer = setTimeout(guardarColumnasAlimentosSupabase, 600);
+}
+
+async function guardarColumnasAlimentosSupabase() {
+  columnasAlimentosGuardadoRemotoTimer = 0;
+
+  const client = window.supabaseClient;
+  const userId = pesoIdealSesionActiva && pesoIdealSesionActiva.user
+    ? pesoIdealSesionActiva.user.id
+    : "";
+  if (!client || !userId) return;
+
+  const { error } = await client
+    .from("profiles")
+    .upsert({
+      user_id: userId,
+      columnas_alimentos_visibles: obtenerColumnasAlimentosVisiblesArray()
+    }, { onConflict: "user_id" });
+
+  if (error) {
+    console.warn("No se pudo guardar la configuración de columnas en Supabase.", error.message);
+    setConfigColumnasMensaje("No se pudo guardar la configuración en Supabase.", "error");
+  }
+}
+
+async function cargarColumnasAlimentosSupabase(session) {
+  const client = window.supabaseClient;
+  if (!client || !session || !session.user) return false;
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("columnas_alimentos_visibles")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("No se pudo cargar la configuración de columnas desde Supabase.", error.message);
+    return false;
+  }
+
+  if (!data || !Array.isArray(data.columnas_alimentos_visibles)) return false;
+
+  columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(data.columnas_alimentos_visibles);
+  guardarColumnasAlimentosPersistidas();
+  aplicarVisibilidadColumnasAlimentos();
+  setConfigColumnasMensaje("");
+  return true;
+}
+
+function obtenerClavePesoIdealPersistido() {
+  return `${PESO_IDEAL_STORAGE_PREFIX}:${pesoIdealStorageScope}`;
+}
+
+function leerPesoIdealPersistido() {
+  try {
+    const valor = window.localStorage ? window.localStorage.getItem(obtenerClavePesoIdealPersistido()) : "";
+    const numero = Number(valor);
+
+    if (!valor || !Number.isFinite(numero) || numero <= 0) {
+      return "";
+    }
+
+    return String(Math.trunc(numero));
+  } catch (error) {
+    return "";
+  }
+}
+
+function guardarPesoIdealPersistido() {
+  try {
+    if (!window.localStorage) return;
+
+    const pesoIdeal = obtenerPesoIdealMacronutrientes();
+    const clave = obtenerClavePesoIdealPersistido();
+
+    if (pesoIdeal > 0) {
+      window.localStorage.setItem(clave, String(pesoIdeal));
+    } else {
+      window.localStorage.removeItem(clave);
+    }
+  } catch (error) {
+    // El calculo debe seguir funcionando aunque el navegador bloquee localStorage.
+  }
+}
+
+function programarGuardarPesoIdealSupabase() {
+  if (pesoIdealGuardadoRemotoTimer) {
+    clearTimeout(pesoIdealGuardadoRemotoTimer);
+  }
+
+  pesoIdealGuardadoRemotoTimer = setTimeout(guardarPesoIdealSupabase, 500);
+}
+
+async function guardarPesoIdealSupabase() {
+  pesoIdealGuardadoRemotoTimer = 0;
+
+  const client = window.supabaseClient;
+  const userId = pesoIdealSesionActiva && pesoIdealSesionActiva.user
+    ? pesoIdealSesionActiva.user.id
+    : "";
+  if (!client || !userId) return;
+
+  const pesoIdeal = obtenerPesoIdealMacronutrientes();
+  const payload = {
+    user_id: userId,
+    peso_ideal: pesoIdeal > 0 ? pesoIdeal : null
+  };
+
+  const { error } = await client
+    .from("profiles")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (error) {
+    console.warn("No se pudo guardar el peso ideal en Supabase.", error.message);
+  }
+}
+
+async function cargarPesoIdealSupabase(session) {
+  const client = window.supabaseClient;
+  if (!client || !session || !session.user) return false;
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("peso_ideal")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("No se pudo cargar el peso ideal desde Supabase.", error.message);
+    return false;
+  }
+
+  const pesoIdeal = data ? Number(data.peso_ideal) : 0;
+  if (!Number.isFinite(pesoIdeal) || pesoIdeal <= 0) return false;
+
+  const pesoIdealInput = document.getElementById("macro_peso_ideal");
+  if (!pesoIdealInput) return false;
+
+  pesoIdealInput.value = String(Math.trunc(pesoIdeal));
+  pesoIdealEditadoManualmente = true;
+  guardarPesoIdealPersistido();
+  return true;
+}
+
+function cargarPesoIdealPersistido() {
+  const valorPersistido = leerPesoIdealPersistido();
+  if (!valorPersistido) return false;
+
+  const pesoIdealInput = document.getElementById("macro_peso_ideal");
+  if (!pesoIdealInput) return false;
+
+  pesoIdealInput.value = valorPersistido;
+  pesoIdealEditadoManualmente = true;
+  return true;
+}
+
+function restaurarPesoIdealOSincronizar() {
+  if (cargarPesoIdealPersistido()) return true;
+
+  pesoIdealEditadoManualmente = false;
+  sincronizarPesoIdealConPesoActual(true);
+  return false;
+}
+
+async function actualizarScopePesoIdealPersistido(session) {
+  const siguienteScope = session && session.user && session.user.id
+    ? session.user.id
+    : "anonimo";
+
+  pesoIdealSesionActiva = session || null;
+
+  pesoIdealStorageScope = siguienteScope;
+  const cargadoSupabase = await cargarPesoIdealSupabase(session);
+  if (!cargadoSupabase) {
+    const cargadoLocal = restaurarPesoIdealOSincronizar();
+    if (cargadoLocal && session && session.user) {
+      programarGuardarPesoIdealSupabase();
+    }
+  }
+
+  const medidasCargadasSupabase = await cargarMedidasAntropometricasSupabase(session);
+  if (!medidasCargadasSupabase) {
+    const medidasCargadasLocal = restaurarMedidasAntropometricasOLimpiar();
+    if (medidasCargadasLocal && session && session.user) {
+      programarGuardarMedidasAntropometricasSupabase();
+    }
+  }
+
+  const columnasCargadasSupabase = await cargarColumnasAlimentosSupabase(session);
+  if (!columnasCargadasSupabase) {
+    const columnasCargadasLocal = restaurarColumnasAlimentosOPredeterminadas();
+    aplicarVisibilidadColumnasAlimentos();
+    if (columnasCargadasLocal && session && session.user) {
+      programarGuardarColumnasAlimentosSupabase();
+    }
+  }
+
+  actualizarRequerimientoMacronutrientes();
 }
 
 function establecerPorcentajesMacronutrientes(proteina, grasa) {
@@ -62,8 +725,9 @@ function inferirPorcentajesMacronutrientesDesdeRequerimiento() {
 }
 
 function actualizarRequerimientoMacronutrientes() {
+  sincronizarPesoIdealConPesoActual(false);
   const energia = obtenerValorNumerico('input_energia_calculada_requerimiento');
-  const peso = obtenerValorNumerico('calc_peso');
+  const pesoIdeal = obtenerPesoIdealMacronutrientes();
   const porcentajeProteina = obtenerValorNumerico('macro_proteina_porcentaje');
   const porcentajeGrasa = obtenerValorNumerico('macro_grasa_porcentaje');
   const porcentajeCarbohidratos = 100 - porcentajeProteina - porcentajeGrasa;
@@ -86,9 +750,9 @@ function actualizarRequerimientoMacronutrientes() {
   actualizarTextoMacro('macro_proteina_gramos', gramosProteina, 'g');
   actualizarTextoMacro('macro_grasa_gramos', gramosGrasa, 'g');
   actualizarTextoMacro('macro_carbohidratos_gramos', gramosCarbohidratos, 'g');
-  actualizarTextoMacro('macro_proteina_gkg', peso > 0 ? gramosProteina / peso : 0, 'g/kg');
-  actualizarTextoMacro('macro_grasa_gkg', peso > 0 ? gramosGrasa / peso : 0, 'g/kg');
-  actualizarTextoMacro('macro_carbohidratos_gkg', peso > 0 ? gramosCarbohidratos / peso : 0, 'g/kg');
+  actualizarTextoMacro('macro_proteina_gkg', pesoIdeal > 0 ? gramosProteina / pesoIdeal : 0, 'g/kg');
+  actualizarTextoMacro('macro_grasa_gkg', pesoIdeal > 0 ? gramosGrasa / pesoIdeal : 0, 'g/kg');
+  actualizarTextoMacro('macro_carbohidratos_gkg', pesoIdeal > 0 ? gramosCarbohidratos / pesoIdeal : 0, 'g/kg');
 
   const porcentajeInvalido = porcentajeProteina < 0 || porcentajeGrasa < 0 || porcentajeCarbohidratos < 0;
   const error = document.getElementById('macro_porcentaje_error');
@@ -111,12 +775,55 @@ function configurarEventosMacronutrientes() {
   [
     'macro_proteina_porcentaje',
     'macro_grasa_porcentaje',
-    'input_energia_calculada_requerimiento',
-    'calc_peso'
+    'input_energia_calculada_requerimiento'
   ].forEach(id => {
     const elemento = document.getElementById(id);
     if (elemento) elemento.addEventListener('input', actualizarRequerimientoMacronutrientes);
   });
+
+  const pesoInput = document.getElementById('calc_peso');
+  const pesoIdealInput = document.getElementById('macro_peso_ideal');
+
+  if (pesoInput) {
+    pesoInput.addEventListener('input', function () {
+      sincronizarPesoIdealConPesoActual(false);
+      if (!pesoIdealEditadoManualmente) {
+        programarGuardarPesoIdealSupabase();
+      }
+      actualizarRequerimientoMacronutrientes();
+    });
+  }
+
+  if (pesoIdealInput) {
+    pesoIdealInput.addEventListener('input', function () {
+      normalizarInputPesoIdeal();
+      pesoIdealEditadoManualmente = Boolean(pesoIdealInput.value);
+      guardarPesoIdealPersistido();
+      programarGuardarPesoIdealSupabase();
+      actualizarRequerimientoMacronutrientes();
+    });
+  }
+
+  restaurarPesoIdealOSincronizar();
+}
+
+function configurarEventosMedidasAntropometricas() {
+  const ids = MEDIDAS_ANTROPOMETRICAS_CAMPOS.map(function (campo) {
+    return campo.id;
+  }).concat("medidas_observaciones");
+
+  ids.forEach(function (id) {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.addEventListener("input", programarGuardarMedidasAntropometricasSupabase);
+  });
+
+  restaurarMedidasAntropometricasOLimpiar();
+}
+
+function inicializarIconosLucide() {
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
 }
 
 function formatearFechaNombreArchivo(fechaValor) {
@@ -193,173 +900,6 @@ function inicializarOrdenamientoSeleccionados() {
     configurarOrdenamientoTbody(document.getElementById("valores_" + tiempo.replace(" ", "_")));
   });
 }
-/*
-document.getElementById("file-input").addEventListener("change", function (event) {
-  const file = event.target.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function (event) {
-    const fileContent = event.target.result;
-    const lineas = fileContent.split('\n');
-    for (const linea of lineas) {
-      valores = linea.split(";");
-      alimentos.push(
-        {
-          nombre: valores[0],
-          energia_calculada: parseFloat(valores[2].replace(",", ".")),
-          proteina: parseFloat(valores[3].replace(",", ".")),
-          grasa_total: parseFloat(valores[4].replace(",", ".")),
-          carbohidratos: parseFloat(valores[5].replace(",", ".")),
-          fibra: parseFloat(valores[6].replace(",", ".")),
-          ags: parseFloat(valores[7].replace(",", ".")),
-          agm: parseFloat(valores[8].replace(",", ".")),
-          agpi: parseFloat(valores[9].replace(",", ".")),
-          colesterol: parseFloat(valores[10].replace(",", ".")),
-          calcio: parseFloat(valores[11].replace(",", ".")),
-          fosforo: parseFloat(valores[12].replace(",", ".")),
-          hierro: parseFloat(valores[13].replace(",", ".")),
-          potasio: parseFloat(valores[14].replace(",", ".")),
-          sodio: parseFloat(valores[15].replace(",", ".")),
-          zinc: parseFloat(valores[16].replace(",", ".")),
-          vitamina_c: parseFloat(valores[17].replace(",", ".")),
-          vitamina_a: parseFloat(valores[18].replace(",", ".")),
-          folatos: parseFloat(valores[19].replace(",", ".")),
-          vitamina_b12: parseFloat(valores[20].replace(",", ".")),
-        },          
-      )
-  }
-  };
-  reader.readAsText(file);
-});
-*/
-
-
-document.getElementById("file-input2").addEventListener("change", function (event) {
-  const file = event.target.files[0];
-  const fileName = document.getElementById("file-input2-name");
-  if (fileName) {
-    fileName.textContent = file ? file.name : "Sin archivos seleccionados";
-  }
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function (e) {
-    var data = new Uint8Array(e.target.result);
-    var workbook = XLSX.read(data, { type: 'array' });
-    var worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    var headerRow = jsonData[0] || [];
-    var macroPorcentajesCargados = false;
-    function obtenerValorFila(row, columna, indiceFallback) {
-      var indice = headerRow.indexOf(columna);
-      if (indice !== -1) return row[indice];
-      return row[indiceFallback];
-    }
-
-    if (alimentos.length > 0) {
-      for (var i = 1; i < jsonData.length; i++) {
-        var row = jsonData[i];
-        if (!row || row.length === 0) continue;
-        
-        var tiempoComida = obtenerValorFila(row, "Tiempo de Comida", 0);
-        var nombreAlimento = obtenerValorFila(row, "nombre", 1);
-        var gramos = obtenerValorFila(row, "gramos", 2);
-
-        if (tiempoComida === "Identificacion") {
-          let idInput = document.getElementById("calc_id");
-          if(idInput) idInput.value = nombreAlimento || "";
-          continue;
-        }
-        if (tiempoComida === "Fecha") {
-          let fInput = document.getElementById("calc_fecha");
-          if(fInput) fInput.value = nombreAlimento || "";
-          continue;
-        }
-        if (tiempoComida === "NombrePaciente") {
-          let nInput = document.getElementById("calc_nombre");
-          if(nInput) nInput.value = nombreAlimento || "";
-          continue;
-        }
-        if (tiempoComida === "Peso") {
-          let pesoInput = document.getElementById("calc_peso");
-          if(pesoInput) pesoInput.value = nombreAlimento || "70";
-          continue;
-        }
-        if (tiempoComida === "Estatura") {
-          let estaturaInput = document.getElementById("calc_estatura");
-          if(estaturaInput) estaturaInput.value = nombreAlimento || "170";
-          continue;
-        }
-        if (tiempoComida === "Edad") {
-          let edadInput = document.getElementById("calc_edad");
-          if(edadInput) edadInput.value = nombreAlimento || "30";
-          continue;
-        }
-        if (tiempoComida === "Genero") {
-          let generoInput = document.getElementById("calc_genero");
-          if(generoInput && nombreAlimento) generoInput.value = nombreAlimento;
-          continue;
-        }
-        if (tiempoComida === "Actividad") {
-          let actividadInput = document.getElementById("calc_actividad");
-          if(actividadInput && nombreAlimento) actividadInput.value = nombreAlimento;
-          continue;
-        }
-        if (tiempoComida === "Macronutrientes") {
-          establecerPorcentajesMacronutrientes(
-            obtenerValorFila(row, "macro_proteina_porcentaje", 4),
-            obtenerValorFila(row, "macro_grasa_porcentaje", 5)
-          );
-          macroPorcentajesCargados = true;
-          actualizarRequerimientoMacronutrientes();
-          continue;
-        }
-        if (tiempoComida === "Paciente Info") continue;
-
-        if (nombreAlimento && nombreAlimento !== "Total" && nombreAlimento !== 'Requerimiento'
-          && nombreAlimento !== 'Total Kilocalorias'
-          && nombreAlimento !== 'Porcentaje de Adecuación') {
-          
-          agregarAlimentos(gramos, nombreAlimento, tiempoComida);
-        }
-        
-        if (nombreAlimento === 'Requerimiento') {
-          document.getElementById('input_energia_calculada_requerimiento').value = obtenerValorFila(row, "energia_calculada", 3);
-          document.getElementById('input_proteina_requerimiento').value = obtenerValorFila(row, "proteina", 4);
-          document.getElementById('input_grasa_requerimiento').value = obtenerValorFila(row, "grasa_total", 5);
-          document.getElementById('input_carbohidratos_requerimiento').value = obtenerValorFila(row, "carbohidratos", 6);
-          document.getElementById('input_fibra_requerimiento').value = obtenerValorFila(row, "fibra", 7);
-          document.getElementById("input_ags_requerimiento").value = obtenerValorFila(row, "ags", 8);
-          document.getElementById("input_agm_requerimiento").value = obtenerValorFila(row, "agm", 9);
-          document.getElementById("input_agpi_requerimiento").value = obtenerValorFila(row, "agpi", 10);
-          document.getElementById("input_colesterol_requerimiento").value = obtenerValorFila(row, "colesterol", 11);
-          document.getElementById("input_calcio_requerimiento").value = obtenerValorFila(row, "calcio", 12);
-          document.getElementById("input_fosforo_requerimiento").value = obtenerValorFila(row, "fosforo", 13);
-          document.getElementById("input_hierro_requerimiento").value = obtenerValorFila(row, "hierro", 14);
-          document.getElementById("input_potasio_requerimiento").value = obtenerValorFila(row, "potasio", 15);
-          document.getElementById("input_sodio_requerimiento").value = obtenerValorFila(row, "sodio", 16);
-          document.getElementById("input_zinc_requerimiento").value = obtenerValorFila(row, "zinc", 17);
-          document.getElementById("input_vitamina_c_requerimiento").value = obtenerValorFila(row, "vitamina_c", 18);
-          document.getElementById("input_vitamina_a_requerimiento").value = obtenerValorFila(row, "vitamina_a", 19);
-          document.getElementById("input_folatos_requerimiento").value = obtenerValorFila(row, "folatos", 20);
-          document.getElementById("input_vitamina_b12_requerimiento").value = obtenerValorFila(row, "vitamina_b12", 21);
-          if (!macroPorcentajesCargados) inferirPorcentajesMacronutrientesDesdeRequerimiento();
-          actualizarRequerimientoMacronutrientes();
-          continue;
-        }
-      }
-    } else {
-      alert('Por favor cargue la base de datos antes de recuperar el trabajo.');
-    }
-
-
-  };
-  reader.readAsArrayBuffer(file);
-
-});
-
 //Descarga alimentos
 
 function total_kilocalorias() {
@@ -373,29 +913,7 @@ function total_kilocalorias() {
 
 }
 
-const ordenDeseado = [
-  "nombre",
-  "gramos",
-  "energia_calculada",
-  "proteina",
-  "grasa_total",
-  "carbohidratos",
-  "fibra",
-  "ags",
-  "agm",
-  "agpi",
-  "colesterol",
-  "calcio",
-  "fosforo",
-  "hierro",
-  "potasio",
-  "sodio",
-  "zinc",
-  "vitamina_c",
-  "vitamina_a",
-  "folatos",
-  "vitamina_b12"
-];
+const ordenDeseado = ["nombre", "gramos"].concat(obtenerColumnasNutrientesKeys());
 
 function descargar() {
   nuevoOrden();
@@ -407,6 +925,7 @@ function descargar() {
   info.push({ "Tiempo de Comida": "Fecha", "nombre": document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "" });
   info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
   info.push({ "Tiempo de Comida": "Peso", "nombre": document.getElementById('calc_peso') ? document.getElementById('calc_peso').value : "" });
+  info.push({ "Tiempo de Comida": "PesoIdeal", "nombre": document.getElementById('macro_peso_ideal') ? document.getElementById('macro_peso_ideal').value : "" });
   info.push({ "Tiempo de Comida": "Estatura", "nombre": document.getElementById('calc_estatura') ? document.getElementById('calc_estatura').value : "" });
   info.push({ "Tiempo de Comida": "Edad", "nombre": document.getElementById('calc_edad') ? document.getElementById('calc_edad').value : "" });
   info.push({ "Tiempo de Comida": "Genero", "nombre": document.getElementById('calc_genero') ? document.getElementById('calc_genero').value : "" });
@@ -893,6 +1412,8 @@ function buscar() {
   }
 
   lista.appendChild(tbody);
+  aplicarAtributosColumnasTabla(lista, ["nombre"].concat(obtenerColumnasNutrientesKeys()));
+  aplicarVisibilidadColumnasAlimentos();
 
 }
 
@@ -1150,7 +1671,13 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
   vitamina_b12.textContent = alimento.vitamina_b12;
   fila.appendChild(vitamina_b12);
 
+  const columnasSeleccionados = ["nombre", "gramos"].concat(obtenerColumnasNutrientesKeys());
+  Array.from(fila.children).forEach(function (celda, index) {
+    if (columnasSeleccionados[index]) celda.dataset.foodCol = columnasSeleccionados[index];
+  });
+
   valores_tbody.appendChild(fila);
+  aplicarVisibilidadColumnasAlimentos();
 
   let alimentoCopia = { ...alimento };
   alimentoCopia.tiempo = tiempo;
@@ -1457,9 +1984,136 @@ function generarPDF() {
   });
 }
 
+let celdaFilaAlimentos = null;
+let rafFilaAlimentos = 0;
+
+function crearGuiaAlimentos(id, className) {
+  let guia = document.getElementById(id);
+  if (!guia) {
+    guia = document.createElement("div");
+    guia.id = id;
+    guia.className = className;
+    document.body.appendChild(guia);
+  }
+
+  return guia;
+}
+
+function obtenerGuiasFilaAlimentos() {
+  return [
+    crearGuiaAlimentos("food-row-guide-top", "food-row-guide"),
+    crearGuiaAlimentos("food-row-guide-bottom", "food-row-guide")
+  ];
+}
+
+function posicionarGuiaFila(guia, y, left, width, limiteSuperior, limiteInferior, ocultarSiTocaLimite = false) {
+  if (y < limiteSuperior || y > limiteInferior || (ocultarSiTocaLimite && y <= limiteSuperior + 2)) {
+    guia.style.display = "none";
+    return;
+  }
+
+  guia.style.display = "block";
+  guia.style.left = `${left}px`;
+  guia.style.top = `${y}px`;
+  guia.style.width = `${width}px`;
+}
+
+function actualizarGuiasFilaAlimentos() {
+  rafFilaAlimentos = 0;
+
+  if (!celdaFilaAlimentos) return;
+
+  const tabla = celdaFilaAlimentos.closest("#lista, #valores");
+  const contenedor = tabla ? tabla.closest(".scrollable-div") : null;
+  if (!tabla || !contenedor) {
+    limpiarResaltadoCruceAlimentos();
+    return;
+  }
+
+  const tablaRect = tabla.getBoundingClientRect();
+  const contenedorRect = contenedor.getBoundingClientRect();
+  const filaRect = celdaFilaAlimentos.parentElement.getBoundingClientRect();
+  const headerRect = tabla.tHead ? tabla.tHead.getBoundingClientRect() : null;
+  const top = Math.max(contenedorRect.top, headerRect ? headerRect.bottom : tablaRect.top);
+  const bottom = Math.min(contenedorRect.bottom, tablaRect.bottom);
+  const height = bottom - top;
+  const left = Math.max(contenedorRect.left, tablaRect.left);
+  const right = Math.min(contenedorRect.right, tablaRect.right);
+  const width = right - left;
+
+  if (height <= 0 || width <= 0) {
+    limpiarResaltadoCruceAlimentos();
+    return;
+  }
+
+  const [superior, inferior] = obtenerGuiasFilaAlimentos();
+  posicionarGuiaFila(superior, Math.max(filaRect.top, top), left, width, top, bottom, true);
+  posicionarGuiaFila(inferior, Math.min(filaRect.bottom, bottom), left, width, top, bottom);
+}
+
+function solicitarActualizacionGuiasFila() {
+  if (!rafFilaAlimentos) {
+    rafFilaAlimentos = requestAnimationFrame(actualizarGuiasFilaAlimentos);
+  }
+}
+
+function limpiarEncabezadoAlimentos() {
+  document.querySelectorAll("#lista th.food-header-highlight, #valores th.food-header-highlight").forEach(function (th) {
+    th.classList.remove("food-header-highlight");
+  });
+}
+
+function resaltarEncabezadoAlimentos(tabla, columna) {
+  limpiarEncabezadoAlimentos();
+
+  const encabezado = tabla.tHead ? tabla.tHead.querySelectorAll("th")[columna] : null;
+  if (encabezado) encabezado.classList.add("food-header-highlight");
+}
+
+function limpiarResaltadoCruceAlimentos() {
+  celdaFilaAlimentos = null;
+  limpiarEncabezadoAlimentos();
+  document.querySelectorAll("#food-column-guide-left, #food-column-guide-right").forEach(function (guia) {
+    guia.style.display = "none";
+  });
+  obtenerGuiasFilaAlimentos().forEach(function (guia) {
+    guia.style.display = "none";
+  });
+}
+
+function configurarResaltadoCruceAlimentos() {
+  document.querySelectorAll("#lista, #valores").forEach(function (tabla) {
+    tabla.classList.add("food-crosshair");
+
+    tabla.addEventListener("pointermove", function (event) {
+      const celda = event.target.closest("tbody td");
+      if (!celda || !tabla.contains(celda) || celda.colSpan > 1) {
+        limpiarResaltadoCruceAlimentos();
+        return;
+      }
+
+      celdaFilaAlimentos = celda;
+      resaltarEncabezadoAlimentos(tabla, celda.cellIndex);
+      solicitarActualizacionGuiasFila();
+    });
+
+    tabla.addEventListener("pointerleave", function () {
+      limpiarResaltadoCruceAlimentos();
+    });
+  });
+
+  document.addEventListener("scroll", solicitarActualizacionGuiasFila, true);
+  window.addEventListener("resize", solicitarActualizacionGuiasFila);
+}
+
+window.addEventListener("auth:session-changed", function (event) {
+  actualizarScopePesoIdealPersistido(event.detail ? event.detail.session : null);
+});
+
 // Limpiar el formulario cuando la página se recarga o se abre
 document.addEventListener('DOMContentLoaded', function() {
   inicializarOrdenamientoSeleccionados();
+  configurarResaltadoCruceAlimentos();
 
   const nombre = document.getElementById('calc_nombre');
   const id = document.getElementById('calc_id');
@@ -1495,6 +2149,11 @@ document.addEventListener('DOMContentLoaded', function() {
   if (resDiv) resDiv.style.display = 'none';
   
   // Recalcular para blanquear porcentajes
+  restaurarColumnasAlimentosOPredeterminadas();
+  renderizarConfiguracionColumnasAlimentos();
+  aplicarVisibilidadColumnasAlimentos();
   configurarEventosMacronutrientes();
+  configurarEventosMedidasAntropometricas();
+  inicializarIconosLucide();
   actualizarRequerimientoMacronutrientes();
 });

@@ -1,487 +1,1070 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Alimentos</title>
-    <link rel="stylesheet" href="style.css" type="text/css">    
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
-  </head>
-  <body>
-    <!-- Nav tabs -->
-  <div class="container-fluid mt-3">
-    <ul class="nav nav-tabs" id="myTab" role="tablist">
-      <li class="nav-item">
-          <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Calculadora</a>
-      </li>
-      <li class="nav-item">
-          <a class="nav-link" id="generador-tab" data-toggle="tab" href="#generador" role="tab" aria-controls="generador" aria-selected="false">Generador Semanal</a>
-      </li>
-    </ul>
-    <!-- Tab content -->
-    <div class="tab-content" id="myTabContent">
-      <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
-        <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
-          <div class="encabezado-fijo">   
-            <div class="centered-div">
-              <h3>MUY ALIMENTADO</h3>
-            </div>
-            <div class="contenedor-flex">                           
-              <div>
-                <button class="boton-personalizado" onclick="descargar()">Descargar Excel</button>          
-                <button class="boton-personalizado" style="background-color: #dc3545;" onclick="generarPDF()">Descargar PDF</button>          
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alimentos</title>
+  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-panel">
+      <div>
+        <p class="auth-kicker">MUY ALIMENTADO</p>
+        <h1 class="auth-title">Acceso de usuarios</h1>
+        <p class="auth-copy">Inicia sesion para usar la calculadora y guardar tu trabajo de forma segura.</p>
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <div class="auth-mode" role="group" aria-label="Modo de acceso">
+          <button type="button" id="auth-login-tab" class="auth-mode-button active">Entrar</button>
+          <button type="button" id="auth-register-tab" class="auth-mode-button">Crear cuenta</button>
+        </div>
+
+        <label for="auth-email">Correo</label>
+        <input type="email" id="auth-email" class="form-control" autocomplete="email" required>
+
+        <label for="auth-password">Contrasena</label>
+        <input type="password" id="auth-password" class="form-control" autocomplete="current-password" minlength="8"
+          required>
+
+        <button type="submit" id="auth-submit" class="btn btn-success w-100">Entrar</button>
+        <p id="auth-message" class="auth-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- App shell -->
+  <div id="app-shell" class="container-fluid mt-3 auth-hidden">
+    <div class="auth-userbar">
+      <div class="auth-user-summary">
+        <img id="auth-user-avatar" class="auth-user-avatar" alt="Foto de perfil">
+        <div class="auth-user-text">
+          <span id="auth-user-name" class="auth-user-name">Perfil</span>
+          <span>Sesion iniciada como <strong id="auth-user-email"></strong></span>
+        </div>
+      </div>
+      <button type="button" id="auth-signout" class="btn btn-outline-secondary btn-sm">Cerrar sesion</button>
+    </div>
+    <div class="app-layout side-menu-collapsed">
+      <aside class="side-menu" id="side-menu" aria-label="Menu lateral">
+        <nav id="side-menu-nav" class="side-menu-nav">
+          <a class="side-menu-link" id="side-perfil-link" data-toggle="tab" href="#perfil" role="tab"
+            aria-controls="perfil" aria-selected="false" aria-label="Perfil" title="Perfil">
+            <span class="side-menu-icon" data-lucide="circle-user-round" aria-hidden="true"></span>
+            <span class="side-menu-label">Perfil</span>
+          </a>
+          <a class="side-menu-link" id="side-pacientes-link" data-toggle="tab" href="#pacientes" role="tab"
+            aria-controls="pacientes" aria-selected="false" aria-label="Agregar pacientes" title="Agregar pacientes">
+            <span class="side-menu-icon" data-lucide="user-plus" aria-hidden="true"></span>
+            <span class="side-menu-label">Agregar pacientes</span>
+          </a>
+          <a class="side-menu-link active" id="side-home-link" data-toggle="tab" href="#home" role="tab"
+            aria-controls="home" aria-selected="true" aria-label="Calculadora" title="Calculadora">
+            <span class="side-menu-icon" data-lucide="calculator" aria-hidden="true"></span>
+            <span class="side-menu-label">Calculadora</span>
+          </a>
+          <a class="side-menu-link" id="side-citas-link" data-toggle="tab" href="#citas" role="tab"
+            aria-controls="citas" aria-selected="false" aria-label="Citas" title="Citas">
+            <span class="side-menu-icon" data-lucide="clipboard-list" aria-hidden="true"></span>
+            <span class="side-menu-label">Citas</span>
+          </a>
+          <a class="side-menu-link" id="side-generador-link" data-toggle="tab" href="#generador" role="tab"
+            aria-controls="generador" aria-selected="false" aria-label="Men&uacute;" title="Men&uacute;">
+            <span class="side-menu-icon" data-lucide="utensils" aria-hidden="true"></span>
+            <span class="side-menu-label">Men&uacute;</span>
+          </a>
+          <a class="side-menu-link" id="side-configuracion-link" data-toggle="tab" href="#configuracion" role="tab"
+            aria-controls="configuracion" aria-selected="false" aria-label="Configuraci&oacute;n"
+            title="Configuraci&oacute;n">
+            <span class="side-menu-icon" data-lucide="settings" aria-hidden="true"></span>
+            <span class="side-menu-label">Configuraci&oacute;n</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="app-content">
+        <!-- Page content -->
+        <div class="tab-content" id="appPages">
+          <div class="tab-pane fade" id="perfil" role="tabpanel" aria-labelledby="side-perfil-link">
+            <div style="padding: 30px;">
+              <div class="centered-div" style="padding-bottom: 20px;">
+                <h3>PERFIL</h3>
               </div>
-              <div class="cargar-archivo">
-                <h6>CARGAR ARCHIVO PREVIO</h6>
-                <div class="archivo-control">
-                  <label for="file-input2" class="archivo-boton">Seleccionar archivo</label>
-                  <span id="file-input2-name" class="archivo-nombre">Sin archivos seleccionados</span>
-                  <input type="file" id="file-input2" class="archivo-input">
+
+              <div class="profile-grid">
+                <div class="card p-3 profile-card">
+                  <form id="perfil-form">
+                    <div class="profile-avatar-row">
+                      <img id="perfil_avatar_preview" class="profile-avatar" alt="Foto de perfil">
+                      <div>
+                        <label for="perfil_avatar" class="btn btn-outline-secondary btn-sm mb-0">Cambiar foto</label>
+                        <input type="file" id="perfil_avatar" class="profile-file-input" accept="image/*">
+                      </div>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_nombre">Nombre</label>
+                        <input type="text" id="perfil_nombre" class="form-control">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_nombre_usuario">Nombre de usuario</label>
+                        <input type="text" id="perfil_nombre_usuario" class="form-control">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_email">Correo electr&oacute;nico</label>
+                        <input type="email" id="perfil_email" class="form-control">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_telefono">N&uacute;mero de tel&eacute;fono</label>
+                        <input type="tel" id="perfil_telefono" class="form-control">
+                      </div>
+                    </div>
+
+                    <button type="submit" id="perfil_submit" class="btn btn-success mt-3">Guardar perfil</button>
+                    <p id="perfil_mensaje" class="profile-message" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card p-3 profile-card">
+                  <h5>Cambiar contrase&ntilde;a</h5>
+                  <form id="perfil-password-form">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_password">Nueva contrase&ntilde;a</label>
+                        <input type="password" id="perfil_password" class="form-control" minlength="8"
+                          autocomplete="new-password">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="perfil_password_confirm">Confirmar contrase&ntilde;a</label>
+                        <input type="password" id="perfil_password_confirm" class="form-control" minlength="8"
+                          autocomplete="new-password">
+                      </div>
+                    </div>
+                    <button type="submit" id="perfil_password_submit" class="btn btn-outline-success mt-3">Cambiar
+                      contrase&ntilde;a</button>
+                    <p id="perfil_password_mensaje" class="profile-message" aria-live="polite"></p>
+                  </form>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <!-- SECCIÓN 0: CALCULADORA DE REQUERIMIENTOS -->
-        <div class="row w-100 m-0 mb-4">
-          <div class="col-md-12">
+
+          <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="side-home-link">
             <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
-              <div class="centered-div" style="padding-bottom: 10px;">
-                <h3>CALCULADORA DE REQUERIMIENTO ENERGÉTICO</h3>
-              </div>
-              <div class="card p-3 mb-3">
-                <div class="row g-3">
-                  <div class="col-md-5">
-                    <label class="form-label">Nombre (Opcional)</label>
-                    <input type="text" id="calc_nombre" class="form-control" placeholder="Ej. Juan Pérez">
+              <div class="encabezado-fijo">
+                <div class="centered-div">
+                  <h3>MUY ALIMENTADO</h3>
+                </div>
+                <div class="contenedor-flex">
+                  <div>
+                    <button class="boton-personalizado" onclick="descargar()">Descargar Excel</button>
+                    <button class="boton-personalizado" style="background-color: #dc3545;"
+                      onclick="generarPDF()">Descargar PDF</button>
+                    <button type="button" id="guardar_cita_btn" class="boton-personalizado"
+                      style="background-color: #0d6efd;">Guardar como cita</button>
                   </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Cédula / Pasaporte</label>
-                    <input type="text" id="calc_id" class="form-control" placeholder="Ej. 123456789">
+                </div>
+              </div>
+            </div>
+            <!-- SECCIÓN 0: CALCULADORA DE REQUERIMIENTOS -->
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
+                  <div class="centered-div" style="padding-bottom: 10px;">
+                    <h3>CALCULADORA DE REQUERIMIENTO ENERGÉTICO</h3>
+                  </div>
+                  <div class="card p-3 mb-3">
+                    <div class="row g-3">
+                      <div class="col-md-12">
+                        <label class="form-label" for="calc_paciente_busqueda">Paciente registrado</label>
+                        <input type="search" id="calc_paciente_busqueda" class="form-control"
+                          list="calc_pacientes_lista" placeholder="Buscar por nombres, apellidos o cedula/pasaporte"
+                          autocomplete="off">
+                        <datalist id="calc_pacientes_lista"></datalist>
+                        <input type="hidden" id="calc_paciente_id">
+                        <div id="calc_paciente_detalle" class="form-text"></div>
+                      </div>
+                      <div class="col-md-5">
+                        <label class="form-label">Nombre (Opcional)</label>
+                        <input type="text" id="calc_nombre" class="form-control" placeholder="Ej. Juan Pérez">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Cédula / Pasaporte</label>
+                        <input type="text" id="calc_id" class="form-control" placeholder="Ej. 123456789">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Fecha de Evaluación</label>
+                        <input type="date" id="calc_fecha" class="form-control">
+                      </div>
+                      <div class="col-md-2 mt-3">
+                        <label class="form-label">Peso (kg)</label>
+                        <input type="number" id="calc_peso" class="form-control" min="1" step="0.1" value="70">
+                      </div>
+                      <div class="col-md-2 mt-3">
+                        <label class="form-label">Estatura (cm)</label>
+                        <input type="number" id="calc_estatura" class="form-control" min="1" step="0.1" value="170">
+                      </div>
+                      <div class="col-md-2 mt-3">
+                        <label class="form-label">Edad (años)</label>
+                        <input type="number" id="calc_edad" class="form-control" min="1" value="30">
+                      </div>
+                      <div class="col-md-2 mt-3">
+                        <label class="form-label">Género</label>
+                        <select id="calc_genero" class="form-select" style="height: 38px;">
+                          <option value="M">Masculino</option>
+                          <option value="F">Femenino</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6 mt-3">
+                        <label class="form-label">Nivel de Actividad Física</label>
+                        <select id="calc_actividad" class="form-select" style="height: 38px;">
+                          <option value="1.2">Sedentario (Poco o ningún ejercicio) (1.2)</option>
+                          <option value="1.375">Ligero (Ejercicio ligero 1-3 días/sem) (1.375)</option>
+                          <option value="1.55" selected>Moderado (Ejercicio moderado 3-5 días/sem) (1.55)</option>
+                          <option value="1.725">Activo (Ejercicio intenso 6-7 días/sem) (1.725)</option>
+                          <option value="1.9">Muy Activo (Atletas profesionales / Entrenamiento físico duro diario)
+                            (1.9)</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6 mt-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100"
+                          style="height: 38px; background-color: #4CAF50; border-color: #4CAF50;"
+                          onclick="calcularReqEnergia()">Calcular Requerimiento</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="resultados_calc" class="alert alert-info" style="display: none;">
+                    <h5>Resultados de Energía Calculada (Kcal/día)</h5>
+                    <ul>
+                      <li><strong>Harris-Benedict:</strong> <span id="res_harris"></span> kcal</li>
+                      <li><strong>Mifflin-St Jeor:</strong> <span id="res_mifflin"></span> kcal</li>
+                      <li><strong>OMS/FAO:</strong> <span id="res_oms"></span> kcal</li>
+                    </ul>
+                    <p class="mb-0 mt-2 text-success" id="res_msg_success" style="font-weight: 500;">✓ Se ha
+                      autocompletado un promedio (<span id="res_promedio"></span> kcal) en el requerimiento de energía
+                      total abajo.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <section class="ideal-weight-section" aria-labelledby="body_measures_title">
+                  <div class="ideal-weight-header">
+                    <div>
+                      <h3 id="body_measures_title">MEDIDAS CORPORALES</h3>
+                    </div>
+                  </div>
+
+                  <div class="ideal-measures-layout">
+                    <div class="ideal-silhouette-card" aria-label="Silueta con puntos de medici&oacute;n corporal">
+                      <img class="ideal-body-figure" src="media/cuerpo%20entero.png"
+                        alt="Silueta corporal con gu&iacute;as de medici&oacute;n">
+                    </div>
+
+                    <div class="ideal-measures-grid">
+                      <article class="ideal-measure-card">
+                        <div class="ideal-card-heading">
+                          <span class="ideal-card-icon body-part-icon" aria-hidden="true">
+                            <img src="media/brazo.png" alt="">
+                          </span>
+                          <h4>BRAZOS</h4>
+                        </div>
+                        <div class="ideal-card-fields">
+                          <div class="ideal-field">
+                            <label for="medida_brazo_izquierdo">Brazo izquierdo</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_brazo_izquierdo" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                          <div class="ideal-field">
+                            <label for="medida_brazo_derecho">Brazo derecho</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_brazo_derecho" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+
+                      <article class="ideal-measure-card">
+                        <div class="ideal-card-heading">
+                          <span class="ideal-card-icon body-part-icon" aria-hidden="true">
+                            <img src="media/cintura.png" alt="">
+                          </span>
+                          <h4>ABDOMEN</h4>
+                        </div>
+                        <div class="ideal-card-fields">
+                          <div class="ideal-field">
+                            <label for="medida_abdomen">Abdomen</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_abdomen" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                          <div class="ideal-field">
+                            <label for="medida_abdomen_bajo">Abdomen bajo</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_abdomen_bajo" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+
+                      <article class="ideal-measure-card">
+                        <div class="ideal-card-heading">
+                          <span class="ideal-card-icon body-part-icon" aria-hidden="true">
+                            <img src="media/muslos.png" alt="">
+                          </span>
+                          <h4>MUSLOS</h4>
+                        </div>
+                        <div class="ideal-card-fields">
+                          <div class="ideal-field">
+                            <label for="medida_muslo_izquierdo">Muslo izquierdo</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_muslo_izquierdo" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                          <div class="ideal-field">
+                            <label for="medida_muslo_derecho">Muslo derecho</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_muslo_derecho" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+
+                      <article class="ideal-measure-card">
+                        <div class="ideal-card-heading">
+                          <span class="ideal-card-icon body-part-icon" aria-hidden="true">
+                            <img src="media/pantorrilas.png" alt="">
+                          </span>
+                          <h4>PANTORRILLAS</h4>
+                        </div>
+                        <div class="ideal-card-fields">
+                          <div class="ideal-field">
+                            <label for="medida_pantorrilla_izquierda">Pantorrilla izquierda</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_pantorrilla_izquierda" class="form-control" min="0"
+                                step="0.1" placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                          <div class="ideal-field">
+                            <label for="medida_pantorrilla_derecha">Pantorrilla derecha</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_pantorrilla_derecha" class="form-control" min="0"
+                                step="0.1" placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+
+                  <div class="ideal-observations">
+                    <label for="medidas_observaciones">Observaciones (edema, asimetr&iacute;as, variaciones u otros
+                      hallazgos relevantes)</label>
+                    <textarea id="medidas_observaciones" class="form-control" rows="3"
+                      placeholder="Escribe tus observaciones aqu&iacute;..."></textarea>
+                    <p id="medidas_antropometricas_estado" class="ideal-save-status" aria-live="polite"></p>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <div class="macro-requerimiento-panel">
+                  <div class="macro-peso-ideal-row">
+                    <div class="macro-peso-ideal-field">
+                      <label class="form-label" for="macro_peso_ideal">Peso ideal</label>
+                      <div class="input-group">
+                        <input type="number" id="macro_peso_ideal" class="form-control" min="1" step="1" value="70"
+                          inputmode="numeric">
+                        <span class="input-group-text">kg</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-sm macro-requerimiento-tabla mb-0">
+                      <thead>
+                        <tr>
+                          <th>Macronutriente</th>
+                          <th>%</th>
+                          <th>Kcal</th>
+                          <th>Gramos Totales</th>
+                          <th>g/kg</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Proteínas</td>
+                          <td>
+                            <input type="number" id="macro_proteina_porcentaje"
+                              class="form-control macro-porcentaje-input" min="0" max="100" step="0.1" value="20">
+                          </td>
+                          <td id="macro_proteina_kcal">0.00 kcal</td>
+                          <td id="macro_proteina_gramos" class="macro-gramos">0.00 g</td>
+                          <td id="macro_proteina_gkg">0.00 g/kg</td>
+                        </tr>
+                        <tr>
+                          <td>Grasas</td>
+                          <td>
+                            <input type="number" id="macro_grasa_porcentaje" class="form-control macro-porcentaje-input"
+                              min="0" max="100" step="0.1" value="30">
+                          </td>
+                          <td id="macro_grasa_kcal">0.00 kcal</td>
+                          <td id="macro_grasa_gramos" class="macro-gramos">0.00 g</td>
+                          <td id="macro_grasa_gkg">0.00 g/kg</td>
+                        </tr>
+                        <tr>
+                          <td>Carbohidratos</td>
+                          <td><span id="macro_carbohidratos_porcentaje">50.00%</span></td>
+                          <td id="macro_carbohidratos_kcal">0.00 kcal</td>
+                          <td id="macro_carbohidratos_gramos" class="macro-gramos">0.00 g</td>
+                          <td id="macro_carbohidratos_gkg">0.00 g/kg</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div id="macro_porcentaje_error" class="text-danger mt-2" style="display: none;">La suma de proteínas
+                    y grasas no debe superar 100%.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 1: BUSCADOR -->
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
+                  <div class="espacio-extra-encabezado" style="padding-bottom: 10px;">
+                    <div class="centered-div">
+                      <h3>ALIMENTOS</h3>
+                    </div>
+                    <h6>BÚSQUEDA:</h6>
+                    <input type="text" id="busqueda" class="form-control" style="width: 100%; max-width: 400px;"
+                      onkeyup="buscar()" />
+                    <div id="filtros-nutrientes" class="d-flex flex-wrap mt-2" style="max-width: 400px;">
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="energia_calculada" onclick="toggleFiltro(this)">Energía Cal.</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="proteina" onclick="toggleFiltro(this)">Proteína</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="grasa_total" onclick="toggleFiltro(this)">Grasa total</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="carbohidratos" onclick="toggleFiltro(this)">Carbohidratos</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="fibra"
+                        onclick="toggleFiltro(this)">Fibra</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="ags"
+                        onclick="toggleFiltro(this)">AGS</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agm"
+                        onclick="toggleFiltro(this)">AGM</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agpi"
+                        onclick="toggleFiltro(this)">AGPI</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="colesterol" onclick="toggleFiltro(this)">Colesterol</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="calcio" onclick="toggleFiltro(this)">Calcio</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="fosforo" onclick="toggleFiltro(this)">Fósforo</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="hierro" onclick="toggleFiltro(this)">Hierro</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="potasio" onclick="toggleFiltro(this)">Potasio</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="sodio"
+                        onclick="toggleFiltro(this)">Sodio</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="zinc"
+                        onclick="toggleFiltro(this)">Zinc</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="vitamina_c" onclick="toggleFiltro(this)">Vit. C</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="vitamina_a" onclick="toggleFiltro(this)">Vit. A</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="folatos" onclick="toggleFiltro(this)">Folatos</button>
+                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
+                        data-nutriente="vitamina_b12" onclick="toggleFiltro(this)">Vit. B12</button>
+                    </div>
+                  </div>
+                  <div id="buscador" class="scrollable-div">
+                    <table id="lista" class="table table-striped table-hover table-sm custom-width-table">
+                      <thead class='table-primary'>
+                        <tr>
+                          <th class="ancho-alimento">Nombre</th>
+                          <th class="ancho-celda">Gramos</th>
+                          <th class="ancho-celda">Energía calculada (Kcal)</th>
+                          <th class="ancho-celda">Proteína (g)</th>
+                          <th class="ancho-celda">Grasa total (g)</th>
+                          <th class="ancho-celda">Carbohidratos (g)</th>
+                          <th class="ancho-celda">Fibra (g)</th>
+                          <th class="ancho-celda">AGS (g)</th>
+                          <th class="ancho-celda">AGM (g)</th>
+                          <th class="ancho-celda">AGPI (g)</th>
+                          <th class="ancho-celda">Colesterol (mg)</th>
+                          <th class="ancho-celda">Calcio (mg)</th>
+                          <th class="ancho-celda">Fosforo (mg)</th>
+                          <th class="ancho-celda">Hierro (mg)</th>
+                          <th class="ancho-celda">Potasio (mg)</th>
+                          <th class="ancho-celda">Sodio (mg)</th>
+                          <th class="ancho-celda">Zinc (mg)</th>
+                          <th class="ancho-celda">Vitamina C (mg)</th>
+                          <th class="ancho-celda">Vitamina A (µg ERE)</th>
+                          <th class="ancho-celda">Folatos (µg)</th>
+                          <th class="ancho-celda">Vitamina B12 (µg)</th>
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 2: ALIMENTOS SELECCIONADOS -->
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
+                  <div class="centered-div" style="padding-bottom: 10px;">
+                    <h3>ALIMENTOS SELECCIONADOS</h3>
+                  </div>
+                  <div id="seleccionados" class="scrollable-div">
+                    <table id="valores" class="table table-striped table-hover table-sm custom-width-table">
+                      <thead id="encabezado_valores" class='table-primary'>
+                        <tr>
+                          <th class="ancho-alimento">Nombre</th>
+                          <th class="ancho-celda">Gramos</th>
+                          <th class="ancho-celda">Energía calculada (Kcal)</th>
+                          <th class="ancho-celda">Proteína (g)</th>
+                          <th class="ancho-celda">Grasa total (g)</th>
+                          <th class="ancho-celda">Carbohidratos (g)</th>
+                          <th class="ancho-celda">Fibra (g)</th>
+                          <th class="ancho-celda">AGS (g)</th>
+                          <th class="ancho-celda">AGM (g)</th>
+                          <th class="ancho-celda">AGPI (g)</th>
+                          <th class="ancho-celda">Colesterol (mg)</th>
+                          <th class="ancho-celda">Calcio (mg)</th>
+                          <th class="ancho-celda">Fosforo (mg)</th>
+                          <th class="ancho-celda">Hierro (mg)</th>
+                          <th class="ancho-celda">Potasio (mg)</th>
+                          <th class="ancho-celda">Sodio (mg)</th>
+                          <th class="ancho-celda">Zinc (mg)</th>
+                          <th class="ancho-celda">Vitamina C (mg)</th>
+                          <th class="ancho-celda">Vitamina A (µg ERE)</th>
+                          <th class="ancho-celda">Folatos (µg)</th>
+                          <th class="ancho-celda">Vitamina B12 (µg)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">Desayuno</td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Desayuno"></tbody>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">Media Mañana</td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Media_Mañana"></tbody>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">Almuerzo</td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Almuerzo"></tbody>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">Media Tarde</td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Media_Tarde"></tbody>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">Merienda</td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Merienda"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 3: TOTALES -->
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
+                  <div class="centered-div" style="padding-bottom: 10px;">
+                    <h3>TOTALES</h3>
+                  </div>
+                  <div class="scrollable-div-totales">
+                    <table class="table table-striped table-sm">
+                      <thead class='table-primary'>
+                        <tr>
+                          <th style="width: 300px;">Totales</th>
+                          <th>Energía calculada (Kcal)</th>
+                          <th>Proteína (g)</th>
+                          <th>Grasa total (g)</th>
+                          <th>Carbohidratos (g)</th>
+                          <th>Fibra (g)</th>
+                          <th>AGS (g)</th>
+                          <th>AGM (g)</th>
+                          <th>AGPI (g)</th>
+                          <th>Colesterol (mg)</th>
+                          <th>Calcio (mg)</th>
+                          <th>Fosforo (mg)</th>
+                          <th>Hierro (mg)</th>
+                          <th>Potasio (mg)</th>
+                          <th>Sodio (mg)</th>
+                          <th>Zinc (mg)</th>
+                          <th>Vitamina C (mg)</th>
+                          <th>Vitamina A (µg ERE)</th>
+                          <th>Folatos (µg)</th>
+                          <th>Vitamina B12 (µg)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="encabezado_valores_tbody">
+                        <!-- Subtotales por Tiempo de Comida -->
+                        <tr id="row_subtotal_Desayuno">
+                          <td style="width: 300px;">Desayuno</td>
+                          <td id="sub_Desayuno_0"></td>
+                          <td id="sub_Desayuno_1"></td>
+                          <td id="sub_Desayuno_2"></td>
+                          <td id="sub_Desayuno_3"></td>
+                          <td id="sub_Desayuno_4"></td>
+                          <td id="sub_Desayuno_5"></td>
+                          <td id="sub_Desayuno_6"></td>
+                          <td id="sub_Desayuno_7"></td>
+                          <td id="sub_Desayuno_8"></td>
+                          <td id="sub_Desayuno_9"></td>
+                          <td id="sub_Desayuno_10"></td>
+                          <td id="sub_Desayuno_11"></td>
+                          <td id="sub_Desayuno_12"></td>
+                          <td id="sub_Desayuno_13"></td>
+                          <td id="sub_Desayuno_14"></td>
+                          <td id="sub_Desayuno_15"></td>
+                          <td id="sub_Desayuno_16"></td>
+                          <td id="sub_Desayuno_17"></td>
+                          <td id="sub_Desayuno_18"></td>
+                        </tr>
+                        <tr id="row_subtotal_Media_Mañana">
+                          <td style="width: 300px;">Media Mañana</td>
+                          <td id="sub_Media_Mañana_0"></td>
+                          <td id="sub_Media_Mañana_1"></td>
+                          <td id="sub_Media_Mañana_2"></td>
+                          <td id="sub_Media_Mañana_3"></td>
+                          <td id="sub_Media_Mañana_4"></td>
+                          <td id="sub_Media_Mañana_5"></td>
+                          <td id="sub_Media_Mañana_6"></td>
+                          <td id="sub_Media_Mañana_7"></td>
+                          <td id="sub_Media_Mañana_8"></td>
+                          <td id="sub_Media_Mañana_9"></td>
+                          <td id="sub_Media_Mañana_10"></td>
+                          <td id="sub_Media_Mañana_11"></td>
+                          <td id="sub_Media_Mañana_12"></td>
+                          <td id="sub_Media_Mañana_13"></td>
+                          <td id="sub_Media_Mañana_14"></td>
+                          <td id="sub_Media_Mañana_15"></td>
+                          <td id="sub_Media_Mañana_16"></td>
+                          <td id="sub_Media_Mañana_17"></td>
+                          <td id="sub_Media_Mañana_18"></td>
+                        </tr>
+                        <tr id="row_subtotal_Almuerzo">
+                          <td style="width: 300px;">Almuerzo</td>
+                          <td id="sub_Almuerzo_0"></td>
+                          <td id="sub_Almuerzo_1"></td>
+                          <td id="sub_Almuerzo_2"></td>
+                          <td id="sub_Almuerzo_3"></td>
+                          <td id="sub_Almuerzo_4"></td>
+                          <td id="sub_Almuerzo_5"></td>
+                          <td id="sub_Almuerzo_6"></td>
+                          <td id="sub_Almuerzo_7"></td>
+                          <td id="sub_Almuerzo_8"></td>
+                          <td id="sub_Almuerzo_9"></td>
+                          <td id="sub_Almuerzo_10"></td>
+                          <td id="sub_Almuerzo_11"></td>
+                          <td id="sub_Almuerzo_12"></td>
+                          <td id="sub_Almuerzo_13"></td>
+                          <td id="sub_Almuerzo_14"></td>
+                          <td id="sub_Almuerzo_15"></td>
+                          <td id="sub_Almuerzo_16"></td>
+                          <td id="sub_Almuerzo_17"></td>
+                          <td id="sub_Almuerzo_18"></td>
+                        </tr>
+                        <tr id="row_subtotal_Media_Tarde">
+                          <td style="width: 300px;">Media Tarde</td>
+                          <td id="sub_Media_Tarde_0"></td>
+                          <td id="sub_Media_Tarde_1"></td>
+                          <td id="sub_Media_Tarde_2"></td>
+                          <td id="sub_Media_Tarde_3"></td>
+                          <td id="sub_Media_Tarde_4"></td>
+                          <td id="sub_Media_Tarde_5"></td>
+                          <td id="sub_Media_Tarde_6"></td>
+                          <td id="sub_Media_Tarde_7"></td>
+                          <td id="sub_Media_Tarde_8"></td>
+                          <td id="sub_Media_Tarde_9"></td>
+                          <td id="sub_Media_Tarde_10"></td>
+                          <td id="sub_Media_Tarde_11"></td>
+                          <td id="sub_Media_Tarde_12"></td>
+                          <td id="sub_Media_Tarde_13"></td>
+                          <td id="sub_Media_Tarde_14"></td>
+                          <td id="sub_Media_Tarde_15"></td>
+                          <td id="sub_Media_Tarde_16"></td>
+                          <td id="sub_Media_Tarde_17"></td>
+                          <td id="sub_Media_Tarde_18"></td>
+                        </tr>
+                        <tr id="row_subtotal_Merienda">
+                          <td style="width: 300px;">Merienda</td>
+                          <td id="sub_Merienda_0"></td>
+                          <td id="sub_Merienda_1"></td>
+                          <td id="sub_Merienda_2"></td>
+                          <td id="sub_Merienda_3"></td>
+                          <td id="sub_Merienda_4"></td>
+                          <td id="sub_Merienda_5"></td>
+                          <td id="sub_Merienda_6"></td>
+                          <td id="sub_Merienda_7"></td>
+                          <td id="sub_Merienda_8"></td>
+                          <td id="sub_Merienda_9"></td>
+                          <td id="sub_Merienda_10"></td>
+                          <td id="sub_Merienda_11"></td>
+                          <td id="sub_Merienda_12"></td>
+                          <td id="sub_Merienda_13"></td>
+                          <td id="sub_Merienda_14"></td>
+                          <td id="sub_Merienda_15"></td>
+                          <td id="sub_Merienda_16"></td>
+                          <td id="sub_Merienda_17"></td>
+                          <td id="sub_Merienda_18"></td>
+                        </tr>
+                        <tr class="table-secondary">
+                          <td style="width: 300px; font-weight: bold;">Total</td>
+                          <td class="td_principal" id="energia_calculada_total"></td>
+                          <td class="td_principal" id="proteina_total"></td>
+                          <td class="td_principal" id="grasa_total"></td>
+                          <td class="td_principal" id="carbohidratos_total"></td>
+                          <td class="td_principal" id="fibra_total"></td>
+                          <td class="td_principal" id="ags_total"></td>
+                          <td class="td_principal" id="agm_total"></td>
+                          <td class="td_principal" id="agpi_total"></td>
+                          <td class="td_principal" id="colesterol_total"></td>
+                          <td class="td_principal" id="calcio_total"></td>
+                          <td class="td_principal" id="fosforo_total"></td>
+                          <td class="td_principal" id="hierro_total"></td>
+                          <td class="td_principal" id="potasio_total"></td>
+                          <td class="td_principal" id="sodio_total"></td>
+                          <td class="td_principal" id="zinc_total"></td>
+                          <td class="td_principal" id="vitamina_c_total"></td>
+                          <td class="td_principal" id="vitamina_a_total"></td>
+                          <td class="td_principal" id="folatos_total"></td>
+                          <td class="td_principal" id="vitamina_b12_total"></td>
+                        </tr>
+                        <tr>
+                          <td style="width: 300px;">Requerimiento</td>
+                          <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento"
+                              min="1" value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_ags_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_agm_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular() " type="number" id="input_agpi_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_colesterol_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_calcio_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_fosforo_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_hierro_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_potasio_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_sodio_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_zinc_requerimiento" min="1" value="1"
+                              style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_vitamina_c_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_vitamina_a_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_folatos_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                          <td><input onkeyup="calcular()" type="number" id="input_vitamina_b12_requerimiento" min="1"
+                              value="1" style="width: 100px;"></td>
+                        </tr>
+                        <tr>
+                          <td style="width: 300px;">% de adecuación</td>
+                          <td id="adecuacion_energia_calculada"></td>
+                          <td id="adecuacion_proteina"></td>
+                          <td id="adecuacion_grasa"></td>
+                          <td id="adecuacion_carbohidratos"></td>
+                          <td id="adecuacion_fibra"></td>
+                          <td id="adecuacion_ags"></td>
+                          <td id="adecuacion_agm"></td>
+                          <td id="adecuacion_agpi"></td>
+                          <td id="adecuacion_colesterol"></td>
+                          <td id="adecuacion_calcio"></td>
+                          <td id="adecuacion_fosforo"></td>
+                          <td id="adecuacion_hierro"></td>
+                          <td id="adecuacion_potasio"></td>
+                          <td id="adecuacion_sodio"></td>
+                          <td id="adecuacion_zinc"></td>
+                          <td id="adecuacion_vitamina_c"></td>
+                          <td id="adecuacion_vitamina_a"></td>
+                          <td id="adecuacion_folatos"></td>
+                          <td id="adecuacion_vitamina_b12"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PESTANA CITAS -->
+          <div class="tab-pane fade" id="citas" role="tabpanel" aria-labelledby="side-citas-link">
+            <div style="padding: 30px;">
+              <div class="centered-div" style="padding-bottom: 20px;">
+                <h3>CITAS</h3>
+              </div>
+
+              <div class="card p-3 mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                  <h5 class="mb-0">Historial de citas</h5>
+                  <div class="citas-table-actions">
+                    <input type="search" id="citas_filtro" class="form-control form-control-sm citas-filter"
+                      placeholder="Buscar por paciente, cedula o fecha" aria-label="Buscar citas">
+                    <button type="button" id="citas_recargar" class="btn btn-outline-secondary btn-sm">Recargar</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Paciente</th>
+                        <th>C&eacute;dula/Pasaporte</th>
+                        <th>Guardada</th>
+                      </tr>
+                    </thead>
+                    <tbody id="citas_tbody">
+                      <tr>
+                        <td colspan="4" class="text-muted">Sin citas guardadas.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div id="cita_detalle" class="cita-detail"></div>
+            </div>
+          </div>
+
+          <!-- PESTANA AGREGAR PACIENTES -->
+          <div class="tab-pane fade" id="pacientes" role="tabpanel" aria-labelledby="side-pacientes-link">
+            <div style="padding: 30px;">
+              <div class="centered-div" style="padding-bottom: 20px;">
+                <h3>AGREGAR PACIENTES</h3>
+              </div>
+
+              <div class="card p-3 mb-4">
+                <form id="paciente-form">
+                  <div class="row g-3">
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_nombres">Nombres</label>
+                      <input type="text" id="paciente_nombres" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_apellidos">Apellidos</label>
+                      <input type="text" id="paciente_apellidos" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_documento">C&eacute;dula/Pasaporte</label>
+                      <input type="text" id="paciente_documento" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_fecha_nacimiento">Fecha de nacimiento</label>
+                      <input type="date" id="paciente_fecha_nacimiento" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_pais_nacimiento">Pa&iacute;s de nacimiento</label>
+                      <input type="text" id="paciente_pais_nacimiento" class="form-control"
+                        list="paises_nacimiento_lista" autocomplete="off" required>
+                      <datalist id="paises_nacimiento_lista"></datalist>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                      <button type="submit" id="paciente_submit" class="btn btn-success w-100">Guardar paciente</button>
+                    </div>
+                  </div>
+                  <p id="paciente_mensaje" class="paciente-message" aria-live="polite"></p>
+                </form>
+              </div>
+
+              <div class="card p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <h5 class="mb-0">Pacientes creados</h5>
+                  <div class="paciente-table-actions">
+                    <input type="search" id="paciente_filtro" class="form-control form-control-sm paciente-filter"
+                      placeholder="Filtrar pacientes" aria-label="Filtrar pacientes">
+                    <button type="button" id="paciente_recargar"
+                      class="btn btn-outline-secondary btn-sm">Recargar</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th>Nombres</th>
+                        <th>Apellidos</th>
+                        <th>C&eacute;dula/Pasaporte</th>
+                        <th>Fecha de nacimiento</th>
+                        <th>Pa&iacute;s de nacimiento</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pacientes_tabla_body">
+                      <tr>
+                        <td colspan="5" class="text-muted">Sin pacientes cargados.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PESTANA GENERADOR SEMANAL -->
+          <div class="tab-pane fade" id="generador" role="tabpanel" aria-labelledby="side-generador-link">
+            <div style="padding: 30px;">
+              <div class="centered-div" style="padding-bottom: 20px;">
+                <h3>GENERADOR SEMANAL DE DIETA</h3>
+              </div>
+
+              <div class="card p-3 mb-4">
+                <h5>Configuración del Generador</h5>
+                <div class="row g-3 align-items-end">
+                  <div class="col-md-3">
+                    <label class="form-label">Número de Comidas</label>
+                    <select id="gen_comidas" class="form-select">
+                      <option value="3">3 Comidas</option>
+                      <option value="4">4 Comidas</option>
+                      <option value="5" selected>5 Comidas</option>
+                    </select>
                   </div>
                   <div class="col-md-3">
-                    <label class="form-label">Fecha de Evaluación</label>
-                    <input type="date" id="calc_fecha" class="form-control">
-                  </div>
-                  <div class="col-md-2 mt-3">
-                    <label class="form-label">Peso (kg)</label>
-                    <input type="number" id="calc_peso" class="form-control" min="1" step="0.1" value="70">
-                  </div>
-                  <div class="col-md-2 mt-3">
-                    <label class="form-label">Estatura (cm)</label>
-                    <input type="number" id="calc_estatura" class="form-control" min="1" step="0.1" value="170">
-                  </div>
-                  <div class="col-md-2 mt-3">
-                    <label class="form-label">Edad (años)</label>
-                    <input type="number" id="calc_edad" class="form-control" min="1" value="30">
-                  </div>
-                  <div class="col-md-2 mt-3">
-                    <label class="form-label">Género</label>
-                    <select id="calc_genero" class="form-select" style="height: 38px;">
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
+                    <label class="form-label">Entrenamiento</label>
+                    <select id="gen_entrenamiento" class="form-select">
+                      <option value="Mañana">Mañana</option>
+                      <option value="Tarde" selected>Tarde</option>
+                      <option value="Noche">Noche</option>
+                      <option value="No entrena">No entrena</option>
                     </select>
                   </div>
-                  <div class="col-md-6 mt-3">
-                    <label class="form-label">Nivel de Actividad Física</label>
-                    <select id="calc_actividad" class="form-select" style="height: 38px;">
-                      <option value="1.2">Sedentario (Poco o ningún ejercicio)</option>
-                      <option value="1.375">Ligero (Ejercicio ligero 1-3 días/sem)</option>
-                      <option value="1.55" selected>Moderado (Ejercicio moderado 3-5 días/sem)</option>
-                      <option value="1.725">Activo (Ejercicio intenso 6-7 días/sem)</option>
-                      <option value="1.9">Muy Activo (Atletas profesionales / Entrenamiento físico duro diario)</option>
-                    </select>
+                  <div class="col-md-3">
+                    <button class="btn btn-success w-100" onclick="ejecutarGenerador()">Generar Automático</button>
                   </div>
-                  <div class="col-md-6 mt-3 d-flex align-items-end">
-                    <button class="btn btn-primary w-100" style="height: 38px; background-color: #4CAF50; border-color: #4CAF50;" onclick="calcularReqEnergia()">Calcular Requerimiento</button>
+                  <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" onclick="$('#modalCrearReceta').modal('show')">Crear
+                      Receta Personalizada</button>
                   </div>
                 </div>
-              </div>
-              
-              <div id="resultados_calc" class="alert alert-info" style="display: none;">
-                <h5>Resultados de Energía Calculada (Kcal/día)</h5>
-                <ul>
-                  <li><strong>Harris-Benedict:</strong> <span id="res_harris"></span> kcal</li>
-                  <li><strong>Mifflin-St Jeor:</strong> <span id="res_mifflin"></span> kcal</li>
-                  <li><strong>OMS/FAO:</strong> <span id="res_oms"></span> kcal</li>
-                </ul>
-                <p class="mb-0 mt-2 text-success" id="res_msg_success" style="font-weight: 500;">✓ Se ha autocompletado un promedio (<span id="res_promedio"></span> kcal) en el requerimiento de energía total abajo.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row w-100 m-0 mb-4">
-          <div class="col-md-12">
-            <div class="macro-requerimiento-panel">
-              <div class="table-responsive">
-                <table class="table table-sm macro-requerimiento-tabla mb-0">
-                  <thead>
-                    <tr>
-                      <th>Macronutriente</th>
-                      <th>%</th>
-                      <th>Kcal</th>
-                      <th>Gramos Totales</th>
-                      <th>g/kg</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Proteínas</td>
-                      <td>
-                        <input type="number" id="macro_proteina_porcentaje" class="form-control macro-porcentaje-input" min="0" max="100" step="0.1" value="20">
-                      </td>
-                      <td id="macro_proteina_kcal">0.00 kcal</td>
-                      <td id="macro_proteina_gramos" class="macro-gramos">0.00 g</td>
-                      <td id="macro_proteina_gkg">0.00 g/kg</td>
-                    </tr>
-                    <tr>
-                      <td>Grasas</td>
-                      <td>
-                        <input type="number" id="macro_grasa_porcentaje" class="form-control macro-porcentaje-input" min="0" max="100" step="0.1" value="30">
-                      </td>
-                      <td id="macro_grasa_kcal">0.00 kcal</td>
-                      <td id="macro_grasa_gramos" class="macro-gramos">0.00 g</td>
-                      <td id="macro_grasa_gkg">0.00 g/kg</td>
-                    </tr>
-                    <tr>
-                      <td>Carbohidratos</td>
-                      <td><span id="macro_carbohidratos_porcentaje">50.00%</span></td>
-                      <td id="macro_carbohidratos_kcal">0.00 kcal</td>
-                      <td id="macro_carbohidratos_gramos" class="macro-gramos">0.00 g</td>
-                      <td id="macro_carbohidratos_gkg">0.00 g/kg</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div id="macro_porcentaje_error" class="text-danger mt-2" style="display: none;">La suma de proteínas y grasas no debe superar 100%.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 1: BUSCADOR -->
-        <div class="row w-100 m-0 mb-4">
-          <div class="col-md-12">
-            <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
-              <div class="espacio-extra-encabezado" style="padding-bottom: 10px;">          
-                <div class="centered-div">
-                  <h3>ALIMENTOS</h3>
-                </div>
-                <h6>BÚSQUEDA:</h6>
-                <input type="text" id="busqueda" class="form-control" style="width: 100%; max-width: 400px;" onkeyup="buscar()"/>
-                <div id="filtros-nutrientes" class="d-flex flex-wrap mt-2" style="max-width: 400px;">
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="energia_calculada" onclick="toggleFiltro(this)">Energía Cal.</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="proteina" onclick="toggleFiltro(this)">Proteína</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="grasa_total" onclick="toggleFiltro(this)">Grasa total</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="carbohidratos" onclick="toggleFiltro(this)">Carbohidratos</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="fibra" onclick="toggleFiltro(this)">Fibra</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="ags" onclick="toggleFiltro(this)">AGS</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agm" onclick="toggleFiltro(this)">AGM</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agpi" onclick="toggleFiltro(this)">AGPI</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="colesterol" onclick="toggleFiltro(this)">Colesterol</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="calcio" onclick="toggleFiltro(this)">Calcio</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="fosforo" onclick="toggleFiltro(this)">Fósforo</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="hierro" onclick="toggleFiltro(this)">Hierro</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="potasio" onclick="toggleFiltro(this)">Potasio</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="sodio" onclick="toggleFiltro(this)">Sodio</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="zinc" onclick="toggleFiltro(this)">Zinc</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="vitamina_c" onclick="toggleFiltro(this)">Vit. C</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="vitamina_a" onclick="toggleFiltro(this)">Vit. A</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="folatos" onclick="toggleFiltro(this)">Folatos</button>
-                  <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="vitamina_b12" onclick="toggleFiltro(this)">Vit. B12</button>
+                <div class="mt-2 text-muted" style="font-size: 0.9em;">
+                  *Asegúrese de haber calculado los requerimientos en la pestaña "Calculadora" antes de generar.
                 </div>
               </div>
-              <div id="buscador" class="scrollable-div">                        
-                <table id="lista" class="table table-striped table-hover table-sm custom-width-table">
-                  <thead class = 'table-primary'>
-                <tr>
-                  <th class="ancho-alimento">Alimento</th>
-                  <th class="ancho-celda">Gramos</th>
-                  <th class="ancho-celda">Energía calculada (Kcal)</th>
-                  <th class="ancho-celda">Proteína (g)</th>
-                  <th class="ancho-celda">Grasa total (g)</th>
-                  <th class="ancho-celda">Carbohidratos (g)</th>
-                  <th class="ancho-celda">Fibra (g)</th>
-                  <th class="ancho-celda">AGS (g)</th>
-                  <th class="ancho-celda">AGM (g)</th>
-                  <th class="ancho-celda">AGPI (g)</th>
-                  <th class="ancho-celda">Colesterol (mg)</th> 
-                  <th class="ancho-celda">Calcio (mg)</th>
-                  <th class="ancho-celda">Fosforo (mg)</th>
-                  <th class="ancho-celda">Hierro (mg)</th>
-                  <th class="ancho-celda">Potasio (mg)</th>
-                  <th class="ancho-celda">Sodio (mg)</th>
-                  <th class="ancho-celda">Zinc (mg)</th>
-                  <th class="ancho-celda">Vitamina C (mg)</th>
-                  <th class="ancho-celda">Vitamina A (µg ERE)</th>
-                  <th class="ancho-celda">Folatos (µg)</th>
-                  <th class="ancho-celda">Vitamina B12 (µg)</th>   
-                </tr>
-              </thead>
-            </table>
-          </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- SECCIÓN 2: ALIMENTOS SELECCIONADOS -->
-        <div class="row w-100 m-0 mb-4">
-          <div class="col-md-12">
-            <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;"> 
-              <div class="centered-div" style="padding-bottom: 10px;">
-                <h3>ALIMENTOS SELECCIONADOS</h3>
+              <!-- Resultados del Calendario Semanal -->
+              <div id="contenedor_calendario" style="display:none;">
+                <h4>Menú Semanal</h4>
+                <div class="table-responsive">
+                  <table class="table table-bordered table-sm" id="tabla_semanal">
+                    <thead class="table-primary" id="thead_semanal">
+                    </thead>
+                    <tbody id="tbody_semanal">
+                    </tbody>
+                  </table>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                  <button class="btn btn-danger" onclick="generarPDFSemanal()">Descargar PDF Semanal</button>
+                  <button class="btn btn-outline-danger" onclick="generarPDFSemanalHorizontal()">Formato
+                    Horizontal</button>
+                </div>
               </div>
-<div id="seleccionados" class="scrollable-div">
-            <table id="valores" class="table table-striped table-hover table-sm custom-width-table">
-              <thead id="encabezado_valores" class = 'table-primary'>
-                <tr>
-                  <th class="ancho-alimento">Alimento</th>
-                  <th class="ancho-celda">Gramos</th>
-                  <th class="ancho-celda">Energía calculada (Kcal)</th>
-                  <th class="ancho-celda">Proteína (g)</th>
-                  <th class="ancho-celda">Grasa total (g)</th>
-                  <th class="ancho-celda">Carbohidratos (g)</th>
-                  <th class="ancho-celda">Fibra (g)</th>
-                  <th class="ancho-celda">AGS (g)</th>
-                  <th class="ancho-celda">AGM (g)</th>
-                  <th class="ancho-celda">AGPI (g)</th>
-                  <th class="ancho-celda">Colesterol (mg)</th> 
-                  <th class="ancho-celda">Calcio (mg)</th>
-                  <th class="ancho-celda">Fosforo (mg)</th>
-                  <th class="ancho-celda">Hierro (mg)</th>
-                  <th class="ancho-celda">Potasio (mg)</th>
-                  <th class="ancho-celda">Sodio (mg)</th>
-                  <th class="ancho-celda">Zinc (mg)</th>
-                  <th class="ancho-celda">Vitamina C (mg)</th>
-                  <th class="ancho-celda">Vitamina A (µg ERE)</th>
-                  <th class="ancho-celda">Folatos (µg)</th>
-                  <th class="ancho-celda">Vitamina B12 (µg)</th>   
-                </tr>
-              </thead>
-              <tbody><tr class="table-info"><td colspan="21" class="text-start fw-bold">Desayuno</td></tr></tbody>
-              <tbody id="valores_Desayuno"></tbody>
-              <tbody><tr class="table-info"><td colspan="21" class="text-start fw-bold">Media Mañana</td></tr></tbody>
-              <tbody id="valores_Media_Mañana"></tbody>
-              <tbody><tr class="table-info"><td colspan="21" class="text-start fw-bold">Almuerzo</td></tr></tbody>
-              <tbody id="valores_Almuerzo"></tbody>
-              <tbody><tr class="table-info"><td colspan="21" class="text-start fw-bold">Media Tarde</td></tr></tbody>
-              <tbody id="valores_Media_Tarde"></tbody>
-              <tbody><tr class="table-info"><td colspan="21" class="text-start fw-bold">Merienda</td></tr></tbody>
-              <tbody id="valores_Merienda"></tbody>
-            </table>
-          </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECCIÓN 3: TOTALES -->
-        <div class="row w-100 m-0 mb-4">
-          <div class="col-md-12">
-            <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">            
-              <div class="centered-div" style="padding-bottom: 10px;">
-                <h3>TOTALES</h3>
-              </div>
-<div class="scrollable-div-totales">
-              <table class="table table-striped table-sm" >
-                <thead class = 'table-primary'>
-                  <tr>
-                    <th style="width: 300px;">Totales</th>
-                    <th>Energía calculada (Kcal)</th>
-                    <th>Proteína (g)</th>
-                    <th>Grasa total (g)</th>
-                    <th>Carbohidratos (g)</th>
-                    <th>Fibra (g)</th>
-                    <th>AGS (g)</th>
-                    <th>AGM (g)</th>
-                    <th>AGPI (g)</th>
-                    <th>Colesterol (mg)</th>
-                    <th>Calcio (mg)</th>
-                    <th>Fosforo (mg)</th>
-                    <th>Hierro (mg)</th>
-                    <th>Potasio (mg)</th>
-                    <th>Sodio (mg)</th>
-                    <th>Zinc (mg)</th>
-                    <th>Vitamina C (mg)</th>
-                    <th>Vitamina A (µg ERE)</th>
-                    <th>Folatos (µg)</th>
-                    <th>Vitamina B12 (µg)</th>    
-                  </tr>
-                </thead>
-                <tbody id="encabezado_valores_tbody">
-                  <!-- Subtotales por Tiempo de Comida -->
-                  <tr id="row_subtotal_Desayuno">
-                    <td style="width: 300px;">Desayuno</td><td id="sub_Desayuno_0"></td><td id="sub_Desayuno_1"></td><td id="sub_Desayuno_2"></td><td id="sub_Desayuno_3"></td><td id="sub_Desayuno_4"></td><td id="sub_Desayuno_5"></td><td id="sub_Desayuno_6"></td><td id="sub_Desayuno_7"></td><td id="sub_Desayuno_8"></td><td id="sub_Desayuno_9"></td><td id="sub_Desayuno_10"></td><td id="sub_Desayuno_11"></td><td id="sub_Desayuno_12"></td><td id="sub_Desayuno_13"></td><td id="sub_Desayuno_14"></td><td id="sub_Desayuno_15"></td><td id="sub_Desayuno_16"></td><td id="sub_Desayuno_17"></td><td id="sub_Desayuno_18"></td>
-                  </tr>
-                  <tr id="row_subtotal_Media_Mañana">
-                    <td style="width: 300px;">Media Mañana</td><td id="sub_Media_Mañana_0"></td><td id="sub_Media_Mañana_1"></td><td id="sub_Media_Mañana_2"></td><td id="sub_Media_Mañana_3"></td><td id="sub_Media_Mañana_4"></td><td id="sub_Media_Mañana_5"></td><td id="sub_Media_Mañana_6"></td><td id="sub_Media_Mañana_7"></td><td id="sub_Media_Mañana_8"></td><td id="sub_Media_Mañana_9"></td><td id="sub_Media_Mañana_10"></td><td id="sub_Media_Mañana_11"></td><td id="sub_Media_Mañana_12"></td><td id="sub_Media_Mañana_13"></td><td id="sub_Media_Mañana_14"></td><td id="sub_Media_Mañana_15"></td><td id="sub_Media_Mañana_16"></td><td id="sub_Media_Mañana_17"></td><td id="sub_Media_Mañana_18"></td>
-                  </tr>
-                  <tr id="row_subtotal_Almuerzo">
-                    <td style="width: 300px;">Almuerzo</td><td id="sub_Almuerzo_0"></td><td id="sub_Almuerzo_1"></td><td id="sub_Almuerzo_2"></td><td id="sub_Almuerzo_3"></td><td id="sub_Almuerzo_4"></td><td id="sub_Almuerzo_5"></td><td id="sub_Almuerzo_6"></td><td id="sub_Almuerzo_7"></td><td id="sub_Almuerzo_8"></td><td id="sub_Almuerzo_9"></td><td id="sub_Almuerzo_10"></td><td id="sub_Almuerzo_11"></td><td id="sub_Almuerzo_12"></td><td id="sub_Almuerzo_13"></td><td id="sub_Almuerzo_14"></td><td id="sub_Almuerzo_15"></td><td id="sub_Almuerzo_16"></td><td id="sub_Almuerzo_17"></td><td id="sub_Almuerzo_18"></td>
-                  </tr>
-                  <tr id="row_subtotal_Media_Tarde">
-                    <td style="width: 300px;">Media Tarde</td><td id="sub_Media_Tarde_0"></td><td id="sub_Media_Tarde_1"></td><td id="sub_Media_Tarde_2"></td><td id="sub_Media_Tarde_3"></td><td id="sub_Media_Tarde_4"></td><td id="sub_Media_Tarde_5"></td><td id="sub_Media_Tarde_6"></td><td id="sub_Media_Tarde_7"></td><td id="sub_Media_Tarde_8"></td><td id="sub_Media_Tarde_9"></td><td id="sub_Media_Tarde_10"></td><td id="sub_Media_Tarde_11"></td><td id="sub_Media_Tarde_12"></td><td id="sub_Media_Tarde_13"></td><td id="sub_Media_Tarde_14"></td><td id="sub_Media_Tarde_15"></td><td id="sub_Media_Tarde_16"></td><td id="sub_Media_Tarde_17"></td><td id="sub_Media_Tarde_18"></td>
-                  </tr>
-                  <tr id="row_subtotal_Merienda">
-                    <td style="width: 300px;">Merienda</td><td id="sub_Merienda_0"></td><td id="sub_Merienda_1"></td><td id="sub_Merienda_2"></td><td id="sub_Merienda_3"></td><td id="sub_Merienda_4"></td><td id="sub_Merienda_5"></td><td id="sub_Merienda_6"></td><td id="sub_Merienda_7"></td><td id="sub_Merienda_8"></td><td id="sub_Merienda_9"></td><td id="sub_Merienda_10"></td><td id="sub_Merienda_11"></td><td id="sub_Merienda_12"></td><td id="sub_Merienda_13"></td><td id="sub_Merienda_14"></td><td id="sub_Merienda_15"></td><td id="sub_Merienda_16"></td><td id="sub_Merienda_17"></td><td id="sub_Merienda_18"></td>
-                  </tr>
-                  <tr class="table-secondary">
-                    <td style="width: 300px; font-weight: bold;">Total</td>
-                    <td class="td_principal" id="energia_calculada_total"></td>
-                    <td class="td_principal" id="proteina_total"></td>
-                    <td class="td_principal" id="grasa_total"></td>
-                    <td class="td_principal" id="carbohidratos_total"></td>
-                    <td class="td_principal" id="fibra_total"></td>
-                    <td class="td_principal" id="ags_total"></td>
-                    <td class="td_principal" id="agm_total"></td>
-                    <td class="td_principal" id="agpi_total"></td>
-                    <td class="td_principal" id="colesterol_total"></td>
-                    <td class="td_principal" id="calcio_total"></td>
-                    <td class="td_principal" id="fosforo_total"></td>
-                    <td class="td_principal" id="hierro_total"></td>
-                    <td class="td_principal" id="potasio_total"></td>
-                    <td class="td_principal" id="sodio_total"></td>
-                    <td class="td_principal" id="zinc_total"></td>
-                    <td class="td_principal" id="vitamina_c_total"></td>
-                    <td class="td_principal" id="vitamina_a_total"></td>
-                    <td class="td_principal" id="folatos_total"></td>
-                    <td class="td_principal" id="vitamina_b12_total"></td>  
-                  </tr>
-                  <tr>
-                    <td style="width: 300px;">Requerimiento</td>
-                    <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_carbohidratos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_fibra_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_ags_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_agm_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular() "type="number" id="input_agpi_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_colesterol_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_calcio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_fosforo_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_hierro_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_potasio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_sodio_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_zinc_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_c_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_a_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_folatos_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                    <td><input onkeyup="calcular()" type="number" id="input_vitamina_b12_requerimiento" min="1" value="1" style="width: 100px;" ></td>
-                  </tr>
-                  <tr>
-                    <td style="width: 300px;">% de adecuación</td>
-                    <td id="adecuacion_energia_calculada"></td>
-                    <td id="adecuacion_proteina"></td>
-                    <td id="adecuacion_grasa"></td>
-                    <td id="adecuacion_carbohidratos"></td>
-                    <td id="adecuacion_fibra"></td>
-                    <td id="adecuacion_ags"></td>
-                    <td id="adecuacion_agm"></td>
-                    <td id="adecuacion_agpi"></td>
-                    <td id="adecuacion_colesterol"></td>
-                    <td id="adecuacion_calcio"></td>
-                    <td id="adecuacion_fosforo"></td>
-                    <td id="adecuacion_hierro"></td>
-                    <td id="adecuacion_potasio"></td>
-                    <td id="adecuacion_sodio"></td>
-                    <td id="adecuacion_zinc"></td>
-                    <td id="adecuacion_vitamina_c"></td>
-                    <td id="adecuacion_vitamina_a"></td>
-                    <td id="adecuacion_folatos"></td>
-                    <td id="adecuacion_vitamina_b12"></td>
-                  </tr>
-                </tbody>      
-              </table>
-            </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PESTAÑA GENERADOR SEMANAL -->
-      <div class="tab-pane fade" id="generador" role="tabpanel" aria-labelledby="generador-tab">
-        <div style="padding: 30px;">
-          <div class="centered-div" style="padding-bottom: 20px;">
-            <h3>GENERADOR SEMANAL DE DIETA</h3>
-          </div>
-          
-          <div class="card p-3 mb-4">
-            <h5>Configuración del Generador</h5>
-            <div class="row g-3 align-items-end">
-              <div class="col-md-3">
-                <label class="form-label">Número de Comidas</label>
-                <select id="gen_comidas" class="form-select">
-                  <option value="3">3 Comidas</option>
-                  <option value="4">4 Comidas</option>
-                  <option value="5" selected>5 Comidas</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Entrenamiento</label>
-                <select id="gen_entrenamiento" class="form-select">
-                  <option value="Mañana">Mañana</option>
-                  <option value="Tarde" selected>Tarde</option>
-                  <option value="Noche">Noche</option>
-                  <option value="No entrena">No entrena</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <button class="btn btn-success w-100" onclick="ejecutarGenerador()">Generar Automático</button>
-              </div>
-              <div class="col-md-3">
-                <button class="btn btn-outline-primary w-100" onclick="$('#modalCrearReceta').modal('show')">Crear Receta Personalizada</button>
-              </div>
-            </div>
-            <div class="mt-2 text-muted" style="font-size: 0.9em;">
-              *Asegúrese de haber calculado los requerimientos en la pestaña "Calculadora" antes de generar.
             </div>
           </div>
 
-          <!-- Resultados del Calendario Semanal -->
-          <div id="contenedor_calendario" style="display:none;">
-            <h4>Menú Semanal</h4>
-            <div class="table-responsive">
-              <table class="table table-bordered table-sm" id="tabla_semanal">
-                <thead class="table-primary" id="thead_semanal">
-                </thead>
-                <tbody id="tbody_semanal">
-                </tbody>
-              </table>
-            </div>
-            <div class="d-flex flex-wrap gap-2 mt-3">
-              <button class="btn btn-danger" onclick="generarPDFSemanal()">Descargar PDF Semanal</button>
-              <button class="btn btn-outline-danger" onclick="generarPDFSemanalHorizontal()">Formato Horizontal</button>
-            </div>
-          </div>
-        </div>
-      </div>
+          <!-- PESTANA CONFIGURACION -->
+          <div class="tab-pane fade" id="configuracion" role="tabpanel" aria-labelledby="side-configuracion-link">
+            <div style="padding: 30px;">
+              <div class="centered-div" style="padding-bottom: 20px;">
+                <h3>CONFIGURACI&Oacute;N</h3>
+              </div>
 
-    <!-- Modal Selection -->
-    <div class="modal fade" id="mealSelectionModal" tabindex="-1" role="dialog" aria-labelledby="mealModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="mealModalLabel">Seleccionar Tiempo de Comida</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body text-center">
-            <h6 id="modalAlimentoName" class="mb-3"></h6>
-            <div class="list-group">
-              <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarTiempo('Desayuno')">Desayuno</button>
-              <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarTiempo('Media Mañana')">Media Mañana</button>
-              <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarTiempo('Almuerzo')">Almuerzo</button>
-              <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarTiempo('Media Tarde')">Media Tarde</button>
-              <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarTiempo('Merienda')">Merienda</button>
+              <div class="card p-3 config-card">
+                <h5>Columnas visibles</h5>
+                <div id="config_columnas_alimentos" class="config-columns-grid"></div>
+                <p id="config_columnas_mensaje" class="config-message" aria-live="polite"></p>
+              </div>
             </div>
           </div>
+
+          <!-- Modal Selection -->
+          <div class="modal fade" id="mealSelectionModal" tabindex="-1" role="dialog" aria-labelledby="mealModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="mealModalLabel">Seleccionar Tiempo de Comida</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body text-center">
+                  <h6 id="modalAlimentoName" class="mb-3"></h6>
+                  <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Desayuno')">Desayuno</button>
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Media Mañana')">Media Mañana</button>
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Almuerzo')">Almuerzo</button>
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Media Tarde')">Media Tarde</button>
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Merienda')">Merienda</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
-      </div>
+
+      </main>
     </div>
-
-  </div>
 
     <!-- Modal Crear Receta -->
     <div class="modal fade" id="modalCrearReceta" tabindex="-1" role="dialog" aria-hidden="true">
@@ -511,18 +1094,20 @@
             </div>
             <h6>Ingredientes (Buscar y añadir)</h6>
             <div class="input-group mb-2">
-              <input type="text" id="buscador_ingrediente" class="form-control" placeholder="Buscar alimento..." onkeyup="buscarIngredienteParaReceta()">
+              <input type="text" id="buscador_ingrediente" class="form-control" placeholder="Buscar alimento..."
+                onkeyup="buscarIngredienteParaReceta()">
             </div>
             <div id="lista_busqueda_ingredientes" class="list-group mb-3" style="max-height: 150px; overflow-y: auto;">
             </div>
-            
+
             <h6>Ingredientes Seleccionados</h6>
             <ul class="list-group" id="ingredientes_seleccionados_lista">
             </ul>
 
             <div class="mt-3">
               <label for="nueva_receta_elaboracion">Elaboración</label>
-              <textarea id="nueva_receta_elaboracion" class="form-control" rows="4" placeholder="Describa paso a paso cómo preparar la receta"></textarea>
+              <textarea id="nueva_receta_elaboracion" class="form-control" rows="4"
+                placeholder="Describa paso a paso cómo preparar la receta"></textarea>
             </div>
           </div>
           <div class="modal-footer">
@@ -534,21 +1119,27 @@
     </div>
 
   </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>  
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-    <script src="script.js"></script>
-    <script src="alimentos.js"></script>
-    <script src="recetas.js"></script>
-    <script src="generador.js"></script>
-  
-  </body>
+  <script src="auth.js"></script>
+  <script src="perfil.js"></script>
+  <script src="pacientes.js"></script>
+  <script src="citas.js"></script>
+  <script src="script.js"></script>
+  <script src="alimentos.js"></script>
+  <script src="recetas.js"></script>
+  <script src="generador.js"></script>
+
+</body>
 
 </html>
