@@ -438,6 +438,7 @@ function configurarNavegacionLateral() {
   const hoverMenuQuery = window.matchMedia
     ? window.matchMedia("(hover: hover) and (pointer: fine)")
     : null;
+  let menuBloqueadoTrasSeleccion = false;
 
   function actualizarIconos() {
     if (window.lucide) {
@@ -455,22 +456,37 @@ function configurarNavegacionLateral() {
   }
 
   function aplicarModoMenu() {
-    setMenuColapsado(puedeUsarHoverMenu());
+    setMenuColapsado(true);
+  }
+
+  function ocultarMenuLateral() {
+    menuBloqueadoTrasSeleccion = true;
+    setMenuColapsado(true);
+
+    if (sideMenu && sideMenu.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
   }
 
   if (sideMenu) {
     aplicarModoMenu();
 
     sideMenu.addEventListener("mouseenter", function () {
-      if (puedeUsarHoverMenu()) setMenuColapsado(false);
+      if (puedeUsarHoverMenu() && !menuBloqueadoTrasSeleccion) setMenuColapsado(false);
     });
 
     sideMenu.addEventListener("mouseleave", function () {
+      menuBloqueadoTrasSeleccion = false;
       if (puedeUsarHoverMenu()) setMenuColapsado(true);
     });
 
+    sideMenu.addEventListener("pointerleave", function () {
+      menuBloqueadoTrasSeleccion = false;
+      setMenuColapsado(true);
+    });
+
     sideMenu.addEventListener("focusin", function () {
-      if (puedeUsarHoverMenu()) setMenuColapsado(false);
+      if (puedeUsarHoverMenu() && !menuBloqueadoTrasSeleccion) setMenuColapsado(false);
     });
 
     sideMenu.addEventListener("focusout", function (event) {
@@ -489,6 +505,15 @@ function configurarNavegacionLateral() {
     }
   }
 
+  document.querySelectorAll(".side-menu-link").forEach(link => {
+    link.addEventListener("click", function () {
+      window.setTimeout(ocultarMenuLateral, 0);
+    });
+    link.addEventListener("touchend", function () {
+      window.setTimeout(ocultarMenuLateral, 0);
+    }, { passive: true });
+  });
+
   if (window.jQuery) {
     window.jQuery('.side-menu-link[data-toggle="tab"]').on("shown.bs.tab", function (event) {
       const target = event.target.getAttribute("href");
@@ -501,6 +526,8 @@ function configurarNavegacionLateral() {
       if (target && window.location.hash !== target) {
         window.history.replaceState(null, "", target);
       }
+
+      ocultarMenuLateral();
     });
 
     const paginaInicial = PAGINAS_APP.includes(window.location.hash)
