@@ -322,8 +322,33 @@ body {
     gap: 8px;
 }
 
+.paciente-form-actions {
+    min-height: 38px;
+}
+
 .paciente-filter {
     width: 260px;
+}
+
+.paciente-actions-cell {
+    width: 72px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.paciente-edit-button {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.paciente-edit-button svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
 }
 
 .citas-table-actions {
@@ -360,6 +385,52 @@ body {
 .cita-detail .table {
     font-size: 0.88rem;
     min-width: 980px;
+}
+
+.cita-imc-layout {
+    display: grid;
+    grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.cita-imc-summary {
+    display: grid;
+    gap: 8px;
+}
+
+.cita-imc-summary div {
+    display: grid;
+    gap: 3px;
+    padding: 10px 12px;
+    border: 1px solid #dfe5e8;
+    border-radius: 8px;
+    background: #f8faf9;
+}
+
+.cita-imc-summary span {
+    color: #5d6872;
+    font-size: 0.84rem;
+}
+
+.cita-imc-summary strong {
+    font-weight: 400;
+}
+
+.cita-imc-chart-panel {
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid #dfe5e8;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.cita-imc-chart-panel .cita-imc-chart-svg {
+    min-width: 560px;
+}
+
+.cita-detail .cita-medidas-table {
+    min-width: 420px;
 }
 
 img,
@@ -483,7 +554,8 @@ table td {
 }
 
 .config-card {
-    max-width: 920px;
+    width: 100%;
+    max-width: none;
 }
 
 .config-columns-grid {
@@ -512,14 +584,112 @@ table td {
     accent-color: #4CAF50;
 }
 
+.config-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.config-save-button {
+    min-width: 160px;
+    min-height: 40px;
+    border-color: #4CAF50;
+    background-color: #4CAF50;
+    color: #fff;
+    font-weight: 600;
+}
+
+.config-save-button:hover,
+.config-save-button:focus {
+    border-color: #3e8e41;
+    background-color: #3e8e41;
+    color: #fff;
+}
+
+.config-save-button:disabled {
+    border-color: #b7c7b8;
+    background-color: #b7c7b8;
+}
+
 .config-message {
     min-height: 20px;
     margin: 10px 0 0;
     font-size: 0.9rem;
 }
 
+.config-message.pending {
+    color: #6b5d00;
+}
+
+.config-message.success {
+    color: #1d7d38;
+}
+
 .config-message.error {
     color: #b42318;
+}
+
+.meal-selection-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1060;
+    width: min(360px, calc(100vw - 32px));
+    display: none;
+    overflow: hidden;
+    border: 1px solid #d2d8dc;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 18px 46px rgba(31, 41, 55, 0.22);
+    transform: translate(-50%, -50%);
+}
+
+.meal-selection-panel.is-open {
+    display: block;
+}
+
+.meal-selection-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid #e0e5e8;
+}
+
+.meal-selection-panel-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.35;
+}
+
+.meal-selection-close {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #4b5563;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.meal-selection-close:hover {
+    background: #f1f5f3;
+    color: #1f2933;
+}
+
+.meal-selection-panel-body {
+    padding: 16px 18px 18px;
+}
+
+.meal-selection-panel .list-group-item {
+    min-height: 48px;
 }
 
 .ideal-weight-section {
@@ -682,6 +852,148 @@ table td {
     color: #b42318;
 }
 
+.imc-section {
+    margin: 0 30px 10px;
+    padding: 18px;
+    border: 1px solid #dfe5e8;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(31, 41, 55, 0.07);
+    font-family: inherit;
+    font-weight: 400;
+}
+
+.imc-section .ideal-weight-header h3 {
+    font-weight: 400;
+}
+
+.imc-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.imc-summary {
+    display: grid;
+    gap: 10px;
+}
+
+.imc-summary-item {
+    min-height: 70px;
+    display: grid;
+    align-content: center;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid #dfe5e8;
+    border-radius: 8px;
+    background: #f8faf9;
+}
+
+.imc-summary-item span {
+    color: #5d6872;
+    font-size: 0.86rem;
+    font-weight: 400;
+}
+
+.imc-summary-item strong {
+    color: #111827;
+    font-size: 1.14rem;
+    font-weight: 400;
+    line-height: 1.25;
+}
+
+.imc-chart-panel {
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid #dfe5e8;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.imc-chart {
+    width: 100%;
+    min-width: 620px;
+    height: auto;
+    display: block;
+    font-family: inherit;
+    font-weight: 400;
+}
+
+.imc-chart text {
+    fill: #111827;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.imc-chart .imc-axis-label {
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.imc-chart .imc-tick-label {
+    fill: #263238;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.imc-chart .imc-grid-line {
+    stroke: rgba(31, 41, 55, 0.14);
+    stroke-width: 1;
+}
+
+.imc-chart .imc-axis-line {
+    stroke: #111827;
+    stroke-width: 2;
+}
+
+.imc-chart .imc-band {
+    stroke: rgba(17, 24, 39, 0.22);
+    stroke-width: 1;
+}
+
+.imc-chart .imc-boundary {
+    fill: none;
+    stroke: rgba(17, 24, 39, 0.42);
+    stroke-width: 1.5;
+}
+
+.imc-chart .imc-band-label {
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.imc-marker line {
+    stroke: #ffffff;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.imc-marker circle {
+    fill: #176b86;
+    stroke: #ffffff;
+    stroke-width: 3;
+    filter: drop-shadow(0 4px 7px rgba(31, 41, 55, 0.32));
+}
+
+.imc-marker text {
+    fill: #0f172a;
+    paint-order: stroke;
+    stroke: #ffffff;
+    stroke-width: 4px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.imc-chart-note {
+    min-height: 20px;
+    margin: 0;
+    padding: 0 12px 10px;
+    color: #6b7280;
+    font-size: 0.88rem;
+}
+
 /* Seleccionados */
 .scrollable-div {
     width: 100%;
@@ -716,6 +1028,7 @@ table td {
 }
 
 .scrollable-div-totales table {
+    width: 100%;
     min-width: 2100px;
     table-layout: fixed;
 }
@@ -741,8 +1054,9 @@ table td {
 
 
 .custom-width-table {
-    width: 2040px;
-    /* Establece el ancho deseado para la tabla */
+    width: 100%;
+    min-width: 2040px;
+    /* Establece el ancho minimo para conservar el scroll cuando hay muchas columnas */
     table-layout: fixed;
     /* Fuerza la distribución de columnas según el ancho definido */
 }
@@ -1023,6 +1337,28 @@ body {
         padding: 14px;
     }
 
+    .imc-section {
+        margin: 0 8px 8px;
+        padding: 14px;
+    }
+
+    .imc-layout {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .imc-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .imc-chart {
+        min-width: 560px;
+    }
+
+    .cita-imc-layout {
+        grid-template-columns: 1fr;
+    }
+
     .macro-peso-ideal-row {
         justify-content: stretch;
     }
@@ -1079,7 +1415,7 @@ body {
     }
 
     .custom-width-table {
-        width: 1740px;
+        min-width: 1740px;
     }
 
     .ancho-alimento {
@@ -1152,13 +1488,17 @@ body {
         padding-right: 6px;
     }
 
+    .imc-summary {
+        grid-template-columns: 1fr;
+    }
+
     .macro-requerimiento-tabla {
         min-width: 520px;
         font-size: 0.84rem;
     }
 
     .custom-width-table {
-        width: 1660px;
+        min-width: 1660px;
     }
 
     .ancho-alimento {

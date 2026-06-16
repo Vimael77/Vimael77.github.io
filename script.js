@@ -15,6 +15,7 @@ let pesoIdealSesionActiva = null;
 let pesoIdealGuardadoRemotoTimer = 0;
 let medidasAntropometricasGuardadoRemotoTimer = 0;
 let columnasAlimentosGuardadoRemotoTimer = 0;
+let columnasAlimentosCambiosPendientes = false;
 const PESO_IDEAL_STORAGE_PREFIX = "muyAlimentado:pesoIdeal";
 const MEDIDAS_ANTROPOMETRICAS_STORAGE_PREFIX = "muyAlimentado:medidasAntropometricas";
 const COLUMNAS_ALIMENTOS_STORAGE_PREFIX = "muyAlimentado:columnasAlimentosVisibles";
@@ -65,6 +66,27 @@ let columnasAlimentosVisibles = new Set(COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES);
 window.alimentos_subtotales = {};
 const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
 
+const IMC_CHART = {
+  minPeso: 40,
+  maxPeso: 130,
+  minEstatura: 1.4,
+  maxEstatura: 2,
+  left: 62,
+  top: 54,
+  width: 548,
+  height: 274
+};
+IMC_CHART.right = IMC_CHART.left + IMC_CHART.width;
+IMC_CHART.bottom = IMC_CHART.top + IMC_CHART.height;
+
+const IMC_BANDAS = [
+  { label: "Delgadez", min: -Infinity, max: 18.5, color: "#ffffff", labelPeso: 55, labelEstatura: 1.76 },
+  { label: "Normal", min: 18.5, max: 25, color: "#00ed19", labelPeso: 68, labelEstatura: 1.76 },
+  { label: "Sobrepeso", min: 25, max: 30, color: "#fff200", labelPeso: 84, labelEstatura: 1.75 },
+  { label: "Obesidad", min: 30, max: 35, color: "#ff9f1a", labelPeso: 100, labelEstatura: 1.74 },
+  { label: "Obesidad clinica", min: 35, max: Infinity, color: "#ff1717", labelPeso: 116, labelEstatura: 1.74 }
+];
+
 function obtenerFechaActualInput() {
   const hoy = new Date();
   const anio = hoy.getFullYear();
@@ -86,6 +108,301 @@ function obtenerValorNumerico(id) {
 function actualizarTextoMacro(id, valor, unidad) {
   const elemento = document.getElementById(id);
   if (elemento) elemento.textContent = `${valor.toFixed(2)} ${unidad}`;
+}
+
+function limitarValor(valor, minimo, maximo) {
+  return Math.min(Math.max(valor, minimo), maximo);
+}
+
+function crearSvgElemento(tag, atributos, texto) {
+  const elemento = document.createElementNS("http://www.w3.org/2000/svg", tag);
+
+  Object.keys(atributos || {}).forEach(function (nombre) {
+    const valor = atributos[nombre];
+    if (valor !== undefined && valor !== null) elemento.setAttribute(nombre, String(valor));
+  });
+
+  if (texto !== undefined) elemento.textContent = texto;
+  return elemento;
+}
+
+function limpiarGrupoSvg(grupo) {
+  if (!grupo) return;
+  if (typeof grupo.replaceChildren === "function") {
+    grupo.replaceChildren();
+    return;
+  }
+
+  while (grupo.firstChild) {
+    grupo.removeChild(grupo.firstChild);
+  }
+}
+
+function obtenerXImc(peso) {
+  return IMC_CHART.left + ((peso - IMC_CHART.minPeso) / (IMC_CHART.maxPeso - IMC_CHART.minPeso)) * IMC_CHART.width;
+}
+
+function obtenerYImc(estaturaMetros) {
+  return IMC_CHART.bottom - ((estaturaMetros - IMC_CHART.minEstatura) / (IMC_CHART.maxEstatura - IMC_CHART.minEstatura)) * IMC_CHART.height;
+}
+
+function obtenerEstaturaMetrosImc() {
+  const estatura = obtenerValorNumerico('calc_estatura');
+  if (estatura <= 0) return 0;
+  return estatura > 3 ? estatura / 100 : estatura;
+}
+
+function obtenerClasificacionImc(imc) {
+  if (imc < 18.5) return "Delgadez";
+  if (imc < 25) return "Normal";
+  if (imc < 30) return "Sobrepeso";
+  if (imc < 35) return "Obesidad";
+  return "Obesidad clinica";
+}
+
+function obtenerIndiceMasaCorporalActual() {
+  const peso = obtenerValorNumerico('calc_peso');
+  const estaturaMetros = obtenerEstaturaMetrosImc();
+
+  if (peso <= 0 || estaturaMetros <= 0) {
+    return {
+      valido: false,
+      peso,
+      estaturaMetros,
+      imc: 0,
+      clasificacion: ""
+    };
+  }
+
+  const imc = peso / (estaturaMetros * estaturaMetros);
+
+  return {
+    valido: Number.isFinite(imc) && imc > 0,
+    peso,
+    estaturaMetros,
+    imc,
+    clasificacion: obtenerClasificacionImc(imc)
+  };
+}
+
+function obtenerPuntoLimiteImc(limiteImc, estaturaMetros) {
+  let peso = limiteImc * estaturaMetros * estaturaMetros;
+
+  if (limiteImc === -Infinity) peso = IMC_CHART.minPeso;
+  if (limiteImc === Infinity) peso = IMC_CHART.maxPeso;
+
+  return [obtenerXImc(peso), obtenerYImc(estaturaMetros)];
+}
+
+function crearPathBandaImc(minImc, maxImc) {
+  const pasos = 56;
+  const bordeSuperior = [];
+  const bordeInferior = [];
+
+  for (let i = 0; i <= pasos; i++) {
+    const proporcion = i / pasos;
+    const estatura = IMC_CHART.minEstatura + ((IMC_CHART.maxEstatura - IMC_CHART.minEstatura) * proporcion);
+    bordeSuperior.push(obtenerPuntoLimiteImc(maxImc, estatura));
+    bordeInferior.unshift(obtenerPuntoLimiteImc(minImc, estatura));
+  }
+
+  return bordeSuperior.concat(bordeInferior)
+    .map(function (punto, index) {
+      return `${index === 0 ? "M" : "L"} ${punto[0].toFixed(2)} ${punto[1].toFixed(2)}`;
+    })
+    .join(" ") + " Z";
+}
+
+function crearPathLineaImc(limiteImc) {
+  const pasos = 56;
+  const puntos = [];
+
+  for (let i = 0; i <= pasos; i++) {
+    const proporcion = i / pasos;
+    const estatura = IMC_CHART.minEstatura + ((IMC_CHART.maxEstatura - IMC_CHART.minEstatura) * proporcion);
+    puntos.push(obtenerPuntoLimiteImc(limiteImc, estatura));
+  }
+
+  return puntos
+    .map(function (punto, index) {
+      return `${index === 0 ? "M" : "L"} ${punto[0].toFixed(2)} ${punto[1].toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function renderizarGraficaIndiceMasaCorporal() {
+  const chart = document.getElementById("imc_chart");
+  if (!chart || chart.dataset.rendered === "1") return;
+
+  const bandas = document.getElementById("imc_chart_bands");
+  const grid = document.getElementById("imc_chart_grid");
+  const axes = document.getElementById("imc_chart_axes");
+  const labels = document.getElementById("imc_chart_labels");
+  if (!bandas || !grid || !axes || !labels) return;
+
+  limpiarGrupoSvg(bandas);
+  limpiarGrupoSvg(grid);
+  limpiarGrupoSvg(axes);
+  limpiarGrupoSvg(labels);
+
+  IMC_BANDAS.forEach(function (banda) {
+    bandas.appendChild(crearSvgElemento("path", {
+      class: "imc-band",
+      d: crearPathBandaImc(banda.min, banda.max),
+      fill: banda.color
+    }));
+  });
+
+  [18.5, 25, 30, 35].forEach(function (limite) {
+    bandas.appendChild(crearSvgElemento("path", {
+      class: "imc-boundary",
+      d: crearPathLineaImc(limite)
+    }));
+  });
+
+  for (let peso = IMC_CHART.minPeso; peso <= IMC_CHART.maxPeso; peso += 10) {
+    const x = obtenerXImc(peso);
+    grid.appendChild(crearSvgElemento("line", {
+      class: "imc-grid-line",
+      x1: x,
+      y1: IMC_CHART.top,
+      x2: x,
+      y2: IMC_CHART.bottom
+    }));
+    axes.appendChild(crearSvgElemento("text", {
+      class: "imc-tick-label",
+      x,
+      y: IMC_CHART.bottom + 20,
+      "text-anchor": "middle"
+    }, String(peso)));
+  }
+
+  for (let estatura = IMC_CHART.minEstatura; estatura <= IMC_CHART.maxEstatura + 0.001; estatura += 0.1) {
+    const y = obtenerYImc(estatura);
+    grid.appendChild(crearSvgElemento("line", {
+      class: "imc-grid-line",
+      x1: IMC_CHART.left,
+      y1: y,
+      x2: IMC_CHART.right,
+      y2: y
+    }));
+    axes.appendChild(crearSvgElemento("text", {
+      class: "imc-tick-label",
+      x: IMC_CHART.left - 10,
+      y: y + 4,
+      "text-anchor": "end"
+    }, estatura.toFixed(2)));
+  }
+
+  axes.appendChild(crearSvgElemento("rect", {
+    class: "imc-axis-line",
+    x: IMC_CHART.left,
+    y: IMC_CHART.top,
+    width: IMC_CHART.width,
+    height: IMC_CHART.height,
+    fill: "none"
+  }));
+  axes.appendChild(crearSvgElemento("text", {
+    class: "imc-axis-label",
+    x: IMC_CHART.left + (IMC_CHART.width / 2),
+    y: 31,
+    "text-anchor": "middle"
+  }, "Indice de Masa Corporal (IMC)"));
+  axes.appendChild(crearSvgElemento("text", {
+    class: "imc-axis-label",
+    x: IMC_CHART.left + (IMC_CHART.width / 2),
+    y: IMC_CHART.bottom + 54,
+    "text-anchor": "middle"
+  }, "Peso (kg)"));
+  axes.appendChild(crearSvgElemento("text", {
+    class: "imc-axis-label",
+    x: 22,
+    y: IMC_CHART.top + (IMC_CHART.height / 2),
+    "text-anchor": "middle",
+    transform: `rotate(-90 22 ${IMC_CHART.top + (IMC_CHART.height / 2)})`
+  }, "Altura (m)"));
+
+  IMC_BANDAS.forEach(function (banda) {
+    const x = obtenerXImc(banda.labelPeso);
+    const y = obtenerYImc(banda.labelEstatura);
+    labels.appendChild(crearSvgElemento("text", {
+      class: "imc-band-label",
+      x,
+      y,
+      "text-anchor": "middle",
+      "dominant-baseline": "middle",
+      transform: `rotate(-55 ${x} ${y})`
+    }, banda.label));
+  });
+
+  chart.dataset.rendered = "1";
+}
+
+function actualizarTextoImc(id, texto) {
+  const elemento = document.getElementById(id);
+  if (elemento) elemento.textContent = texto;
+}
+
+function actualizarIndiceMasaCorporal() {
+  renderizarGraficaIndiceMasaCorporal();
+
+  const datos = obtenerIndiceMasaCorporalActual();
+  const marcador = document.getElementById("imc_marker");
+  const marcadorTexto = document.getElementById("imc_marker_text");
+  const nota = document.getElementById("imc_rango_grafica");
+
+  if (!datos.valido) {
+    actualizarTextoImc("imc_valor", "--");
+    actualizarTextoImc("imc_clasificacion", "--");
+    actualizarTextoImc("imc_peso_ref", "-- kg");
+    actualizarTextoImc("imc_estatura_ref", "-- m");
+    if (marcador) marcador.setAttribute("visibility", "hidden");
+    if (nota) nota.textContent = "";
+    return;
+  }
+
+  const xReal = obtenerXImc(datos.peso);
+  const yReal = obtenerYImc(datos.estaturaMetros);
+  const x = limitarValor(xReal, IMC_CHART.left, IMC_CHART.right);
+  const y = limitarValor(yReal, IMC_CHART.top, IMC_CHART.bottom);
+  const fueraDeRango = x !== xReal || y !== yReal;
+  const edad = obtenerValorNumerico('calc_edad');
+  const notas = [];
+
+  actualizarTextoImc("imc_valor", datos.imc.toFixed(1));
+  actualizarTextoImc("imc_clasificacion", datos.clasificacion);
+  actualizarTextoImc("imc_peso_ref", `${datos.peso.toFixed(1)} kg`);
+  actualizarTextoImc("imc_estatura_ref", `${datos.estaturaMetros.toFixed(2)} m`);
+
+  if (marcador) {
+    marcador.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
+    marcador.setAttribute("visibility", "visible");
+  }
+
+  if (marcadorTexto) marcadorTexto.textContent = datos.imc.toFixed(1);
+  if (nota) {
+    if (fueraDeRango) {
+      notas.push("El punto esta ajustado al borde porque el valor esta fuera del rango visible de la grafica.");
+    }
+
+    if (edad > 0 && edad < 20) {
+      notas.push("Para menores de 20 anos, interpreta el IMC con percentiles por edad y sexo.");
+    }
+
+    nota.textContent = notas.join(" ");
+  }
+}
+
+function configurarEventosIndiceMasaCorporal() {
+  ["calc_peso", "calc_estatura", "calc_edad"].forEach(function (id) {
+    const elemento = document.getElementById(id);
+    if (!elemento || elemento.dataset.imcConfigured === "1") return;
+
+    elemento.addEventListener("input", actualizarIndiceMasaCorporal);
+    elemento.dataset.imcConfigured = "1";
+  });
+
+  actualizarIndiceMasaCorporal();
 }
 
 function obtenerPesoIdealMacronutrientes() {
@@ -374,6 +691,63 @@ function setConfigColumnasMensaje(mensaje, tipo) {
   elemento.className = `config-message ${tipo || ""}`.trim();
 }
 
+function obtenerColumnasAlimentosSeleccionadasConfig() {
+  renderizarConfiguracionColumnasAlimentos();
+
+  return COLUMNAS_ALIMENTOS_OPCIONALES
+    .filter(function (columna) {
+      const input = document.getElementById(`config_columna_${columna.key}`);
+      return input && input.checked;
+    })
+    .map(function (columna) {
+      return columna.key;
+    });
+}
+
+function configurarBotonGuardarColumnasAlimentos() {
+  const boton = document.getElementById("config_columnas_guardar");
+  if (!boton || boton.dataset.configured === "1") return;
+
+  boton.addEventListener("click", guardarConfiguracionColumnasAlimentos);
+  boton.dataset.configured = "1";
+}
+
+function marcarCambiosPendientesColumnasAlimentos() {
+  columnasAlimentosCambiosPendientes = true;
+  setConfigColumnasMensaje("Cambios sin guardar. Presiona Guardar para aplicarlos.", "pending");
+}
+
+async function guardarConfiguracionColumnasAlimentos() {
+  const boton = document.getElementById("config_columnas_guardar");
+
+  try {
+    if (boton) boton.disabled = true;
+    setConfigColumnasMensaje("Guardando...", "pending");
+
+    columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(obtenerColumnasAlimentosSeleccionadasConfig());
+    columnasAlimentosCambiosPendientes = false;
+
+    guardarColumnasAlimentosPersistidas();
+
+    if (columnasAlimentosGuardadoRemotoTimer) {
+      clearTimeout(columnasAlimentosGuardadoRemotoTimer);
+      columnasAlimentosGuardadoRemotoTimer = 0;
+    }
+
+    aplicarVisibilidadColumnasAlimentos();
+
+    const guardadoRemoto = await guardarColumnasAlimentosSupabase();
+    if (guardadoRemoto === false) return;
+
+    setConfigColumnasMensaje("Configuracion guardada.", "success");
+  } catch (error) {
+    console.warn("No se pudo guardar la configuracion de columnas.", error);
+    setConfigColumnasMensaje("No se pudo guardar la configuracion.", "error");
+  } finally {
+    if (boton) boton.disabled = false;
+  }
+}
+
 function esColumnaAlimentosVisible(key) {
   if (key === "nombre" || key === "gramos" || key === "etiqueta") return true;
 
@@ -409,18 +783,54 @@ function contarColumnasVisiblesSeleccionados() {
   return 2 + nutrientesVisibles;
 }
 
-function actualizarAnchosTablasAlimentos() {
-  const nutrientesVisibles = COLUMNAS_NUTRIENTES_ALIMENTOS.filter(function (columna) {
-    return esColumnaAlimentosVisible(columna.key);
-  }).length;
+function obtenerAnchoBaseColumnaAlimentos(columna, esTablaTotales) {
+  if (columna === "nombre") return 320;
+  if (columna === "etiqueta") return 300;
+  if (columna === "gramos") return 86;
+  return esTablaTotales ? 100 : 86;
+}
+
+function obtenerAnchoMinimoColumnasAlimentos(columnas, esTablaTotales) {
+  return columnas.reduce(function (total, columna) {
+    if (!esColumnaAlimentosVisible(columna)) return total;
+    return total + obtenerAnchoBaseColumnaAlimentos(columna, esTablaTotales);
+  }, 0);
+}
+
+function aplicarAnchosColumnasAlimentos(tabla, columnas, esTablaTotales) {
+  if (!tabla) return;
+
+  const anchoMinimo = obtenerAnchoMinimoColumnasAlimentos(columnas, esTablaTotales);
+  const porcentajes = {};
+
+  columnas.forEach(function (columna) {
+    if (!esColumnaAlimentosVisible(columna) || anchoMinimo <= 0) return;
+    porcentajes[columna] = (obtenerAnchoBaseColumnaAlimentos(columna, esTablaTotales) / anchoMinimo) * 100;
+  });
+
+  tabla.querySelectorAll("[data-food-col]").forEach(function (celda) {
+    const porcentaje = porcentajes[celda.dataset.foodCol];
+    celda.style.width = porcentaje ? `${porcentaje}%` : "";
+  });
+}
+
+function actualizarAnchosTablasAlimentos(columnasLista, columnasSeleccionados, columnasTotales) {
   const lista = document.getElementById("lista");
   const valores = document.getElementById("valores");
   const totales = document.querySelector(".scrollable-div-totales table");
-  const listaTieneGramos = lista && lista.querySelectorAll("thead th").length === (2 + COLUMNAS_NUTRIENTES_ALIMENTOS.length);
+  const aplicarAnchoFlexible = function (tabla, anchoMinimo) {
+    if (!tabla) return;
+    tabla.style.width = "100%";
+    tabla.style.minWidth = `${anchoMinimo}px`;
+  };
 
-  if (lista) lista.style.width = `${320 + (listaTieneGramos ? 86 : 0) + (nutrientesVisibles * 86)}px`;
-  if (valores) valores.style.width = `${320 + 86 + (nutrientesVisibles * 86)}px`;
-  if (totales) totales.style.minWidth = `${300 + (nutrientesVisibles * 100)}px`;
+  aplicarAnchoFlexible(lista, obtenerAnchoMinimoColumnasAlimentos(columnasLista, false));
+  aplicarAnchoFlexible(valores, obtenerAnchoMinimoColumnasAlimentos(columnasSeleccionados, false));
+  aplicarAnchoFlexible(totales, obtenerAnchoMinimoColumnasAlimentos(columnasTotales, true));
+
+  aplicarAnchosColumnasAlimentos(lista, columnasLista, false);
+  aplicarAnchosColumnasAlimentos(valores, columnasSeleccionados, false);
+  aplicarAnchosColumnasAlimentos(totales, columnasTotales, true);
 }
 
 function aplicarVisibilidadColumnasAlimentos() {
@@ -444,12 +854,13 @@ function aplicarVisibilidadColumnasAlimentos() {
     celda.colSpan = contarColumnasVisiblesSeleccionados();
   });
 
-  actualizarAnchosTablasAlimentos();
+  actualizarAnchosTablasAlimentos(columnasLista, columnasSeleccionados, columnasTotales);
   sincronizarConfigColumnasUI();
 }
 
 function renderizarConfiguracionColumnasAlimentos() {
   const contenedor = document.getElementById("config_columnas_alimentos");
+  configurarBotonGuardarColumnasAlimentos();
   if (!contenedor || contenedor.dataset.rendered === "1") return;
 
   COLUMNAS_ALIMENTOS_OPCIONALES.forEach(function (columna) {
@@ -462,15 +873,7 @@ function renderizarConfiguracionColumnasAlimentos() {
     input.id = `config_columna_${columna.key}`;
     input.value = columna.key;
     input.addEventListener("change", function () {
-      if (input.checked) {
-        columnasAlimentosVisibles.add(columna.key);
-      } else {
-        columnasAlimentosVisibles.delete(columna.key);
-      }
-
-      guardarColumnasAlimentosPersistidas();
-      aplicarVisibilidadColumnasAlimentos();
-      programarGuardarColumnasAlimentosSupabase();
+      marcarCambiosPendientesColumnasAlimentos();
     });
 
     const texto = document.createElement("span");
@@ -484,8 +887,10 @@ function renderizarConfiguracionColumnasAlimentos() {
   contenedor.dataset.rendered = "1";
 }
 
-function sincronizarConfigColumnasUI() {
+function sincronizarConfigColumnasUI(forzar = false) {
   renderizarConfiguracionColumnasAlimentos();
+  if (columnasAlimentosCambiosPendientes && !forzar) return;
+
   COLUMNAS_ALIMENTOS_OPCIONALES.forEach(function (columna) {
     const input = document.getElementById(`config_columna_${columna.key}`);
     if (input) input.checked = columnasAlimentosVisibles.has(columna.key);
@@ -509,7 +914,7 @@ async function guardarColumnasAlimentosSupabase() {
   const userId = pesoIdealSesionActiva && pesoIdealSesionActiva.user
     ? pesoIdealSesionActiva.user.id
     : "";
-  if (!client || !userId) return;
+  if (!client || !userId) return true;
 
   const { error } = await client
     .from("profiles")
@@ -521,7 +926,10 @@ async function guardarColumnasAlimentosSupabase() {
   if (error) {
     console.warn("No se pudo guardar la configuración de columnas en Supabase.", error.message);
     setConfigColumnasMensaje("No se pudo guardar la configuración en Supabase.", "error");
+    return false;
   }
+
+  return true;
 }
 
 async function cargarColumnasAlimentosSupabase(session) {
@@ -862,6 +1270,14 @@ function obtenerTiempoDesdeTbody(tbody) {
   return tbody.id.replace("valores_", "").replace(/_/g, " ");
 }
 
+function obtenerSlugTiempo(tiempo) {
+  return String(tiempo || "Desayuno").trim().replace(/\s+/g, "_");
+}
+
+function obtenerIdTbodyTiempo(tiempo) {
+  return "valores_" + obtenerSlugTiempo(tiempo);
+}
+
 function obtenerAlimentoSeleccionadoPorId(id) {
   return alimentos_seleccionados.find(function (item) {
     return item[0] + "" === id + "";
@@ -879,6 +1295,7 @@ function actualizarTiemposDesdeTabla() {
 
 function configurarOrdenamientoTbody(valores_tbody) {
   if (!valores_tbody || valores_tbody.dataset.sortableInitialized) return;
+  if (typeof Sortable === "undefined" || typeof Sortable.create !== "function") return;
 
   Sortable.create(valores_tbody, {
     animation: 150,
@@ -897,7 +1314,7 @@ function configurarOrdenamientoTbody(valores_tbody) {
 
 function inicializarOrdenamientoSeleccionados() {
   tiemposComida.forEach(function (tiempo) {
-    configurarOrdenamientoTbody(document.getElementById("valores_" + tiempo.replace(" ", "_")));
+    configurarOrdenamientoTbody(document.getElementById(obtenerIdTbodyTiempo(tiempo)));
   });
 }
 //Descarga alimentos
@@ -1542,28 +1959,105 @@ function eliminar(alimento, id) {
   }
 }
 function abrirModalTiempo(alimento) {
+  if (!alimento) return;
   alimentoPendiente = alimento;
-  document.getElementById('modalAlimentoName').textContent = alimento.nombre;
-  $('#mealSelectionModal').modal('show');
+  const nombreModal = document.getElementById('modalAlimentoName');
+  if (nombreModal) nombreModal.textContent = alimento.nombre;
+  mostrarModalTiempo();
+}
+
+function limpiarRestosModalTiempo() {
+  if (document.querySelector(".modal.show")) return;
+
+  document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+    backdrop.remove();
+  });
+
+  document.body.classList.remove("modal-open");
+  document.body.style.paddingRight = "";
+}
+
+function cerrarPanelTiempoClickFuera(event) {
+  const panel = document.getElementById("mealSelectionModal");
+  if (!panel || panel.hidden || panel.contains(event.target)) return;
+  cerrarModalTiempo();
+}
+
+function cerrarPanelTiempoConEscape(event) {
+  if (event.key === "Escape") cerrarModalTiempo();
+}
+
+function activarCierrePanelTiempo() {
+  document.removeEventListener("mousedown", cerrarPanelTiempoClickFuera);
+  document.removeEventListener("keydown", cerrarPanelTiempoConEscape);
+
+  window.setTimeout(function () {
+    document.addEventListener("mousedown", cerrarPanelTiempoClickFuera);
+    document.addEventListener("keydown", cerrarPanelTiempoConEscape);
+  }, 0);
+}
+
+function desactivarCierrePanelTiempo() {
+  document.removeEventListener("mousedown", cerrarPanelTiempoClickFuera);
+  document.removeEventListener("keydown", cerrarPanelTiempoConEscape);
+}
+
+function mostrarModalTiempo() {
+  const panel = document.getElementById("mealSelectionModal");
+  if (!panel) return;
+
+  limpiarRestosModalTiempo();
+  panel.hidden = false;
+  panel.setAttribute("aria-hidden", "false");
+  panel.classList.add("is-open");
+  activarCierrePanelTiempo();
+}
+
+function cerrarModalTiempo() {
+  const panel = document.getElementById("mealSelectionModal");
+  if (!panel) return;
+
+  panel.classList.remove("is-open");
+  panel.hidden = true;
+  panel.setAttribute("aria-hidden", "true");
+  alimentoPendiente = null;
+  desactivarCierrePanelTiempo();
+  limpiarRestosModalTiempo();
 }
 
 function seleccionarTiempo(tiempo) {
-  if (alimentoPendiente) {
-    agregar(baseGramos, alimentoPendiente, tiempo);
-    $('#mealSelectionModal').modal('hide');
-    alimentoPendiente = null;
+  const alimento = alimentoPendiente;
+  cerrarModalTiempo();
+
+  if (!alimento) return;
+
+  try {
+    agregar(baseGramos, alimento, tiempo);
+  } catch (error) {
+    console.error("No se pudo agregar el alimento.", error);
+    alert("No se pudo agregar el alimento. Revisa la consola para ver el detalle.");
   }
 }
 
 // agregar un alimento a la tabla de valores nutricionales
 function agregar(valorGramos, alimento, tiempo = "Desayuno") {
-  let tbody_id = "valores_" + tiempo.replace(" ", "_");
-  const valores_tbody = document.getElementById(tbody_id);
+  let tiempoSeleccionado = tiempo || "Desayuno";
+  let valores_tbody = document.getElementById(obtenerIdTbodyTiempo(tiempoSeleccionado));
+
+  if (!valores_tbody && tiempoSeleccionado !== "Desayuno") {
+    console.warn(`No se encontro la tabla para ${tiempoSeleccionado}. Se usara Desayuno.`);
+    tiempoSeleccionado = "Desayuno";
+    valores_tbody = document.getElementById(obtenerIdTbodyTiempo(tiempoSeleccionado));
+  }
+
+  if (!valores_tbody) {
+    throw new Error("No se encontro la tabla de alimentos seleccionados.");
+  }
 
   configurarOrdenamientoTbody(valores_tbody);
 
   const encabezado = document.getElementById("encabezado_valores");
-  encabezado.classList.add('table-primary');
+  if (encabezado) encabezado.classList.add('table-primary');
 
 
   //Crea una fila y le agrega un id.
@@ -1680,7 +2174,7 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
   aplicarVisibilidadColumnasAlimentos();
 
   let alimentoCopia = { ...alimento };
-  alimentoCopia.tiempo = tiempo;
+  alimentoCopia.tiempo = tiempoSeleccionado;
 
   alimentos_seleccionados.push(Object.assign({}, [contadorAlimento, alimentoCopia]));
   contadorAlimento++;
@@ -1734,7 +2228,7 @@ function actualizarTotal(alimentos_seleccionados) {
   // Update Subtotals in UI
   tiempos.forEach(t => {
     props.forEach((p, idx) => {
-      let el_id = "sub_" + t.replace(" ", "_") + "_" + idx;
+      let el_id = "sub_" + obtenerSlugTiempo(t) + "_" + idx;
       let el = document.getElementById(el_id);
       if (el) el.textContent = subtotales[t][p].toFixed(2);
     });
@@ -1747,6 +2241,7 @@ function calcularReqEnergia() {
   const edad = parseFloat(document.getElementById('calc_edad').value) || 0;
   const genero = document.getElementById('calc_genero').value;
   const actividad = parseFloat(document.getElementById('calc_actividad').value) || 1.2;
+  actualizarIndiceMasaCorporal();
 
   if (peso <= 0 || estatura <= 0 || edad <= 0) {
     alert("Por favor, ingrese valores válidos para peso, estatura y edad.");
@@ -2152,6 +2647,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restaurarColumnasAlimentosOPredeterminadas();
   renderizarConfiguracionColumnasAlimentos();
   aplicarVisibilidadColumnasAlimentos();
+  configurarEventosIndiceMasaCorporal();
   configurarEventosMacronutrientes();
   configurarEventosMedidasAntropometricas();
   inicializarIconosLucide();

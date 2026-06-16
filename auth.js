@@ -9,6 +9,7 @@ const supabaseClient = window.supabase.createClient(
 window.supabaseClient = supabaseClient;
 
 let authMode = "login";
+const AUTH_USUARIO_PENDIENTE_PREFIX = "muyAlimentado:usuarioPendiente";
 
 function setAuthMessage(message, type) {
   const messageElement = document.getElementById("auth-message");
@@ -30,6 +31,73 @@ function setAuthLoading(isLoading) {
       : "Crear cuenta";
 }
 
+function obtenerUsuarioAuth() {
+  const input = document.getElementById("auth-usuario");
+  return input ? input.value.trim() : "";
+}
+
+function obtenerClaveUsuarioPendiente(email) {
+  return `${AUTH_USUARIO_PENDIENTE_PREFIX}:${String(email || "").trim().toLowerCase()}`;
+}
+
+function guardarUsuarioPendiente(email, usuario) {
+  if (!email || !usuario) return;
+
+  try {
+    window.localStorage.setItem(obtenerClaveUsuarioPendiente(email), usuario);
+  } catch (_error) {
+    // El registro no debe fallar si el navegador bloquea localStorage.
+  }
+}
+
+function leerUsuarioPendiente(email) {
+  if (!email) return "";
+
+  try {
+    return window.localStorage.getItem(obtenerClaveUsuarioPendiente(email)) || "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function limpiarUsuarioPendiente(email) {
+  if (!email) return;
+
+  try {
+    window.localStorage.removeItem(obtenerClaveUsuarioPendiente(email));
+  } catch (_error) {
+    // Sin accion necesaria.
+  }
+}
+
+async function guardarUsuarioPerfilAuth(session, usuario) {
+  if (!session || !session.user || !usuario) return true;
+
+  const { error } = await supabaseClient
+    .from("profiles")
+    .upsert({
+      user_id: session.user.id,
+      usuario
+    }, { onConflict: "user_id" });
+
+  if (error) {
+    console.warn("No se pudo guardar el usuario en el perfil.", error.message);
+    return false;
+  }
+
+  return true;
+}
+
+async function sincronizarUsuarioPendiente(session) {
+  if (!session || !session.user || !session.user.email) return;
+
+  const usuario = leerUsuarioPendiente(session.user.email);
+  if (!usuario) return;
+
+  const guardado = await guardarUsuarioPerfilAuth(session, usuario);
+  if (guardado) limpiarUsuarioPendiente(session.user.email);
+}
+
 function setAuthMode(nextMode) {
   authMode = nextMode;
 
@@ -37,6 +105,7 @@ function setAuthMode(nextMode) {
   const registerTab = document.getElementById("auth-register-tab");
   const submitButton = document.getElementById("auth-submit");
   const passwordInput = document.getElementById("auth-password");
+  const usuarioInput = document.getElementById("auth-usuario");
 
   if (loginTab) loginTab.classList.toggle("active", authMode === "login");
   if (registerTab) registerTab.classList.toggle("active", authMode === "register");
@@ -44,6 +113,13 @@ function setAuthMode(nextMode) {
   if (passwordInput) {
     passwordInput.autocomplete = authMode === "login" ? "current-password" : "new-password";
   }
+  if (usuarioInput) {
+    usuarioInput.required = authMode === "register";
+    usuarioInput.disabled = authMode !== "register";
+  }
+  document.querySelectorAll(".auth-register-only").forEach((elemento) => {
+    elemento.classList.toggle("auth-hidden", authMode !== "register");
+  });
 
   setAuthMessage("");
 }
@@ -81,9 +157,15 @@ async function handleAuthSubmit(event) {
 
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
+  const usuario = obtenerUsuarioAuth();
 
   if (!email || !password) {
     setAuthMessage("Escribe tu correo y contrasena.", "error");
+    return;
+  }
+
+  if (authMode === "register" && !usuario) {
+    setAuthMessage("Escribe tu usuario.", "error");
     return;
   }
 
@@ -96,6 +178,7 @@ async function handleAuthSubmit(event) {
         email,
         password,
         options: {
+          data: { usuario },
           emailRedirectTo: getAuthRedirectUrl()
         }
       });
@@ -107,9 +190,18 @@ async function handleAuthSubmit(event) {
     return;
   }
 
+  if (authMode === "register" && usuario) {
+    guardarUsuarioPendiente(email, usuario);
+
+    if (result.data.session) {
+      const guardado = await guardarUsuarioPerfilAuth(result.data.session, usuario);
+      if (guardado) limpiarUsuarioPendiente(email);
+    }
+  }
+
   if (authMode === "register" && !result.data.session) {
-    setAuthMessage("Cuenta creada. Revisa tu correo para confirmar el acceso.", "success");
     setAuthMode("login");
+    setAuthMessage("Cuenta creada. Revisa tu correo para confirmar el acceso.", "success");
     return;
   }
 
@@ -137,6 +229,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   supabaseClient.auth.onAuthStateChange((_event, session) => {
     setSessionUI(session);
+    sincronizarUsuarioPendiente(session);
   });
 
   const { data, error } = await supabaseClient.auth.getSession();
@@ -147,4 +240,5 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   setSessionUI(data.session);
+  await sincronizarUsuarioPendiente(data.session);
 });

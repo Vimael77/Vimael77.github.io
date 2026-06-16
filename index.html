@@ -25,6 +25,10 @@
           <button type="button" id="auth-register-tab" class="auth-mode-button">Crear cuenta</button>
         </div>
 
+        <label for="auth-usuario" class="auth-register-only auth-hidden">Usuario</label>
+        <input type="text" id="auth-usuario" class="form-control auth-register-only auth-hidden"
+          autocomplete="username" minlength="3" disabled>
+
         <label for="auth-email">Correo</label>
         <input type="email" id="auth-email" class="form-control" autocomplete="email" required>
 
@@ -386,6 +390,63 @@
                     <textarea id="medidas_observaciones" class="form-control" rows="3"
                       placeholder="Escribe tus observaciones aqu&iacute;..."></textarea>
                     <p id="medidas_antropometricas_estado" class="ideal-save-status" aria-live="polite"></p>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <section class="imc-section" aria-labelledby="imc_title">
+                  <div class="ideal-weight-header">
+                    <div>
+                      <h3 id="imc_title">&Iacute;NDICE DE MASA CORPORAL</h3>
+                    </div>
+                  </div>
+
+                  <div class="imc-layout">
+                    <div class="imc-summary" aria-label="Resumen del &iacute;ndice de masa corporal">
+                      <div class="imc-summary-item">
+                        <span>IMC</span>
+                        <strong id="imc_valor">--</strong>
+                      </div>
+                      <div class="imc-summary-item">
+                        <span>Clasificaci&oacute;n</span>
+                        <strong id="imc_clasificacion">--</strong>
+                      </div>
+                      <div class="imc-summary-item">
+                        <span>Peso</span>
+                        <strong id="imc_peso_ref">-- kg</strong>
+                      </div>
+                      <div class="imc-summary-item">
+                        <span>Estatura</span>
+                        <strong id="imc_estatura_ref">-- m</strong>
+                      </div>
+                    </div>
+
+                    <div class="imc-chart-panel">
+                      <svg id="imc_chart" class="imc-chart" viewBox="0 0 680 390" role="img"
+                        aria-labelledby="imc_chart_title imc_chart_desc">
+                        <title id="imc_chart_title">&Iacute;ndice de Masa Corporal</title>
+                        <desc id="imc_chart_desc">Gr&aacute;fica de peso y altura con bandas de clasificaci&oacute;n de IMC.</desc>
+                        <defs>
+                          <clipPath id="imc_plot_clip">
+                            <rect x="62" y="54" width="548" height="274"></rect>
+                          </clipPath>
+                        </defs>
+                        <g id="imc_chart_bands" clip-path="url(#imc_plot_clip)"></g>
+                        <g id="imc_chart_grid"></g>
+                        <g id="imc_chart_axes"></g>
+                        <g id="imc_chart_labels"></g>
+                        <g id="imc_marker" class="imc-marker" visibility="hidden">
+                          <line x1="-13" y1="0" x2="13" y2="0"></line>
+                          <line x1="0" y1="-13" x2="0" y2="13"></line>
+                          <circle r="9"></circle>
+                          <text id="imc_marker_text" x="14" y="-12">--</text>
+                        </g>
+                      </svg>
+                      <p id="imc_rango_grafica" class="imc-chart-note" aria-live="polite"></p>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -916,8 +977,18 @@
                         list="paises_nacimiento_lista" autocomplete="off" required>
                       <datalist id="paises_nacimiento_lista"></datalist>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                      <button type="submit" id="paciente_submit" class="btn btn-success w-100">Guardar paciente</button>
+                    <div class="col-md-3">
+                      <label class="form-label" for="paciente_sexo">Sexo</label>
+                      <select id="paciente_sexo" class="form-select" required>
+                        <option value="">Seleccionar</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end gap-2 paciente-form-actions">
+                      <button type="submit" id="paciente_submit" class="btn btn-success flex-fill">Guardar paciente</button>
+                      <button type="button" id="paciente_cancelar_edicion" class="btn btn-outline-secondary"
+                        hidden>Cancelar</button>
                     </div>
                   </div>
                   <p id="paciente_mensaje" class="paciente-message" aria-live="polite"></p>
@@ -943,11 +1014,13 @@
                         <th>C&eacute;dula/Pasaporte</th>
                         <th>Fecha de nacimiento</th>
                         <th>Pa&iacute;s de nacimiento</th>
+                        <th>Sexo</th>
+                        <th>Acciones</th>
                       </tr>
                     </thead>
                     <tbody id="pacientes_tabla_body">
                       <tr>
-                        <td colspan="5" class="text-muted">Sin pacientes cargados.</td>
+                        <td colspan="7" class="text-muted">Sin pacientes cargados.</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1026,23 +1099,24 @@
               <div class="card p-3 config-card">
                 <h5>Columnas visibles</h5>
                 <div id="config_columnas_alimentos" class="config-columns-grid"></div>
+                <div class="config-actions">
+                  <button type="button" id="config_columnas_guardar" class="btn btn-success config-save-button">Guardar</button>
+                </div>
                 <p id="config_columnas_mensaje" class="config-message" aria-live="polite"></p>
               </div>
             </div>
           </div>
 
-          <!-- Modal Selection -->
-          <div class="modal fade" id="mealSelectionModal" tabindex="-1" role="dialog" aria-labelledby="mealModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="mealModalLabel">Seleccionar Tiempo de Comida</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div class="modal-body text-center">
+          <!-- Selector de tiempo de comida -->
+          <div class="meal-selection-panel" id="mealSelectionModal" aria-labelledby="mealModalLabel" aria-hidden="true"
+            hidden>
+            <div class="meal-selection-panel-header">
+              <h5 id="mealModalLabel">Seleccionar Tiempo de Comida</h5>
+              <button type="button" class="meal-selection-close" onclick="cerrarModalTiempo()" aria-label="Cerrar">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="meal-selection-panel-body text-center">
                   <h6 id="modalAlimentoName" class="mb-3"></h6>
                   <div class="list-group">
                     <button type="button" class="list-group-item list-group-item-action"
@@ -1055,8 +1129,6 @@
                       onclick="seleccionarTiempo('Media Tarde')">Media Tarde</button>
                     <button type="button" class="list-group-item list-group-item-action"
                       onclick="seleccionarTiempo('Merienda')">Merienda</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

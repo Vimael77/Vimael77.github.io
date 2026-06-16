@@ -1,6 +1,8 @@
 let pacientes = [];
 let filtroPacientes = "";
 let paisesNacimiento = [];
+let pacienteEditandoId = "";
+const SEXOS_PACIENTE = ["Masculino", "Femenino"];
 
 const PAGINAS_APP = ["#perfil", "#pacientes", "#home", "#citas", "#generador", "#configuracion"];
 
@@ -80,6 +82,18 @@ function obtenerPaisNacimientoCanonico(value) {
   return paisesNacimiento.find(pais => normalizarTexto(pais) === textoNormalizado) || "";
 }
 
+function normalizarSexoPaciente(value) {
+  const textoNormalizado = normalizarTexto(value);
+  return SEXOS_PACIENTE.find(sexo => normalizarTexto(sexo) === textoNormalizado) || "";
+}
+
+function obtenerGeneroCalculadoraDesdeSexo(sexo) {
+  const sexoNormalizado = normalizarSexoPaciente(sexo);
+  if (sexoNormalizado === "Masculino") return "M";
+  if (sexoNormalizado === "Femenino") return "F";
+  return "";
+}
+
 function formatearFechaPaciente(fecha) {
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha || "";
 
@@ -100,7 +114,8 @@ function obtenerPacientesFiltrados() {
       paciente.documento,
       paciente.fecha_nacimiento,
       formatearFechaPaciente(paciente.fecha_nacimiento),
-      paciente.pais_nacimiento
+      paciente.pais_nacimiento,
+      paciente.sexo
     ].join(" "));
 
     return terminos.every(termino => textoPaciente.includes(termino));
@@ -132,11 +147,74 @@ function setPacienteMensaje(message, type) {
   elemento.className = `paciente-message ${type || ""}`.trim();
 }
 
+function actualizarIconosPacientes() {
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
+function actualizarModoEdicionPaciente() {
+  const submit = document.getElementById("paciente_submit");
+  const cancelar = document.getElementById("paciente_cancelar_edicion");
+
+  if (submit) {
+    submit.textContent = pacienteEditandoId ? "Actualizar paciente" : "Guardar paciente";
+  }
+
+  if (cancelar) {
+    cancelar.hidden = !pacienteEditandoId;
+  }
+}
+
 function limpiarFormularioPaciente() {
-  ["paciente_nombres", "paciente_apellidos", "paciente_pais_nacimiento", "paciente_documento", "paciente_fecha_nacimiento"].forEach(id => {
+  ["paciente_nombres", "paciente_apellidos", "paciente_pais_nacimiento", "paciente_documento", "paciente_fecha_nacimiento", "paciente_sexo"].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = "";
   });
+}
+
+function cancelarEdicionPaciente() {
+  pacienteEditandoId = "";
+  limpiarFormularioPaciente();
+  actualizarModoEdicionPaciente();
+  setPacienteMensaje("");
+}
+
+function cargarPacienteEnFormulario(paciente) {
+  if (!paciente) return;
+
+  const campos = {
+    paciente_nombres: paciente.nombres,
+    paciente_apellidos: paciente.apellidos,
+    paciente_documento: paciente.documento,
+    paciente_fecha_nacimiento: paciente.fecha_nacimiento,
+    paciente_pais_nacimiento: paciente.pais_nacimiento,
+    paciente_sexo: paciente.sexo
+  };
+
+  Object.keys(campos).forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.value = campos[id] || "";
+  });
+}
+
+function editarPaciente(pacienteId) {
+  const paciente = pacientes.find(item => item.id === pacienteId);
+  const form = document.getElementById("paciente-form");
+
+  if (!paciente) {
+    setPacienteMensaje("No se encontro el paciente seleccionado.", "error");
+    return;
+  }
+
+  pacienteEditandoId = paciente.id;
+  cargarPacienteEnFormulario(paciente);
+  actualizarModoEdicionPaciente();
+  setPacienteMensaje("Editando paciente. Guarda para aplicar los cambios.", "");
+
+  if (form && typeof form.scrollIntoView === "function") {
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function renderPacientesTabla() {
@@ -144,14 +222,14 @@ function renderPacientesTabla() {
   if (!tbody) return;
 
   if (!pacientes.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Sin pacientes cargados.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-muted">Sin pacientes cargados.</td></tr>';
     return;
   }
 
   const pacientesFiltrados = obtenerPacientesFiltrados();
 
   if (!pacientesFiltrados.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Sin resultados para el filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-muted">Sin resultados para el filtro.</td></tr>';
     return;
   }
 
@@ -162,8 +240,17 @@ function renderPacientesTabla() {
       <td>${escapeHtml(paciente.documento)}</td>
       <td>${escapeHtml(formatearFechaPaciente(paciente.fecha_nacimiento))}</td>
       <td>${escapeHtml(paciente.pais_nacimiento)}</td>
+      <td>${escapeHtml(paciente.sexo)}</td>
+      <td class="paciente-actions-cell">
+        <button type="button" class="btn btn-outline-secondary btn-sm paciente-edit-button"
+          data-paciente-editar="${escapeHtml(paciente.id)}" aria-label="Editar paciente"
+          title="Editar paciente">
+          <span data-lucide="pencil" aria-hidden="true"></span>
+        </button>
+      </td>
     </tr>
   `).join("");
+  actualizarIconosPacientes();
 }
 
 function renderPacientesSelector() {
@@ -218,15 +305,18 @@ function aplicarPacienteEnCalculadora(pacienteId) {
   const nombreInput = document.getElementById("calc_nombre");
   const documentoInput = document.getElementById("calc_id");
   const edadInput = document.getElementById("calc_edad");
+  const generoInput = document.getElementById("calc_genero");
   const edad = calcularEdad(paciente.fecha_nacimiento);
+  const genero = obtenerGeneroCalculadoraDesdeSexo(paciente.sexo);
 
   if (nombreInput) nombreInput.value = `${paciente.nombres} ${paciente.apellidos}`.trim();
   if (documentoInput) documentoInput.value = paciente.documento;
   if (edadInput && edad) edadInput.value = edad;
+  if (generoInput && genero) generoInput.value = genero;
   if (pacienteIdInput) pacienteIdInput.value = paciente.id;
   if (pacienteBusqueda) pacienteBusqueda.value = obtenerEtiquetaPaciente(paciente);
   if (detalle) {
-    detalle.textContent = `${paciente.pais_nacimiento} | Nacimiento: ${paciente.fecha_nacimiento}`;
+    detalle.textContent = `${paciente.sexo || "Sexo no registrado"} | ${paciente.pais_nacimiento} | Nacimiento: ${paciente.fecha_nacimiento}`;
   }
 }
 
@@ -265,7 +355,7 @@ async function cargarPacientes() {
 
   const { data, error } = await client
     .from("pacientes")
-    .select("id,nombres,apellidos,pais_nacimiento,documento,fecha_nacimiento,created_at")
+    .select("id,nombres,apellidos,pais_nacimiento,documento,fecha_nacimiento,sexo,created_at")
     .order("apellidos", { ascending: true })
     .order("nombres", { ascending: true });
 
@@ -273,11 +363,14 @@ async function cargarPacientes() {
     pacientes = [];
     renderPacientesTabla();
     renderPacientesSelector();
-    setPacienteMensaje("No se pudieron cargar los pacientes. Ejecuta supabase-pacientes.sql en Supabase.", "error");
+    setPacienteMensaje("No se pudieron cargar los pacientes. Ejecuta supabase-pacientes-sexo.sql si falta la columna sexo.", "error");
     return;
   }
 
   pacientes = data || [];
+  if (pacienteEditandoId && !pacientes.some(paciente => paciente.id === pacienteEditandoId)) {
+    cancelarEdicionPaciente();
+  }
   renderPacientesTabla();
   renderPacientesSelector();
   setPacienteMensaje("");
@@ -289,15 +382,17 @@ async function guardarPaciente(event) {
   const client = window.supabaseClient;
   const boton = document.getElementById("paciente_submit");
   const paisNacimiento = obtenerPaisNacimientoCanonico(document.getElementById("paciente_pais_nacimiento").value);
+  const sexo = normalizarSexoPaciente(document.getElementById("paciente_sexo").value);
   const payload = {
     nombres: document.getElementById("paciente_nombres").value.trim(),
     apellidos: document.getElementById("paciente_apellidos").value.trim(),
     documento: document.getElementById("paciente_documento").value.trim(),
     fecha_nacimiento: document.getElementById("paciente_fecha_nacimiento").value,
-    pais_nacimiento: paisNacimiento
+    pais_nacimiento: paisNacimiento,
+    sexo
   };
 
-  if (!payload.nombres || !payload.apellidos || !payload.documento || !payload.fecha_nacimiento) {
+  if (!payload.nombres || !payload.apellidos || !payload.documento || !payload.fecha_nacimiento || !payload.sexo) {
     setPacienteMensaje("Completa todos los campos del paciente.", "error");
     return;
   }
@@ -308,11 +403,20 @@ async function guardarPaciente(event) {
   }
 
   if (boton) boton.disabled = true;
-  setPacienteMensaje("Guardando paciente...", "");
+  const estaEditando = Boolean(pacienteEditandoId);
+  setPacienteMensaje(estaEditando ? "Actualizando paciente..." : "Guardando paciente...", "");
 
-  const { error } = await client
-    .from("pacientes")
-    .insert(payload);
+  const { error } = estaEditando
+    ? await client
+      .from("pacientes")
+      .update({
+        ...payload,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", pacienteEditandoId)
+    : await client
+      .from("pacientes")
+      .insert(payload);
 
   if (boton) boton.disabled = false;
 
@@ -322,8 +426,10 @@ async function guardarPaciente(event) {
   }
 
   limpiarFormularioPaciente();
+  pacienteEditandoId = "";
+  actualizarModoEdicionPaciente();
   await cargarPacientes();
-  setPacienteMensaje("Paciente guardado correctamente.", "success");
+  setPacienteMensaje(estaEditando ? "Paciente actualizado correctamente." : "Paciente guardado correctamente.", "success");
 }
 
 function configurarNavegacionLateral() {
@@ -417,9 +523,18 @@ function configurarPacientes() {
   const recargar = document.getElementById("paciente_recargar");
   const pacienteBusqueda = document.getElementById("calc_paciente_busqueda");
   const filtro = document.getElementById("paciente_filtro");
+  const cancelarEdicion = document.getElementById("paciente_cancelar_edicion");
+  const pacientesTablaBody = document.getElementById("pacientes_tabla_body");
 
   if (form) form.addEventListener("submit", guardarPaciente);
+  if (cancelarEdicion) cancelarEdicion.addEventListener("click", cancelarEdicionPaciente);
   if (recargar) recargar.addEventListener("click", cargarPacientes);
+  if (pacientesTablaBody) {
+    pacientesTablaBody.addEventListener("click", event => {
+      const botonEditar = event.target.closest("[data-paciente-editar]");
+      if (botonEditar) editarPaciente(botonEditar.dataset.pacienteEditar);
+    });
+  }
   if (filtro) {
     filtro.addEventListener("input", event => {
       filtroPacientes = event.target.value;
@@ -432,6 +547,7 @@ function configurarPacientes() {
 
   cargarListaPaisesNacimiento();
   configurarNavegacionLateral();
+  actualizarModoEdicionPaciente();
   window.addEventListener("auth:session-changed", cargarPacientes);
   cargarPacientes();
 }

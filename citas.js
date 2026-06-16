@@ -23,6 +23,17 @@ const CAMPOS_NUTRIENTES = [
   ["vitamina_b12", "Vitamina B12 (ug)"]
 ];
 
+const CAMPOS_MEDIDAS_CITA = [
+  ["brazo_izquierdo", "Brazo izquierdo"],
+  ["brazo_derecho", "Brazo derecho"],
+  ["abdomen", "Abdomen"],
+  ["abdomen_bajo", "Abdomen bajo"],
+  ["muslo_izquierdo", "Muslo izquierdo"],
+  ["muslo_derecho", "Muslo derecho"],
+  ["pantorrilla_izquierda", "Pantorrilla izquierda"],
+  ["pantorrilla_derecha", "Pantorrilla derecha"]
+];
+
 function obtenerTiemposCita() {
   if (typeof tiemposComida !== "undefined" && Array.isArray(tiemposComida)) {
     return tiemposComida;
@@ -117,6 +128,157 @@ function citaClonarNutricion(objeto) {
   return salida;
 }
 
+function obtenerColumnasVisiblesCita() {
+  if (typeof obtenerColumnasAlimentosVisiblesArray === "function") {
+    return obtenerColumnasAlimentosVisiblesArray();
+  }
+
+  return [];
+}
+
+function obtenerGraficoImcCita() {
+  if (typeof actualizarIndiceMasaCorporal === "function") {
+    actualizarIndiceMasaCorporal();
+  }
+
+  const chart = document.getElementById("imc_chart");
+  if (!chart) return "";
+
+  const clone = chart.cloneNode(true);
+  const prefijo = `cita_${Date.now()}_`;
+  const idMap = {};
+
+  [clone].concat(Array.from(clone.querySelectorAll("[id]"))).forEach(elemento => {
+    if (!elemento.id) return;
+    const idAnterior = elemento.id;
+    const idSiguiente = `${prefijo}${idAnterior}`;
+    idMap[idAnterior] = idSiguiente;
+    elemento.id = idSiguiente;
+  });
+
+  const actualizarReferencia = function (valor) {
+    let salida = valor;
+    Object.keys(idMap).forEach(idAnterior => {
+      salida = salida
+        .replaceAll(`#${idAnterior}`, `#${idMap[idAnterior]}`)
+        .replaceAll(idAnterior, idMap[idAnterior]);
+    });
+    return salida;
+  };
+
+  [clone].concat(Array.from(clone.querySelectorAll("*"))).forEach(elemento => {
+    Array.from(elemento.attributes).forEach(attr => {
+      if (attr.name === "id") return;
+      if (Object.keys(idMap).some(idAnterior => attr.value.includes(idAnterior))) {
+        elemento.setAttribute(attr.name, actualizarReferencia(attr.value));
+      }
+    });
+  });
+
+  clone.removeAttribute("id");
+  clone.classList.add("cita-imc-chart-svg");
+
+  return clone.outerHTML;
+}
+
+function obtenerImcCita() {
+  const datos = typeof obtenerIndiceMasaCorporalActual === "function"
+    ? obtenerIndiceMasaCorporalActual()
+    : null;
+
+  if (!datos || !datos.valido) {
+    return {
+      valido: false,
+      peso: citaNumero(citaValor("calc_peso")),
+      estatura_cm: citaNumero(citaValor("calc_estatura")),
+      estatura_m: 0,
+      valor: 0,
+      clasificacion: "",
+      grafico_svg: ""
+    };
+  }
+
+  return {
+    valido: true,
+    peso: citaNumero(datos.peso),
+    estatura_cm: citaNumero(citaValor("calc_estatura")),
+    estatura_m: citaNumero(datos.estaturaMetros),
+    valor: citaNumero(datos.imc),
+    clasificacion: datos.clasificacion || "",
+    grafico_svg: obtenerGraficoImcCita()
+  };
+}
+
+function obtenerImcDesdeSnapshot(snapshot) {
+  if (snapshot && snapshot.imc && snapshot.imc.valido) return snapshot.imc;
+
+  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+  const peso = citaNumero(paciente.peso);
+  const estaturaCm = citaNumero(paciente.estatura);
+  const estaturaM = estaturaCm > 3 ? estaturaCm / 100 : estaturaCm;
+  const imc = peso > 0 && estaturaM > 0 ? peso / (estaturaM * estaturaM) : 0;
+
+  if (!imc || !Number.isFinite(imc)) {
+    return { valido: false, peso, estatura_cm: estaturaCm, estatura_m: estaturaM, valor: 0, clasificacion: "", grafico_svg: "" };
+  }
+
+  const clasificacion = typeof obtenerClasificacionImc === "function"
+    ? obtenerClasificacionImc(imc)
+    : "";
+
+  return {
+    valido: true,
+    peso,
+    estatura_cm: estaturaCm,
+    estatura_m: estaturaM,
+    valor: citaNumero(imc),
+    clasificacion,
+    grafico_svg: ""
+  };
+}
+
+function obtenerSvgSeguroCita(svg) {
+  const contenido = String(svg || "").trim();
+  if (!contenido || !/^<svg[\s>]/i.test(contenido)) return "";
+  if (/<script|<foreignObject|javascript:|on[a-z]+\s*=/i.test(contenido)) return "";
+  return contenido;
+}
+
+async function obtenerProfesionalCita(session) {
+  const user = session && session.user ? session.user : null;
+  if (!user) return {};
+
+  const profesional = {
+    user_id: user.id,
+    email: user.email || "",
+    usuario: user.user_metadata && user.user_metadata.usuario ? user.user_metadata.usuario : "",
+    nombre: "",
+    telefono: ""
+  };
+
+  const client = window.supabaseClient;
+  if (!client) return profesional;
+
+  const { data, error } = await client
+    .from("profiles")
+    .select("usuario,nombre,telefono")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!error && data) {
+    profesional.usuario = data.usuario || profesional.usuario;
+    profesional.nombre = data.nombre || "";
+    profesional.telefono = data.telefono || "";
+  }
+
+  if (!profesional.usuario) {
+    const resumen = document.getElementById("auth-user-name");
+    profesional.usuario = resumen ? resumen.textContent || "" : "";
+  }
+
+  return profesional;
+}
+
 function obtenerMacronutrientesCita() {
   return [
     {
@@ -208,6 +370,7 @@ function obtenerSnapshotCita() {
     documento: citaValor("calc_id"),
     fecha_nacimiento: pacienteRegistrado ? pacienteRegistrado.fecha_nacimiento : "",
     pais_nacimiento: pacienteRegistrado ? pacienteRegistrado.pais_nacimiento : "",
+    sexo: pacienteRegistrado ? pacienteRegistrado.sexo : citaSelectTexto("calc_genero"),
     fecha_evaluacion: citaValor("calc_fecha"),
     peso: citaValor("calc_peso"),
     peso_ideal: citaValor("macro_peso_ideal"),
@@ -221,9 +384,14 @@ function obtenerSnapshotCita() {
   };
 
   return {
-    version: 1,
+    version: 2,
     guardado_en: new Date().toISOString(),
     paciente,
+    profesional: {},
+    imc: obtenerImcCita(),
+    configuracion: {
+      columnas_alimentos_visibles: obtenerColumnasVisiblesCita()
+    },
     macronutrientes: obtenerMacronutrientesCita(),
     alimentos_por_tiempo: obtenerAlimentosPorTiempoCita(),
     totales: obtenerTotalesCita()
@@ -243,6 +411,7 @@ async function guardarCita() {
   }
 
   const snapshot = obtenerSnapshotCita();
+  snapshot.profesional = await obtenerProfesionalCita(sessionData.session);
   if (!snapshot.paciente.nombre && !snapshot.paciente.documento) {
     alert("Selecciona o escribe los datos del paciente antes de guardar la cita.");
     return;
@@ -443,12 +612,70 @@ function renderTablaAlimentos(alimentosPorTiempo) {
   `;
 }
 
+function renderIndiceMasaCorporalCita(imc) {
+  const datos = imc && imc.valido ? imc : null;
+  const grafico = datos ? obtenerSvgSeguroCita(datos.grafico_svg) : "";
+
+  return `
+    <div class="cita-imc-layout">
+      <div class="cita-imc-summary">
+        <div><span>IMC</span><strong>${datos ? citaFormatearNumero(datos.valor) : "--"}</strong></div>
+        <div><span>Clasificaci&oacute;n</span><strong>${datos ? citaEscape(datos.clasificacion) : "--"}</strong></div>
+        <div><span>Peso</span><strong>${datos ? `${citaFormatearNumero(datos.peso)} kg` : "--"}</strong></div>
+        <div><span>Estatura</span><strong>${datos ? `${citaFormatearNumero(datos.estatura_m)} m` : "--"}</strong></div>
+      </div>
+      <div class="cita-imc-chart-panel">
+        ${grafico || '<p class="text-muted mb-0">Esta cita no tiene grafico de IMC guardado.</p>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderMedidasAntropometricasCita(medidas) {
+  const datos = medidas && typeof medidas === "object" ? medidas : {};
+  const tieneMedidas = CAMPOS_MEDIDAS_CITA.some(([campo]) => datos[campo] !== null && datos[campo] !== undefined && datos[campo] !== "");
+  const observaciones = String(datos.observaciones || "").trim();
+
+  if (!tieneMedidas && !observaciones) {
+    return '<p class="text-muted mb-0">Sin medidas corporales registradas.</p>';
+  }
+
+  return `
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered cita-medidas-table">
+        <thead class="table-primary">
+          <tr>
+            <th>Medida</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${CAMPOS_MEDIDAS_CITA.map(([campo, label]) => `
+            <tr>
+              <td>${citaEscape(label)}</td>
+              <td>${datos[campo] !== null && datos[campo] !== undefined && datos[campo] !== "" ? `${citaFormatearNumero(datos[campo])} cm` : ""}</td>
+            </tr>
+          `).join("")}
+          ${observaciones ? `
+            <tr>
+              <td>Observaciones</td>
+              <td>${citaEscape(observaciones)}</td>
+            </tr>
+          ` : ""}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderDetalleCita(cita) {
   const detalle = document.getElementById("cita_detalle");
   if (!detalle) return;
 
   const snapshot = cita.snapshot || {};
   const paciente = snapshot.paciente || {};
+  const profesional = snapshot.profesional || {};
+  const imc = obtenerImcDesdeSnapshot(snapshot);
   const totales = snapshot.totales || {};
   const filasTotales = [];
 
@@ -473,8 +700,21 @@ function renderDetalleCita(cita) {
         <div class="col-md-3"><strong>Peso ideal:</strong> ${citaEscape(paciente.peso_ideal || paciente.peso)} kg</div>
         <div class="col-md-3"><strong>Estatura:</strong> ${citaEscape(paciente.estatura)} cm</div>
         <div class="col-md-3"><strong>Edad:</strong> ${citaEscape(paciente.edad)}</div>
-        <div class="col-md-3"><strong>G&eacute;nero:</strong> ${citaEscape(paciente.genero_texto || paciente.genero)}</div>
+        <div class="col-md-3"><strong>Sexo:</strong> ${citaEscape(paciente.sexo || paciente.genero_texto || paciente.genero)}</div>
+        <div class="col-md-3"><strong>Usuario:</strong> ${citaEscape(profesional.usuario)}</div>
+        <div class="col-md-3"><strong>Profesional:</strong> ${citaEscape(profesional.nombre)}</div>
+        <div class="col-md-3"><strong>Correo usuario:</strong> ${citaEscape(profesional.email)}</div>
       </div>
+    </div>
+
+    <div class="card p-3 cita-detail-section">
+      <h5>&Iacute;ndice de masa corporal</h5>
+      ${renderIndiceMasaCorporalCita(imc)}
+    </div>
+
+    <div class="card p-3 cita-detail-section">
+      <h5>Medidas corporales</h5>
+      ${renderMedidasAntropometricasCita(paciente.medidas_antropometricas)}
     </div>
 
     <div class="card p-3 cita-detail-section">
