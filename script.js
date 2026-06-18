@@ -64,7 +64,7 @@ const COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES = [
 ];
 let columnasAlimentosVisibles = new Set(COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES);
 window.alimentos_subtotales = {};
-const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
+const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda", "Cena"];
 
 const IMC_CHART = {
   minPeso: 40,
@@ -1278,6 +1278,48 @@ function obtenerIdTbodyTiempo(tiempo) {
   return "valores_" + obtenerSlugTiempo(tiempo);
 }
 
+function crearItemsPorTiempo() {
+  const itemsPorTiempo = {};
+  tiemposComida.forEach(function (tiempo) {
+    itemsPorTiempo[tiempo] = [];
+  });
+
+  return itemsPorTiempo;
+}
+
+function obtenerIdHoraTiempo(tiempo) {
+  return "hora_" + obtenerSlugTiempo(tiempo);
+}
+
+function obtenerHoraComida(tiempo) {
+  const elemento = document.getElementById(obtenerIdHoraTiempo(tiempo));
+  return elemento ? elemento.value || "" : "";
+}
+
+function obtenerHorasComida() {
+  const horas = {};
+  tiemposComida.forEach(function (tiempo) {
+    horas[tiempo] = obtenerHoraComida(tiempo);
+  });
+
+  return horas;
+}
+
+function tieneHorasComida(horas) {
+  const horasActuales = horas || {};
+  return tiemposComida.some(function (tiempo) {
+    return Boolean(horasActuales[tiempo]);
+  });
+}
+
+function obtenerEtiquetaTiempoConHora(tiempo, horas) {
+  const hora = horas && Object.prototype.hasOwnProperty.call(horas, tiempo)
+    ? horas[tiempo]
+    : obtenerHoraComida(tiempo);
+
+  return hora ? `${tiempo} (${hora})` : tiempo;
+}
+
 function obtenerAlimentoSeleccionadoPorId(id) {
   return alimentos_seleccionados.find(function (item) {
     return item[0] + "" === id + "";
@@ -1354,30 +1396,39 @@ function descargar() {
     "macro_grasa_porcentaje": obtenerValorNumerico('macro_grasa_porcentaje'),
     "macro_carbohidratos_porcentaje": 100 - obtenerValorNumerico('macro_proteina_porcentaje') - obtenerValorNumerico('macro_grasa_porcentaje')
   });
+  const horasComida = obtenerHorasComida();
+  if (tieneHorasComida(horasComida)) {
+    info.push({ "Tiempo de Comida": "Horarios de comida", "nombre": "" });
+    tiemposComida.forEach(function (tiempo) {
+      if (horasComida[tiempo]) {
+        info.push({ "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo], "nombre": "" });
+      }
+    });
+  }
   info.push({}); // spacing
   
-  let itemsPorTiempo = { "Desayuno": [], "Media Mañana": [], "Almuerzo": [], "Media Tarde": [], "Merienda": [] };
+  let itemsPorTiempo = crearItemsPorTiempo();
   
   for (const clave in alimentos_seleccionados_en_orden) {
     let item = alimentos_seleccionados_en_orden[clave];
-    let aux_info = { "Tiempo de Comida": item.tiempo || "Desayuno" };
+    let tiempo = itemsPorTiempo[item.tiempo] ? item.tiempo : "Desayuno";
+    let aux_info = {
+      "Tiempo de Comida": tiempo,
+      "Hora": horasComida[tiempo] || ""
+    };
     for (let i = 0; i < ordenDeseado.length; i++) {
         aux_info[ordenDeseado[i]] = item[ordenDeseado[i]];
     }
-    let tiempo = item.tiempo || "Desayuno";
-    if (itemsPorTiempo[tiempo]) {
-       itemsPorTiempo[tiempo].push(aux_info);
-    }
+    itemsPorTiempo[tiempo].push(aux_info);
   }
 
-  const tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
-  for (let t of tiempos) {
+  for (let t of tiemposComida) {
     if (itemsPorTiempo[t].length > 0) {
       for (let item of itemsPorTiempo[t]) {
         info.push(item);
       }
       if (window.alimentos_subtotales && window.alimentos_subtotales[t]) {
-        let sub_row = { "Tiempo de Comida": "Subtotal " + t, "nombre": "" };
+        let sub_row = { "Tiempo de Comida": "Subtotal " + t, "Hora": horasComida[t] || "", "nombre": "" };
         Object.assign(sub_row, window.alimentos_subtotales[t]);
         info.push(sub_row);
         info.push({}); // Empty spacing row
@@ -1802,7 +1853,7 @@ function buscar() {
 
     const fila = document.createElement('tr');
 
-    fila.addEventListener('click', () => abrirModalTiempo(alim));
+    fila.addEventListener('click', (event) => abrirModalTiempo(alim, event));
 
     fila.appendChild(td_nombre);
     fila.appendChild(td_energia_calculada);
@@ -1958,12 +2009,10 @@ function eliminar(alimento, id) {
     calcular();
   }
 }
-function abrirModalTiempo(alimento) {
+function abrirModalTiempo(alimento, event) {
   if (!alimento) return;
   alimentoPendiente = alimento;
-  const nombreModal = document.getElementById('modalAlimentoName');
-  if (nombreModal) nombreModal.textContent = alimento.nombre;
-  mostrarModalTiempo();
+  mostrarModalTiempo(event);
 }
 
 function limpiarRestosModalTiempo() {
@@ -2002,14 +2051,52 @@ function desactivarCierrePanelTiempo() {
   document.removeEventListener("keydown", cerrarPanelTiempoConEscape);
 }
 
-function mostrarModalTiempo() {
+function posicionarPanelTiempo(panel, event) {
+  const margen = 12;
+  const separacion = 10;
+  const anchoVentana = document.documentElement.clientWidth || window.innerWidth;
+  const altoVentana = document.documentElement.clientHeight || window.innerHeight;
+  const punto = event && typeof event.clientX === "number" && typeof event.clientY === "number"
+    ? { x: event.clientX, y: event.clientY }
+    : { x: anchoVentana / 2, y: altoVentana / 2 };
+
+  panel.style.left = "0px";
+  panel.style.top = "0px";
+
+  const panelRect = panel.getBoundingClientRect();
+  const anchoPanel = panelRect.width;
+  const altoPanel = panelRect.height;
+
+  let left = punto.x + separacion;
+  if (left + anchoPanel > anchoVentana - margen) {
+    left = punto.x - anchoPanel - separacion;
+  }
+
+  let top = punto.y - 8;
+  if (top + altoPanel > altoVentana - margen) {
+    top = altoVentana - altoPanel - margen;
+  }
+
+  left = Math.max(margen, Math.min(left, anchoVentana - anchoPanel - margen));
+  top = Math.max(margen, top);
+
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+}
+
+function mostrarModalTiempo(event) {
   const panel = document.getElementById("mealSelectionModal");
   if (!panel) return;
 
   limpiarRestosModalTiempo();
+  limpiarResaltadoCruceAlimentos();
+  if (panel.parentElement !== document.body) {
+    document.body.appendChild(panel);
+  }
   panel.hidden = false;
   panel.setAttribute("aria-hidden", "false");
   panel.classList.add("is-open");
+  posicionarPanelTiempo(panel, event);
   activarCierrePanelTiempo();
 }
 
@@ -2190,7 +2277,7 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
 }
 
 function actualizarTotal(alimentos_seleccionados) {
-  const tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
+  const tiempos = tiemposComida;
   const props = ["energia_calculada", "proteina", "grasa_total", "carbohidratos", "fibra", "ags", "agm", "agpi", "colesterol", "calcio", "fosforo", "hierro", "potasio", "sodio", "zinc", "vitamina_c", "vitamina_a", "folatos", "vitamina_b12"];
   
   let subtotales = {};
@@ -2312,7 +2399,380 @@ function calcularReqEnergia() {
   }
 }
 
-function generarPDF() {
+const REPORTE_PDF_CAMPOS_MEDIDAS = [
+  ["brazo_izquierdo", "Brazo izquierdo"],
+  ["brazo_derecho", "Brazo derecho"],
+  ["abdomen", "Abdomen"],
+  ["abdomen_bajo", "Abdomen bajo"],
+  ["muslo_izquierdo", "Muslo izquierdo"],
+  ["muslo_derecho", "Muslo derecho"],
+  ["pantorrilla_izquierda", "Pantorrilla izquierda"],
+  ["pantorrilla_derecha", "Pantorrilla derecha"]
+];
+
+function reportePdfEscape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function reportePdfNumero(value) {
+  const numero = parseFloat(value);
+  return Number.isFinite(numero) ? numero.toFixed(2) : reportePdfEscape(value);
+}
+
+function reportePdfFecha(value) {
+  if (typeof citaFormatearFecha === "function") return citaFormatearFecha(value);
+  return value || "";
+}
+
+function reportePdfCamposNutrientes() {
+  if (typeof CAMPOS_NUTRIENTES !== "undefined" && Array.isArray(CAMPOS_NUTRIENTES)) {
+    return CAMPOS_NUTRIENTES;
+  }
+
+  return COLUMNAS_NUTRIENTES_ALIMENTOS.map(function (columna) {
+    return [columna.key, columna.label];
+  });
+}
+
+function reportePdfInfoTable(items) {
+  return `
+    <table class="pdf-info-table">
+      <tbody>
+        ${items.map(function (item) {
+          return `
+            <tr>
+              <th>${reportePdfEscape(item[0])}</th>
+              <td>${reportePdfEscape(item[1] || "")}</td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function reportePdfTablaSimple(headers, rows) {
+  return `
+    <table class="pdf-table">
+      <thead>
+        <tr>${headers.map(header => `<th>${reportePdfEscape(header)}</th>`).join("")}</tr>
+      </thead>
+      <tbody>
+        ${rows.map(row => `
+          <tr>${row.map(cell => `<td>${reportePdfEscape(cell || "")}</td>`).join("")}</tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function reportePdfTablaNutrientes(tituloPrimeraColumna, filas) {
+  const campos = reportePdfCamposNutrientes();
+
+  return `
+    <table class="pdf-table pdf-nutrient-table">
+      <thead>
+        <tr>
+          <th>${reportePdfEscape(tituloPrimeraColumna)}</th>
+          ${campos.map(([, label]) => `<th>${reportePdfEscape(label)}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>
+        ${(filas || []).map(fila => `
+          <tr>
+            <td>${reportePdfEscape(fila.nombre || "")}</td>
+            ${campos.map(([campo]) => `<td>${reportePdfNumero(fila[campo])}</td>`).join("")}
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function reportePdfDatosPaciente(snapshot) {
+  const paciente = snapshot.paciente || {};
+  const profesional = snapshot.profesional || {};
+
+  return reportePdfInfoTable([
+    ["Nombre", paciente.nombre],
+    ["Cedula/Pasaporte", paciente.documento],
+    ["Fecha de evaluacion", reportePdfFecha(paciente.fecha_evaluacion)],
+    ["Fecha de nacimiento", reportePdfFecha(paciente.fecha_nacimiento)],
+    ["Pais de nacimiento", paciente.pais_nacimiento],
+    ["Sexo", paciente.sexo || paciente.genero_texto || paciente.genero],
+    ["Peso", paciente.peso ? `${paciente.peso} kg` : ""],
+    ["Peso ideal", paciente.peso_ideal ? `${paciente.peso_ideal} kg` : ""],
+    ["Estatura", paciente.estatura ? `${paciente.estatura} cm` : ""],
+    ["Edad", paciente.edad],
+    ["Actividad", paciente.actividad_texto || paciente.actividad],
+    ["Profesional", profesional.nombre],
+    ["Usuario", profesional.usuario],
+    ["Correo usuario", profesional.email]
+  ]);
+}
+
+function reportePdfHorarios(horasComida) {
+  const horas = horasComida || {};
+  const rows = tiemposComida.map(tiempo => [tiempo, horas[tiempo] || ""]);
+  return reportePdfTablaSimple(["Tiempo de comida", "Hora"], rows);
+}
+
+function reportePdfMacronutrientes(macros) {
+  const rows = (macros || []).map(item => [
+    item.macronutriente,
+    item.porcentaje,
+    item.kcal,
+    item.gramos,
+    item.gkg
+  ]);
+
+  return reportePdfTablaSimple(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], rows);
+}
+
+function reportePdfRequerimientoEnergetico() {
+  const rows = [
+    ["Harris-Benedict", document.getElementById("res_harris") ? document.getElementById("res_harris").textContent : ""],
+    ["Mifflin-St Jeor", document.getElementById("res_mifflin") ? document.getElementById("res_mifflin").textContent : ""],
+    ["OMS/FAO", document.getElementById("res_oms") ? document.getElementById("res_oms").textContent : ""],
+    ["Promedio usado", document.getElementById("res_promedio") ? document.getElementById("res_promedio").textContent : ""]
+  ].filter(row => row[1]);
+
+  if (!rows.length) return '<p class="pdf-muted">Sin requerimiento energetico calculado.</p>';
+  return reportePdfTablaSimple(["Formula", "Kcal/dia"], rows);
+}
+
+function reportePdfIndiceMasaCorporal(imc) {
+  const datos = imc && imc.valido ? imc : null;
+  const grafico = datos && typeof obtenerSvgSeguroCita === "function"
+    ? obtenerSvgSeguroCita(datos.grafico_svg)
+    : "";
+
+  return `
+    <div class="pdf-imc-layout">
+      <div>
+        ${reportePdfInfoTable([
+          ["IMC", datos ? reportePdfNumero(datos.valor) : ""],
+          ["Clasificacion", datos ? datos.clasificacion : ""],
+          ["Peso", datos ? `${reportePdfNumero(datos.peso)} kg` : ""],
+          ["Estatura", datos ? `${reportePdfNumero(datos.estatura_m)} m` : ""]
+        ])}
+      </div>
+      <div class="pdf-imc-chart">${grafico || '<p class="pdf-muted">Grafico de IMC no disponible.</p>'}</div>
+    </div>
+  `;
+}
+
+function reportePdfMedidasCorporales(medidas) {
+  const datos = medidas && typeof medidas === "object" ? medidas : {};
+  const rows = REPORTE_PDF_CAMPOS_MEDIDAS.map(([campo, label]) => [
+    label,
+    datos[campo] !== null && datos[campo] !== undefined && datos[campo] !== "" ? `${reportePdfNumero(datos[campo])} cm` : ""
+  ]);
+  const observaciones = String(datos.observaciones || "").trim();
+
+  return `
+    <div class="pdf-measures-layout">
+      <div class="pdf-silhouette">
+        <img src="media/cuerpo%20entero.png" alt="Silueta corporal con guias de medicion">
+      </div>
+      <div>
+        ${reportePdfTablaSimple(["Medida", "Valor"], rows)}
+        <div class="pdf-observations">
+          <strong>Observaciones:</strong>
+          <div>${observaciones ? reportePdfEscape(observaciones) : "Sin observaciones."}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function reportePdfAlimentos(alimentosPorTiempo, horasComida) {
+  const campos = reportePdfCamposNutrientes();
+  const filas = [];
+
+  tiemposComida.forEach(function (tiempo) {
+    const etiqueta = obtenerEtiquetaTiempoConHora(tiempo, horasComida);
+    const items = alimentosPorTiempo && alimentosPorTiempo[tiempo] ? alimentosPorTiempo[tiempo] : [];
+    filas.push(`<tr class="pdf-time-row"><td colspan="${campos.length + 2}">${reportePdfEscape(etiqueta)}</td></tr>`);
+
+    if (!items.length) {
+      filas.push(`<tr><td colspan="${campos.length + 2}" class="pdf-muted-cell">Sin alimentos.</td></tr>`);
+      return;
+    }
+
+    items.forEach(item => {
+      filas.push(`
+        <tr>
+          <td>${reportePdfEscape(item.nombre)}</td>
+          <td>${reportePdfNumero(item.gramos)} g</td>
+          ${campos.map(([campo]) => `<td>${reportePdfNumero(item[campo])}</td>`).join("")}
+        </tr>
+      `);
+    });
+  });
+
+  return `
+    <table class="pdf-table pdf-food-table">
+      <thead>
+        <tr>
+          <th>Alimento</th>
+          <th>Gramos</th>
+          ${campos.map(([, label]) => `<th>${reportePdfEscape(label)}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>${filas.join("")}</tbody>
+    </table>
+  `;
+}
+
+function reportePdfTotales(snapshot, horasComida) {
+  const totales = snapshot.totales || {};
+  const filas = [];
+
+  tiemposComida.forEach(function (tiempo) {
+    filas.push({
+      nombre: obtenerEtiquetaTiempoConHora(tiempo, horasComida),
+      ...(totales.subtotales ? totales.subtotales[tiempo] : {})
+    });
+  });
+
+  filas.push({ nombre: "Total", ...(totales.total || {}) });
+  filas.push({ nombre: "Kilocalorias por macronutriente", ...(totales.total_kilocalorias || {}) });
+  filas.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
+  filas.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
+
+  return reportePdfTablaNutrientes("Concepto", filas);
+}
+
+function reportePdfHtml(snapshot) {
+  const paciente = snapshot.paciente || {};
+  const horasComida = snapshot.horas_comida || obtenerHorasComida();
+  const fechaReporte = reportePdfFecha(paciente.fecha_evaluacion);
+
+  return `
+    <div class="pdf-report">
+      <style>
+        .pdf-report { color: #1f2933; font-family: Arial, sans-serif; font-size: 9px; line-height: 1.35; }
+        .pdf-header { border-bottom: 3px solid #4CAF50; margin-bottom: 10px; padding-bottom: 8px; text-align: center; }
+        .pdf-header h1 { margin: 0; color: #214c2a; font-size: 22px; }
+        .pdf-header p { margin: 4px 0 0; color: #5b6670; }
+        .pdf-section { margin-bottom: 10px; padding: 10px; border: 1px solid #d9e1e5; border-radius: 6px; background: #fff; break-inside: avoid; page-break-inside: avoid; }
+        .pdf-section h2 { margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid #d9e1e5; color: #10202f; font-size: 13px; }
+        .pdf-info-table, .pdf-table { width: 100%; border-collapse: collapse; }
+        .pdf-info-table th, .pdf-info-table td, .pdf-table th, .pdf-table td { border: 1px solid #d9e1e5; padding: 4px; vertical-align: top; }
+        .pdf-info-table th { width: 150px; background: #f4f7f5; text-align: left; }
+        .pdf-table th { background: #dceeff; color: #10202f; font-weight: 700; }
+        .pdf-nutrient-table, .pdf-food-table { font-size: 6.5px; table-layout: fixed; }
+        .pdf-nutrient-table th:first-child, .pdf-nutrient-table td:first-child, .pdf-food-table th:first-child, .pdf-food-table td:first-child { width: 88px; text-align: left; }
+        .pdf-time-row td { background: #eef7f0; font-weight: 700; text-align: left; }
+        .pdf-muted, .pdf-muted-cell { color: #68727d; }
+        .pdf-imc-layout, .pdf-measures-layout { display: flex; gap: 12px; align-items: flex-start; }
+        .pdf-imc-layout > div:first-child { flex: 0 0 210px; }
+        .pdf-imc-chart { flex: 1 1 auto; min-height: 210px; }
+        .pdf-imc-chart svg { width: 100%; max-height: 250px; }
+        .pdf-silhouette { flex: 0 0 160px; padding: 8px; border: 1px solid #d9e1e5; border-radius: 6px; text-align: center; }
+        .pdf-silhouette img { width: 140px; max-height: 310px; object-fit: contain; }
+        .pdf-measures-layout > div:last-child { flex: 1 1 auto; }
+        .pdf-observations { margin-top: 8px; padding: 7px; border: 1px solid #d9e1e5; border-radius: 5px; background: #f8faf9; }
+      </style>
+
+      <div class="pdf-header">
+        <h1>Reporte Nutricional</h1>
+        <p>${reportePdfEscape(paciente.nombre || "Paciente")} ${fechaReporte ? `- ${reportePdfEscape(fechaReporte)}` : ""}</p>
+      </div>
+
+      <section class="pdf-section">
+        <h2>Datos de la cita y paciente</h2>
+        ${reportePdfDatosPaciente(snapshot)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Indice de masa corporal</h2>
+        ${reportePdfIndiceMasaCorporal(snapshot.imc)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Medidas corporales</h2>
+        ${reportePdfMedidasCorporales(paciente.medidas_antropometricas)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Requerimiento energetico calculado</h2>
+        ${reportePdfRequerimientoEnergetico()}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Horarios de comida</h2>
+        ${reportePdfHorarios(horasComida)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Distribucion de macronutrientes</h2>
+        ${reportePdfMacronutrientes(snapshot.macronutrientes)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Alimentos seleccionados</h2>
+        ${reportePdfAlimentos(snapshot.alimentos_por_tiempo, horasComida)}
+      </section>
+
+      <section class="pdf-section">
+        <h2>Totales, requerimiento y adecuacion</h2>
+        ${reportePdfTotales(snapshot, horasComida)}
+      </section>
+    </div>
+  `;
+}
+
+function reportePdfEsperarImagenes(contenedor) {
+  const imagenes = Array.from(contenedor.querySelectorAll("img"));
+  if (!imagenes.length) return Promise.resolve();
+
+  return Promise.all(imagenes.map(function (imagen) {
+    if (imagen.complete) return Promise.resolve();
+
+    return new Promise(function (resolve) {
+      imagen.addEventListener("load", resolve, { once: true });
+      imagen.addEventListener("error", resolve, { once: true });
+    });
+  }));
+}
+
+async function reportePdfDescargar(html, opt) {
+  const contenedor = document.createElement("div");
+  contenedor.style.position = "fixed";
+  contenedor.style.left = "0";
+  contenedor.style.top = "0";
+  contenedor.style.width = "1120px";
+  contenedor.style.maxWidth = "1120px";
+  contenedor.style.minHeight = "100vh";
+  contenedor.style.background = "#ffffff";
+  contenedor.style.zIndex = "2147483647";
+  contenedor.style.pointerEvents = "none";
+  contenedor.style.overflow = "visible";
+  contenedor.innerHTML = html;
+
+  document.body.appendChild(contenedor);
+
+  try {
+    await new Promise(function (resolve) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(resolve);
+      });
+    });
+    await reportePdfEsperarImagenes(contenedor);
+    await html2pdf().set(opt).from(contenedor).save();
+  } finally {
+    contenedor.remove();
+  }
+}
+
+function generarPDFResumenAnterior() {
   const nombre = document.getElementById('calc_nombre').value || "Paciente";
   const id = document.getElementById('calc_id').value || "N/A";
   const fecha = document.getElementById('calc_fecha').value || "N/A";
@@ -2325,6 +2785,22 @@ function generarPDF() {
   const adecProt = document.getElementById('adecuacion_proteina').textContent || "0%";
   const adecGrasa = document.getElementById('adecuacion_grasa').textContent || "0%";
   const adecCarb = document.getElementById('adecuacion_carbohidratos').textContent || "0%";
+  const horasComida = obtenerHorasComida();
+  const horariosComidaPdf = tieneHorasComida(horasComida) ? `
+      <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+        <h4 style="margin-top:0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Horarios de Comida</h4>
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <tbody>
+            ${tiemposComida.map(tiempo => `
+              <tr>
+                <td style="padding: 4px; border-bottom: 1px solid #eee;"><strong>${tiempo}</strong></td>
+                <td style="padding: 4px; border-bottom: 1px solid #eee; text-align: right;">${horasComida[tiempo] || ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+  ` : "";
 
   // Custom helper to parse percentage safely
   const parsePct = (str) => {
@@ -2358,6 +2834,8 @@ function generarPDF() {
           </tr>
         </table>
       </div>
+
+      ${horariosComidaPdf}
 
       <div style="margin-bottom: 25px;">
         <h4 style="border-bottom: 1px solid #ccc; padding-bottom: 5px;">Adecuación de Requerimientos</h4>
@@ -2408,22 +2886,20 @@ function generarPDF() {
   `;
 
   nuevoOrden();
-  let itemsPorTiempo = { "Desayuno": [], "Media Mañana": [], "Almuerzo": [], "Media Tarde": [], "Merienda": [] };
+  let itemsPorTiempo = crearItemsPorTiempo();
   
   for (const clave in alimentos_seleccionados_en_orden) {
     let item = alimentos_seleccionados_en_orden[clave];
-    let tiempo = item.tiempo || "Desayuno";
-    if (itemsPorTiempo[tiempo]) {
-       itemsPorTiempo[tiempo].push(item);
-    }
+    let tiempo = itemsPorTiempo[item.tiempo] ? item.tiempo : "Desayuno";
+    itemsPorTiempo[tiempo].push(item);
   }
 
-  const tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
-  for (let t of tiempos) {
+  for (let t of tiemposComida) {
     if (itemsPorTiempo[t].length > 0) {
+      const etiquetaTiempo = obtenerEtiquetaTiempoConHora(t, horasComida);
       html += `
         <div class="pdf-meal-section" style="margin-bottom: 15px; page-break-inside: avoid; break-inside: avoid;">
-          <h5 style="background-color: #f1f1f1; padding: 5px; margin: 0; color: #333;">${t}</h5>
+          <h5 style="background-color: #f1f1f1; padding: 5px; margin: 0; color: #333;">${etiquetaTiempo}</h5>
           <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
             <thead>
               <tr style="border-bottom: 1px solid #ddd;">
@@ -2449,7 +2925,7 @@ function generarPDF() {
          let subKcal = parseFloat(window.alimentos_subtotales[t]["energia_calculada"]).toFixed(2);
          html += `
           <tr>
-            <td style="padding: 4px; font-weight: bold; text-align: right;" colspan="2">Subtotal ${t}:</td>
+            <td style="padding: 4px; font-weight: bold; text-align: right;" colspan="2">Subtotal ${etiquetaTiempo}:</td>
             <td style="text-align: right; padding: 4px; font-weight: bold;">${subKcal} Kcal</td>
           </tr>
          `;
@@ -2477,6 +2953,665 @@ function generarPDF() {
   html2pdf().set(opt).from(html).save().catch(err => {
     console.error("Error generando PDF", err);
   });
+}
+
+async function generarPDF() {
+  try {
+    if (typeof obtenerSnapshotCita !== "function") {
+      alert("No se pudo preparar la informacion de la cita para el PDF.");
+      return;
+    }
+
+    const snapshot = obtenerSnapshotCita();
+
+    if (window.supabaseClient && typeof obtenerProfesionalCita === "function") {
+      try {
+        const { data: sessionData } = await window.supabaseClient.auth.getSession();
+        if (sessionData && sessionData.session) {
+          snapshot.profesional = await obtenerProfesionalCita(sessionData.session);
+        }
+      } catch (error) {
+        console.warn("No se pudo cargar el profesional para el PDF.", error);
+      }
+    }
+
+    const opt = {
+      margin: [8, 8, 8, 8],
+      filename: obtenerNombreArchivoDescarga("pdf"),
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
+      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+      pagebreak: { mode: ["css", "legacy"], avoid: [".pdf-section"] }
+    };
+
+    try {
+      await reportePdfDescargar(reportePdfHtml(snapshot), opt);
+    } catch (error) {
+      console.warn("No se pudo generar el PDF completo con graficos. Se reintentara sin SVG de IMC.", error);
+      if (snapshot.imc) snapshot.imc.grafico_svg = "";
+      await reportePdfDescargar(reportePdfHtml(snapshot), opt);
+    }
+  } catch (err) {
+    console.error("Error generando PDF", err);
+    alert("No se pudo generar el PDF. Revisa la consola para ver el detalle.");
+  }
+}
+
+async function generarPDF() {
+  try {
+    if (typeof obtenerSnapshotCita !== "function") {
+      alert("No se pudo preparar la informacion de la cita para el PDF.");
+      return;
+    }
+
+    const JsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : window.jsPDF;
+    if (!JsPDF) {
+      alert("No se pudo cargar jsPDF para generar el PDF.");
+      return;
+    }
+
+    const snapshot = obtenerSnapshotCita();
+    if (window.supabaseClient && typeof obtenerProfesionalCita === "function") {
+      try {
+        const { data: sessionData } = await window.supabaseClient.auth.getSession();
+        if (sessionData && sessionData.session) {
+          snapshot.profesional = await obtenerProfesionalCita(sessionData.session);
+        }
+      } catch (error) {
+        console.warn("No se pudo cargar el profesional para el PDF.", error);
+      }
+    }
+
+    const doc = new JsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 8;
+    const usableWidth = pageWidth - (margin * 2);
+    let y = margin;
+
+    const limpiar = value => String(value ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    const numero = value => {
+      const n = parseFloat(value);
+      return Number.isFinite(n) ? n.toFixed(2) : limpiar(value);
+    };
+    const fecha = value => (typeof citaFormatearFecha === "function" ? citaFormatearFecha(value) : limpiar(value));
+    const camposResumen = [
+      ["energia_calculada", "Kcal"],
+      ["proteina", "Prot"],
+      ["grasa_total", "Grasa"],
+      ["carbohidratos", "Carb"],
+      ["fibra", "Fibra"],
+      ["calcio", "Calcio"],
+      ["hierro", "Hierro"],
+      ["sodio", "Sodio"]
+    ];
+
+    function nuevaPagina() {
+      doc.addPage();
+      y = margin;
+    }
+
+    function asegurar(alto) {
+      if (y + alto > pageHeight - margin) nuevaPagina();
+    }
+
+    function seccion(titulo) {
+      asegurar(12);
+      doc.setFillColor(238, 247, 240);
+      doc.setDrawColor(197, 214, 203);
+      doc.rect(margin, y, usableWidth, 8, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(20, 32, 47);
+      doc.text(limpiar(titulo), margin + 3, y + 5.5);
+      y += 11;
+    }
+
+    function escribirTexto(valor, x, ancho, opts = {}) {
+      doc.setFont("helvetica", opts.bold ? "bold" : "normal");
+      doc.setFontSize(opts.size || 8);
+      doc.setTextColor(opts.color ? opts.color[0] : 35, opts.color ? opts.color[1] : 45, opts.color ? opts.color[2] : 55);
+      const partes = doc.splitTextToSize(limpiar(valor), ancho);
+      doc.text(partes, x, y);
+      y += partes.length * (opts.lineHeight || 4.2);
+    }
+
+    function tabla(headers, rows, widths) {
+      const rowHeight = 6;
+      const colWidths = widths || headers.map(() => usableWidth / headers.length);
+
+      function header() {
+        asegurar(rowHeight * 2);
+        let x = margin;
+        headers.forEach((headerText, index) => {
+          doc.setFillColor(220, 238, 255);
+          doc.setDrawColor(190, 205, 220);
+          doc.rect(x, y, colWidths[index], rowHeight, "FD");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(6.5);
+          doc.setTextColor(16, 32, 47);
+          doc.text(doc.splitTextToSize(limpiar(headerText), colWidths[index] - 2), x + 1, y + 4);
+          x += colWidths[index];
+        });
+        y += rowHeight;
+      }
+
+      header();
+      rows.forEach(row => {
+        if (y + rowHeight > pageHeight - margin) {
+          nuevaPagina();
+          header();
+        }
+        let x = margin;
+        row.forEach((cell, index) => {
+          doc.setDrawColor(217, 225, 229);
+          doc.rect(x, y, colWidths[index], rowHeight);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(6.3);
+          doc.setTextColor(35, 45, 55);
+          doc.text(doc.splitTextToSize(limpiar(cell), colWidths[index] - 2), x + 1, y + 4);
+          x += colWidths[index];
+        });
+        y += rowHeight;
+      });
+      y += 4;
+    }
+
+    function tablaInfo(items, columnas = 2) {
+      const colWidth = usableWidth / columnas;
+      const rowHeight = 7;
+      for (let i = 0; i < items.length; i += columnas) {
+        asegurar(rowHeight);
+        for (let c = 0; c < columnas; c++) {
+          const item = items[i + c];
+          if (!item) continue;
+          const x = margin + (c * colWidth);
+          doc.setDrawColor(217, 225, 229);
+          doc.rect(x, y, colWidth, rowHeight);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7);
+          doc.setTextColor(50, 60, 70);
+          doc.text(limpiar(item[0]), x + 2, y + 3);
+          doc.setFont("helvetica", "normal");
+          doc.text(doc.splitTextToSize(limpiar(item[1]), colWidth - 36), x + 34, y + 3);
+        }
+        y += rowHeight;
+      }
+      y += 3;
+    }
+
+    function tablaNutricion(nombrePrimeraColumna, filas) {
+      const headers = [nombrePrimeraColumna].concat(camposResumen.map(([, label]) => label));
+      const widths = [54].concat(camposResumen.map(() => (usableWidth - 54) / camposResumen.length));
+      const rows = filas.map(fila => [fila.nombre || ""].concat(camposResumen.map(([campo]) => numero(fila[campo]))));
+      tabla(headers, rows, widths);
+    }
+
+    function buscarImagenProyecto(src) {
+      const objetivo = (() => {
+        try {
+          return decodeURI(src);
+        } catch (error) {
+          return src;
+        }
+      })();
+
+      return Array.from(document.images || []).find(img => {
+        const atributo = img.getAttribute("src") || "";
+        const actual = img.currentSrc || img.src || "";
+        const atributoDecodificado = (() => {
+          try {
+            return decodeURI(atributo);
+          } catch (error) {
+            return atributo;
+          }
+        })();
+        const actualDecodificado = (() => {
+          try {
+            return decodeURI(actual);
+          } catch (error) {
+            return actual;
+          }
+        })();
+
+        return atributo === src
+          || actual.endsWith(src)
+          || atributoDecodificado === objetivo
+          || atributoDecodificado.endsWith(objetivo)
+          || actualDecodificado.endsWith(objetivo);
+      }) || null;
+    }
+
+    function obtenerVariantesRutaImagen(src) {
+      const variantes = [];
+      const agregar = value => {
+        if (value && !variantes.includes(value)) variantes.push(value);
+      };
+
+      agregar(src);
+      try {
+        agregar(decodeURI(src));
+      } catch (error) {
+        // Si no se puede decodificar, se conserva la ruta original.
+      }
+
+      const imagenDom = buscarImagenProyecto(src);
+      if (imagenDom) {
+        agregar(imagenDom.currentSrc || imagenDom.src);
+        agregar(imagenDom.getAttribute("src"));
+      }
+
+      try {
+        const url = new URL(src, document.baseURI);
+        agregar(url.href);
+        agregar(decodeURI(url.href));
+      } catch (error) {
+        // Las rutas relativas simples ya quedaron cubiertas arriba.
+      }
+
+      return variantes;
+    }
+
+    function convertirImagenADataUrl(img) {
+      const ancho = img.naturalWidth || img.width;
+      const alto = img.naturalHeight || img.height;
+      if (!ancho || !alto) return null;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = ancho;
+      canvas.height = alto;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0, ancho, alto);
+      return canvas.toDataURL("image/png");
+    }
+
+    function cargarImagen(src) {
+      return new Promise(resolve => {
+        const assets = window.PDF_ASSETS || {};
+        const variantesAsset = obtenerVariantesRutaImagen(src);
+        for (const variante of variantesAsset) {
+          if (assets[variante]) {
+            resolve(assets[variante]);
+            return;
+          }
+          try {
+            const varianteDecodificada = decodeURI(variante);
+            if (assets[varianteDecodificada]) {
+              resolve(assets[varianteDecodificada]);
+              return;
+            }
+          } catch (error) {
+            // La variante original ya fue revisada.
+          }
+        }
+
+        const imagenDom = buscarImagenProyecto(src);
+        if (imagenDom && imagenDom.complete && imagenDom.naturalWidth) {
+          try {
+            const dataUrl = convertirImagenADataUrl(imagenDom);
+            if (dataUrl) {
+              resolve(dataUrl);
+              return;
+            }
+          } catch (error) {
+            console.warn("No se pudo convertir una imagen del proyecto para el PDF.", error);
+          }
+        }
+
+        const variantes = obtenerVariantesRutaImagen(src);
+        let indice = 0;
+        const probarSiguiente = () => {
+          if (indice >= variantes.length) {
+            resolve(null);
+            return;
+          }
+
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const dataUrl = convertirImagenADataUrl(img);
+              resolve(dataUrl || img);
+            } catch (error) {
+              console.warn("No se pudo convertir una imagen del proyecto para el PDF.", error);
+              resolve(img);
+            }
+          };
+          img.onerror = probarSiguiente;
+          img.src = variantes[indice];
+          indice += 1;
+        };
+
+        probarSiguiente();
+      });
+    }
+
+    function svgAImagenPng(svg) {
+      return new Promise(resolve => {
+        if (!svg || typeof XMLSerializer === "undefined" || typeof Blob === "undefined" || typeof URL === "undefined") {
+          resolve(null);
+          return;
+        }
+
+        try {
+          const clone = svg.cloneNode(true);
+          clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          clone.setAttribute("width", "680");
+          clone.setAttribute("height", "390");
+
+          const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+          style.textContent = `
+            .imc-chart text { fill: #111827; font-family: Arial, sans-serif; font-size: 13px; font-weight: 400; }
+            .imc-chart .imc-axis-label { font-size: 14px; font-weight: 400; }
+            .imc-chart .imc-tick-label { fill: #263238; font-size: 11px; font-weight: 400; }
+            .imc-chart .imc-grid-line { stroke: rgba(31, 41, 55, 0.14); stroke-width: 1; }
+            .imc-chart .imc-axis-line { stroke: #111827; stroke-width: 2; }
+            .imc-chart .imc-band { stroke: rgba(17, 24, 39, 0.22); stroke-width: 1; }
+            .imc-chart .imc-boundary { fill: none; stroke: rgba(17, 24, 39, 0.42); stroke-width: 1.5; }
+            .imc-chart .imc-band-label { font-size: 16px; font-weight: 400; }
+            .imc-marker line { stroke: #ffffff; stroke-width: 3; stroke-linecap: round; }
+            .imc-marker circle { fill: #176b86; stroke: #ffffff; stroke-width: 3; }
+            .imc-marker text { fill: #0f172a; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; font-size: 13px; font-weight: 400; }
+          `;
+          clone.insertBefore(style, clone.firstChild);
+
+          const svgText = new XMLSerializer().serializeToString(clone);
+          const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+
+          img.onload = () => {
+            try {
+              const scale = 2;
+              const canvas = document.createElement("canvas");
+              canvas.width = 680 * scale;
+              canvas.height = 390 * scale;
+              const ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL("image/png"));
+            } catch (error) {
+              console.warn("No se pudo convertir el grafico de IMC para el PDF.", error);
+              resolve(null);
+            } finally {
+              URL.revokeObjectURL(url);
+            }
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(null);
+          };
+          img.src = url;
+        } catch (error) {
+          console.warn("No se pudo preparar el grafico de IMC para el PDF.", error);
+          resolve(null);
+        }
+      });
+    }
+
+    function agregarImagenPdf(imagen, formato, x, yImagen, ancho, alto, mensajeError) {
+      if (!imagen) return false;
+      try {
+        doc.addImage(imagen, formato, x, yImagen, ancho, alto);
+        return true;
+      } catch (error) {
+        console.warn(mensajeError || "No se pudo agregar una imagen al PDF.", error);
+        return false;
+      }
+    }
+
+    const paciente = snapshot.paciente || {};
+    const profesional = snapshot.profesional || {};
+    const imc = snapshot.imc || {};
+    const medidas = paciente.medidas_antropometricas || {};
+    const horasComida = snapshot.horas_comida || obtenerHorasComida();
+    const totales = snapshot.totales || {};
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(76, 175, 80);
+    doc.text("Reporte Nutricional", pageWidth / 2, y, { align: "center" });
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(80, 90, 100);
+    doc.text(`${limpiar(paciente.nombre || "Paciente")} ${paciente.fecha_evaluacion ? "- " + fecha(paciente.fecha_evaluacion) : ""}`, pageWidth / 2, y, { align: "center" });
+    y += 6;
+    doc.setDrawColor(76, 175, 80);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 7;
+
+    seccion("Datos de la cita y paciente");
+    tablaInfo([
+      ["Nombre", paciente.nombre],
+      ["Cedula/Pasaporte", paciente.documento],
+      ["Fecha evaluacion", fecha(paciente.fecha_evaluacion)],
+      ["Fecha nacimiento", fecha(paciente.fecha_nacimiento)],
+      ["Pais nacimiento", paciente.pais_nacimiento],
+      ["Sexo", paciente.sexo || paciente.genero_texto || paciente.genero],
+      ["Peso", paciente.peso ? `${paciente.peso} kg` : ""],
+      ["Peso ideal", paciente.peso_ideal ? `${paciente.peso_ideal} kg` : ""],
+      ["Estatura", paciente.estatura ? `${paciente.estatura} cm` : ""],
+      ["Edad", paciente.edad],
+      ["Actividad", paciente.actividad_texto || paciente.actividad],
+      ["Profesional", profesional.nombre],
+      ["Usuario", profesional.usuario],
+      ["Correo", profesional.email]
+    ], 2);
+
+    asegurar(138);
+    seccion("Indice de masa corporal");
+    if (typeof actualizarIndiceMasaCorporal === "function") actualizarIndiceMasaCorporal();
+    const graficoImc = await svgAImagenPng(document.getElementById("imc_chart"));
+    const yImc = y;
+    const resumenImcAncho = 62;
+    const graficoImcX = margin + resumenImcAncho + 7;
+    const graficoImcAncho = usableWidth - resumenImcAncho - 7;
+    const graficoImcAlto = Math.min(121, graficoImcAncho * (390 / 680));
+    const resumenImcItems = [
+      ["IMC", imc.valido ? numero(imc.valor) : ""],
+      ["Clasificacion", imc.clasificacion || ""],
+      ["Peso", imc.peso ? `${numero(imc.peso)} kg` : ""],
+      ["Estatura", imc.estatura_m ? `${numero(imc.estatura_m)} m` : ""]
+    ];
+
+    resumenImcItems.forEach((item, index) => {
+      const itemY = yImc + (index * 22);
+      const itemAlto = 17;
+      doc.setFillColor(248, 250, 250);
+      doc.setDrawColor(217, 225, 229);
+      if (typeof doc.roundedRect === "function") {
+        doc.roundedRect(margin, itemY, resumenImcAncho, itemAlto, 2, 2, "FD");
+      } else {
+        doc.rect(margin, itemY, resumenImcAncho, itemAlto, "FD");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(88, 99, 112);
+      doc.text(limpiar(item[0]), margin + 3, itemY + 5);
+      doc.setFontSize(9);
+      doc.setTextColor(17, 24, 39);
+      doc.text(doc.splitTextToSize(limpiar(item[1]) || "--", resumenImcAncho - 6), margin + 3, itemY + 12);
+    });
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(217, 225, 229);
+    if (typeof doc.roundedRect === "function") {
+      doc.roundedRect(graficoImcX, yImc, graficoImcAncho, graficoImcAlto, 2, 2, "FD");
+    } else {
+      doc.rect(graficoImcX, yImc, graficoImcAncho, graficoImcAlto, "FD");
+    }
+    if (graficoImc) {
+      agregarImagenPdf(graficoImc, "PNG", graficoImcX + 2, yImc + 2, graficoImcAncho - 4, graficoImcAlto - 4, "No se pudo agregar el grafico de IMC al PDF.");
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Grafico de IMC no disponible.", graficoImcX + (graficoImcAncho / 2), yImc + (graficoImcAlto / 2), { align: "center" });
+    }
+    y = yImc + Math.max(graficoImcAlto, 83) + 7;
+
+    const [siluetaMedidas, iconoBrazos, iconoAbdomen, iconoMuslos, iconoPantorrillas] = await Promise.all([
+      cargarImagen("media/cuerpo%20entero.png"),
+      cargarImagen("media/brazo.png"),
+      cargarImagen("media/cintura.png"),
+      cargarImagen("media/muslos.png"),
+      cargarImagen("media/pantorrilas.png")
+    ]);
+
+    asegurar(125);
+    seccion("Medidas corporales");
+    const yMedidas = y;
+    const altoBloqueMedidas = 92;
+    const anchoSilueta = 54;
+    const xTarjetas = margin + anchoSilueta + 7;
+    const espacioTarjetas = 6;
+    const anchoTarjeta = (usableWidth - anchoSilueta - 7 - espacioTarjetas) / 2;
+    const altoTarjeta = 43;
+    const valorMedida = campo => {
+      const valor = medidas[campo];
+      return valor !== null && valor !== undefined && valor !== "" ? `${numero(valor)} cm` : "";
+    };
+    const dibujarCaja = (xCaja, yCaja, anchoCaja, altoCaja, modo = "S") => {
+      if (typeof doc.roundedRect === "function") {
+        doc.roundedRect(xCaja, yCaja, anchoCaja, altoCaja, 2, 2, modo);
+      } else {
+        doc.rect(xCaja, yCaja, anchoCaja, altoCaja, modo);
+      }
+    };
+    const dibujarTarjetaMedida = (xTarjeta, yTarjeta, titulo, icono, campos) => {
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(217, 225, 229);
+      dibujarCaja(xTarjeta, yTarjeta, anchoTarjeta, altoTarjeta, "FD");
+
+      doc.setFillColor(238, 248, 240);
+      doc.circle(xTarjeta + 9, yTarjeta + 9, 6.2, "F");
+      agregarImagenPdf(icono, "PNG", xTarjeta + 5, yTarjeta + 5, 8, 8, "No se pudo agregar un icono de medidas al PDF.");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.2);
+      doc.setTextColor(17, 24, 39);
+      doc.text(limpiar(titulo), xTarjeta + 18, yTarjeta + 10.5);
+      doc.setDrawColor(226, 232, 236);
+      doc.line(xTarjeta + 4, yTarjeta + 17, xTarjeta + anchoTarjeta - 4, yTarjeta + 17);
+
+      const separacionCampo = 5;
+      const anchoCampo = (anchoTarjeta - 13) / 2;
+      campos.forEach((campo, index) => {
+        const xCampo = xTarjeta + 4 + (index * (anchoCampo + separacionCampo));
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.7);
+        doc.setTextColor(31, 41, 55);
+        doc.text(doc.splitTextToSize(limpiar(campo.label), anchoCampo), xCampo, yTarjeta + 25);
+        doc.setFillColor(252, 253, 253);
+        doc.setDrawColor(217, 225, 229);
+        dibujarCaja(xCampo, yTarjeta + 28, anchoCampo, 8.5, "FD");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.3);
+        doc.setTextColor(17, 24, 39);
+        doc.text(limpiar(valorMedida(campo.campo)) || "--", xCampo + 2, yTarjeta + 33.7);
+      });
+    };
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(217, 225, 229);
+    dibujarCaja(margin, yMedidas, anchoSilueta, altoBloqueMedidas, "FD");
+    agregarImagenPdf(siluetaMedidas, "PNG", margin + 9, yMedidas + 3, anchoSilueta - 18, altoBloqueMedidas - 6, "No se pudo agregar la silueta al PDF.");
+
+    dibujarTarjetaMedida(xTarjetas, yMedidas, "BRAZOS", iconoBrazos, [
+      { campo: "brazo_izquierdo", label: "Brazo izquierdo" },
+      { campo: "brazo_derecho", label: "Brazo derecho" }
+    ]);
+    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "ABDOMEN", iconoAbdomen, [
+      { campo: "abdomen", label: "Abdomen" },
+      { campo: "abdomen_bajo", label: "Abdomen bajo" }
+    ]);
+    dibujarTarjetaMedida(xTarjetas, yMedidas + altoTarjeta + espacioTarjetas, "MUSLOS", iconoMuslos, [
+      { campo: "muslo_izquierdo", label: "Muslo izquierdo" },
+      { campo: "muslo_derecho", label: "Muslo derecho" }
+    ]);
+    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas + altoTarjeta + espacioTarjetas, "PANTORRILLAS", iconoPantorrillas, [
+      { campo: "pantorrilla_izquierda", label: "Pantorrilla izquierda" },
+      { campo: "pantorrilla_derecha", label: "Pantorrilla derecha" }
+    ]);
+
+    const yObservaciones = yMedidas + altoBloqueMedidas + 6;
+    const lineasObservaciones = doc.splitTextToSize(limpiar(medidas.observaciones || "Sin observaciones."), usableWidth - 4);
+    const altoObservaciones = Math.max(15, lineasObservaciones.length * 4 + 7);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.4);
+    doc.setTextColor(31, 41, 55);
+    doc.text("Observaciones (edema, asimetrias, variaciones u otros hallazgos relevantes)", margin, yObservaciones);
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(217, 225, 229);
+    dibujarCaja(margin, yObservaciones + 3, usableWidth, altoObservaciones, "FD");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.2);
+    doc.setTextColor(17, 24, 39);
+    doc.text(lineasObservaciones, margin + 2, yObservaciones + 8);
+    y = yObservaciones + altoObservaciones + 9;
+
+    seccion("Requerimiento energetico calculado");
+    tabla(["Formula", "Kcal/dia"], [
+      ["Harris-Benedict", document.getElementById("res_harris") ? document.getElementById("res_harris").textContent : ""],
+      ["Mifflin-St Jeor", document.getElementById("res_mifflin") ? document.getElementById("res_mifflin").textContent : ""],
+      ["OMS/FAO", document.getElementById("res_oms") ? document.getElementById("res_oms").textContent : ""],
+      ["Promedio usado", document.getElementById("res_promedio") ? document.getElementById("res_promedio").textContent : ""]
+    ].filter(row => row[1]), [70, usableWidth - 70]);
+
+    seccion("Horarios de comida");
+    tabla(["Tiempo de comida", "Hora"], tiemposComida.map(tiempo => [tiempo, horasComida[tiempo] || ""]), [80, usableWidth - 80]);
+
+    seccion("Distribucion de macronutrientes");
+    tabla(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], (snapshot.macronutrientes || []).map(item => [
+      item.macronutriente,
+      item.porcentaje,
+      item.kcal,
+      item.gramos,
+      item.gkg
+    ]), [60, 35, 50, 55, usableWidth - 200]);
+
+    seccion("Alimentos seleccionados");
+    tiemposComida.forEach(tiempo => {
+      const items = snapshot.alimentos_por_tiempo && snapshot.alimentos_por_tiempo[tiempo] ? snapshot.alimentos_por_tiempo[tiempo] : [];
+      asegurar(9);
+      doc.setFillColor(238, 247, 240);
+      doc.rect(margin, y, usableWidth, 7, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(30, 40, 50);
+      doc.text(obtenerEtiquetaTiempoConHora(tiempo, horasComida), margin + 2, y + 4.8);
+      y += 8;
+      if (!items.length) {
+        escribirTexto("Sin alimentos.", margin + 2, usableWidth, { size: 7, color: [100, 110, 120] });
+        y += 1;
+        return;
+      }
+      tabla(["Alimento", "g", "Kcal", "Prot", "Grasa", "Carb"], items.map(item => [
+        item.nombre,
+        numero(item.gramos),
+        numero(item.energia_calculada),
+        numero(item.proteina),
+        numero(item.grasa_total),
+        numero(item.carbohidratos)
+      ]), [usableWidth - 95, 18, 22, 18, 18, 19]);
+    });
+
+    seccion("Totales, requerimiento y adecuacion");
+    const filasTotales = [];
+    tiemposComida.forEach(tiempo => {
+      filasTotales.push({ nombre: obtenerEtiquetaTiempoConHora(tiempo, horasComida), ...(totales.subtotales ? totales.subtotales[tiempo] : {}) });
+    });
+    filasTotales.push({ nombre: "Total", ...(totales.total || {}) });
+    filasTotales.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
+    filasTotales.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
+    tablaNutricion("Concepto", filasTotales);
+
+    doc.save(obtenerNombreArchivoDescarga("pdf"));
+  } catch (err) {
+    console.error("Error generando PDF", err);
+    alert("No se pudo generar el PDF. Revisa la consola para ver el detalle.");
+  }
 }
 
 let celdaFilaAlimentos = null;

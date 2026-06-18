@@ -34,6 +34,7 @@ function distribuirMacrosPorTiempo(reqEnergia, reqProt, reqGrasa, reqCarb, numCo
     if (numComidas === 3) tiempos = ["Desayuno", "Almuerzo", "Merienda"];
     if (numComidas === 4) tiempos = ["Desayuno", "Almuerzo", "Media Tarde", "Merienda"];
     if (numComidas === 5) tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda"];
+    if (numComidas === 6) tiempos = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda", "Cena"];
 
     // Proteína se distribuye linealmente (igual en todas las comidas)
     let protPorComida = reqProt / numComidas;
@@ -52,7 +53,7 @@ function distribuirMacrosPorTiempo(reqEnergia, reqProt, reqGrasa, reqCarb, numCo
     // Mapeo simple:
     // Si entrena en la Mañana -> Desayuno y Media Mañana son peri-entreno (altos en carb, bajos en grasa)
     // Si entrena en la Tarde -> Almuerzo y Media Tarde peri-entreno
-    // Si entrena en la Noche -> Merienda peri-entreno
+    // Si entrena en la Noche -> Cena peri-entreno cuando existe; si no, Merienda
     // Si No entrena -> Distribución más lineal
 
     let pesosCarb = {};
@@ -67,13 +68,14 @@ function distribuirMacrosPorTiempo(reqEnergia, reqProt, reqGrasa, reqCarb, numCo
         if (entrenaEn === 'Mañana') {
             pesosCarb["Desayuno"] = 2;
             if(pesosCarb["Media Mañana"]) pesosCarb["Media Mañana"] = 1.5;
-            pesosGrasa["Merienda"] = 2; // Lejos del entreno
+            pesosGrasa[tiempos[tiempos.length - 1]] = 2; // Lejos del entreno
         } else if (entrenaEn === 'Tarde') {
             pesosCarb["Almuerzo"] = 2;
             if(pesosCarb["Media Tarde"]) pesosCarb["Media Tarde"] = 1.5;
             pesosGrasa["Desayuno"] = 2;
         } else if (entrenaEn === 'Noche') {
-            pesosCarb["Merienda"] = 2;
+            const tiempoNocturno = pesosCarb["Cena"] ? "Cena" : "Merienda";
+            pesosCarb[tiempoNocturno] = 2;
             if(pesosCarb["Media Tarde"]) pesosCarb["Media Tarde"] = 1.5;
             pesosGrasa["Desayuno"] = 2;
         }
@@ -157,7 +159,7 @@ function generarPlanSemanal(reqEnergia, reqProt, reqGrasa, reqCarb, numComidas, 
     const mapTipoReceta = (t) => {
         if (t.includes("Desayuno")) return "Desayuno";
         if (t.includes("Almuerzo")) return "Almuerzo";
-        if (t.includes("Merienda") || t.includes("Cena")) return "Cena"; // Usamos 'Cena' para Merienda
+        if (t.includes("Merienda") || t.includes("Cena")) return "Cena";
         return "Snack";
     };
 

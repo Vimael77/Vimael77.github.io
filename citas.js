@@ -39,7 +39,25 @@ function obtenerTiemposCita() {
     return tiemposComida;
   }
 
-  return ["Desayuno", "Media Ma\u00f1ana", "Almuerzo", "Media Tarde", "Merienda"];
+  return ["Desayuno", "Media Ma\u00f1ana", "Almuerzo", "Media Tarde", "Merienda", "Cena"];
+}
+
+function obtenerHorasComidaCita() {
+  if (typeof obtenerHorasComida === "function") {
+    return obtenerHorasComida();
+  }
+
+  const horas = {};
+  obtenerTiemposCita().forEach(tiempo => {
+    horas[tiempo] = "";
+  });
+  return horas;
+}
+
+function obtenerEtiquetaTiempoCita(tiempo, horasComida) {
+  const horas = horasComida && typeof horasComida === "object" ? horasComida : {};
+  const hora = horas[tiempo] || "";
+  return hora ? `${tiempo} (${hora})` : tiempo;
 }
 
 function citaEscape(value) {
@@ -160,8 +178,8 @@ function obtenerGraficoImcCita() {
     let salida = valor;
     Object.keys(idMap).forEach(idAnterior => {
       salida = salida
-        .replaceAll(`#${idAnterior}`, `#${idMap[idAnterior]}`)
-        .replaceAll(idAnterior, idMap[idAnterior]);
+        .split(`#${idAnterior}`).join(`#${idMap[idAnterior]}`)
+        .split(idAnterior).join(idMap[idAnterior]);
     });
     return salida;
   };
@@ -384,7 +402,7 @@ function obtenerSnapshotCita() {
   };
 
   return {
-    version: 2,
+    version: 4,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
@@ -393,6 +411,7 @@ function obtenerSnapshotCita() {
       columnas_alimentos_visibles: obtenerColumnasVisiblesCita()
     },
     macronutrientes: obtenerMacronutrientesCita(),
+    horas_comida: obtenerHorasComidaCita(),
     alimentos_por_tiempo: obtenerAlimentosPorTiempoCita(),
     totales: obtenerTotalesCita()
   };
@@ -574,11 +593,11 @@ function renderTablaMacronutrientes(macros) {
   `;
 }
 
-function renderTablaAlimentos(alimentosPorTiempo) {
+function renderTablaAlimentos(alimentosPorTiempo, horasComida) {
   const filas = [];
   const columnas = CAMPOS_NUTRIENTES.length + 2;
   obtenerTiemposCita().forEach(tiempo => {
-    filas.push(`<tr class="table-info"><td colspan="${columnas}"><strong>${citaEscape(tiempo)}</strong></td></tr>`);
+    filas.push(`<tr class="table-info"><td colspan="${columnas}"><strong>${citaEscape(obtenerEtiquetaTiempoCita(tiempo, horasComida))}</strong></td></tr>`);
     const items = alimentosPorTiempo && alimentosPorTiempo[tiempo] ? alimentosPorTiempo[tiempo] : [];
     if (!items.length) {
       filas.push(`<tr><td colspan="${columnas}" class="text-muted">Sin alimentos.</td></tr>`);
@@ -607,6 +626,36 @@ function renderTablaAlimentos(alimentosPorTiempo) {
           </tr>
         </thead>
         <tbody>${filas.join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderHorariosComidaCita(horasComida) {
+  const horas = horasComida && typeof horasComida === "object" ? horasComida : {};
+  const tieneHoras = obtenerTiemposCita().some(tiempo => Boolean(horas[tiempo]));
+
+  if (!tieneHoras) {
+    return '<p class="text-muted mb-0">Sin horarios de comida registrados.</p>';
+  }
+
+  return `
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered cita-medidas-table">
+        <thead class="table-primary">
+          <tr>
+            <th>Tiempo de comida</th>
+            <th>Hora</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${obtenerTiemposCita().map(tiempo => `
+            <tr>
+              <td>${citaEscape(tiempo)}</td>
+              <td>${citaEscape(horas[tiempo] || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
       </table>
     </div>
   `;
@@ -677,10 +726,11 @@ function renderDetalleCita(cita) {
   const profesional = snapshot.profesional || {};
   const imc = obtenerImcDesdeSnapshot(snapshot);
   const totales = snapshot.totales || {};
+  const horasComida = snapshot.horas_comida || {};
   const filasTotales = [];
 
   obtenerTiemposCita().forEach(tiempo => {
-    filasTotales.push({ nombre: tiempo, ...(totales.subtotales ? totales.subtotales[tiempo] : {}) });
+    filasTotales.push({ nombre: obtenerEtiquetaTiempoCita(tiempo, horasComida), ...(totales.subtotales ? totales.subtotales[tiempo] : {}) });
   });
   filasTotales.push({ nombre: "Total", ...(totales.total || {}) });
   filasTotales.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
@@ -723,8 +773,13 @@ function renderDetalleCita(cita) {
     </div>
 
     <div class="card p-3 cita-detail-section">
+      <h5>Horarios de comida</h5>
+      ${renderHorariosComidaCita(horasComida)}
+    </div>
+
+    <div class="card p-3 cita-detail-section">
       <h5>Alimentos seleccionados</h5>
-      ${renderTablaAlimentos(snapshot.alimentos_por_tiempo)}
+      ${renderTablaAlimentos(snapshot.alimentos_por_tiempo, horasComida)}
     </div>
 
     <div class="card p-3 cita-detail-section">

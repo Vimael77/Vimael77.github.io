@@ -634,34 +634,88 @@
                       </thead>
                       <tbody>
                         <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">Desayuno</td>
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Desayuno</span>
+                              <label class="meal-time-control" for="hora_Desayuno">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Desayuno" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Desayuno"></tbody>
                       <tbody>
                         <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">Media Mañana</td>
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Media Mañana</span>
+                              <label class="meal-time-control" for="hora_Media_Mañana">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Media_Mañana" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Media_Mañana"></tbody>
                       <tbody>
                         <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">Almuerzo</td>
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Almuerzo</span>
+                              <label class="meal-time-control" for="hora_Almuerzo">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Almuerzo" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Almuerzo"></tbody>
                       <tbody>
                         <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">Media Tarde</td>
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Media Tarde</span>
+                              <label class="meal-time-control" for="hora_Media_Tarde">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Media_Tarde" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Media_Tarde"></tbody>
                       <tbody>
                         <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">Merienda</td>
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Merienda</span>
+                              <label class="meal-time-control" for="hora_Merienda">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Merienda" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Merienda"></tbody>
+                      <tbody>
+                        <tr class="table-info">
+                          <td colspan="21" class="text-start fw-bold">
+                            <div class="meal-section-heading">
+                              <span>Cena</span>
+                              <label class="meal-time-control" for="hora_Cena">
+                                <span>Hora</span>
+                                <input type="time" id="hora_Cena" class="form-control form-control-sm">
+                              </label>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                      <tbody id="valores_Cena"></tbody>
                     </table>
                   </div>
                 </div>
@@ -812,6 +866,28 @@
                           <td id="sub_Merienda_16"></td>
                           <td id="sub_Merienda_17"></td>
                           <td id="sub_Merienda_18"></td>
+                        </tr>
+                        <tr id="row_subtotal_Cena">
+                          <td style="width: 300px;">Cena</td>
+                          <td id="sub_Cena_0"></td>
+                          <td id="sub_Cena_1"></td>
+                          <td id="sub_Cena_2"></td>
+                          <td id="sub_Cena_3"></td>
+                          <td id="sub_Cena_4"></td>
+                          <td id="sub_Cena_5"></td>
+                          <td id="sub_Cena_6"></td>
+                          <td id="sub_Cena_7"></td>
+                          <td id="sub_Cena_8"></td>
+                          <td id="sub_Cena_9"></td>
+                          <td id="sub_Cena_10"></td>
+                          <td id="sub_Cena_11"></td>
+                          <td id="sub_Cena_12"></td>
+                          <td id="sub_Cena_13"></td>
+                          <td id="sub_Cena_14"></td>
+                          <td id="sub_Cena_15"></td>
+                          <td id="sub_Cena_16"></td>
+                          <td id="sub_Cena_17"></td>
+                          <td id="sub_Cena_18"></td>
                         </tr>
                         <tr class="table-secondary">
                           <td style="width: 300px; font-weight: bold;">Total</td>
@@ -1045,6 +1121,7 @@
                       <option value="3">3 Comidas</option>
                       <option value="4">4 Comidas</option>
                       <option value="5" selected>5 Comidas</option>
+                      <option value="6">6 Comidas</option>
                     </select>
                   </div>
                   <div class="col-md-3">
@@ -1108,16 +1185,12 @@
           </div>
 
           <!-- Selector de tiempo de comida -->
-          <div class="meal-selection-panel" id="mealSelectionModal" aria-labelledby="mealModalLabel" aria-hidden="true"
+          <div class="meal-selection-panel" id="mealSelectionModal" aria-label="Seleccionar tiempo de comida" aria-hidden="true"
             hidden>
-            <div class="meal-selection-panel-header">
-              <h5 id="mealModalLabel">Seleccionar Tiempo de Comida</h5>
-              <button type="button" class="meal-selection-close" onclick="cerrarModalTiempo()" aria-label="Cerrar">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
+            <button type="button" class="meal-selection-close" onclick="cerrarModalTiempo()" aria-label="Cerrar">
+              <span aria-hidden="true">&times;</span>
+            </button>
             <div class="meal-selection-panel-body text-center">
-                  <h6 id="modalAlimentoName" class="mb-3"></h6>
                   <div class="list-group">
                     <button type="button" class="list-group-item list-group-item-action"
                       onclick="seleccionarTiempo('Desayuno')">Desayuno</button>
@@ -1129,6 +1202,8 @@
                       onclick="seleccionarTiempo('Media Tarde')">Media Tarde</button>
                     <button type="button" class="list-group-item list-group-item-action"
                       onclick="seleccionarTiempo('Merienda')">Merienda</button>
+                    <button type="button" class="list-group-item list-group-item-action"
+                      onclick="seleccionarTiempo('Cena')">Cena</button>
               </div>
             </div>
           </div>
@@ -1207,6 +1282,7 @@
   <script src="perfil.js"></script>
   <script src="pacientes.js"></script>
   <script src="citas.js"></script>
+  <script src="pdf-assets.js"></script>
   <script src="script.js"></script>
   <script src="alimentos.js"></script>
   <script src="recetas.js"></script>

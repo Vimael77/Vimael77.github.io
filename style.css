@@ -631,65 +631,56 @@ table td {
 
 .meal-selection-panel {
     position: fixed;
-    top: 50%;
-    left: 50%;
+    top: 12px;
+    left: 12px;
     z-index: 1060;
-    width: min(360px, calc(100vw - 32px));
+    width: min(260px, calc(100vw - 32px));
+    max-height: calc(100vh - 24px);
     display: none;
     overflow: hidden;
     border: 1px solid #d2d8dc;
     border-radius: 8px;
     background: #fff;
     box-shadow: 0 18px 46px rgba(31, 41, 55, 0.22);
-    transform: translate(-50%, -50%);
 }
 
 .meal-selection-panel.is-open {
     display: block;
 }
 
-.meal-selection-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid #e0e5e8;
-}
-
-.meal-selection-panel-header h5 {
-    margin: 0;
-    font-size: 1.1rem;
-    line-height: 1.35;
-}
-
 .meal-selection-close {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 50%;
     background: transparent;
     color: #4b5563;
-    font-size: 1.6rem;
+    font-size: 1.35rem;
     line-height: 1;
 }
 
 .meal-selection-close:hover {
-    background: #f1f5f3;
+    border-color: #d2d8dc;
+    background: #f8faf9;
     color: #1f2933;
 }
 
 .meal-selection-panel-body {
-    padding: 16px 18px 18px;
+    padding: 12px;
 }
 
 .meal-selection-panel .list-group-item {
-    min-height: 48px;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 1rem;
 }
 
 .ideal-weight-section {
@@ -1086,6 +1077,31 @@ table td {
 #lista td:not(:first-child),
 #valores td:not(:first-child) {
     text-align: right;
+}
+
+.meal-section-heading {
+    min-width: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.meal-time-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #2d3741;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.meal-time-control .form-control {
+    width: 118px;
+    min-height: 32px;
+    padding: 3px 6px;
+    font-size: 0.9rem;
 }
 
 #lista.food-crosshair tbody tr:hover,
