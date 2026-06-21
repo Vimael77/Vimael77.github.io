@@ -38,8 +38,8 @@ function setAuthUserSummary(profile, email) {
   const avatar = document.getElementById("auth-user-avatar");
   const name = document.getElementById("auth-user-name");
   const avatarUrl = profile && profile.avatar_url ? profile.avatar_url : "";
-  const displayName = profile && (profile.usuario || profile.nombre_usuario || profile.nombre)
-    ? profile.usuario || profile.nombre_usuario || profile.nombre
+  const displayName = profile && (profile.nombre_usuario || profile.usuario || profile.nombre)
+    ? profile.nombre_usuario || profile.usuario || profile.nombre
     : "Perfil";
 
   if (avatar) avatar.src = avatarUrl || getPerfilAvatarDefault(email);
@@ -72,18 +72,19 @@ async function cargarPerfil() {
 
   const { data, error } = await client
     .from("profiles")
-    .select("nombre,usuario,telefono,avatar_url")
+    .select("nombre,nombre_usuario,telefono,avatar_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (error) {
+    console.warn("No se pudo cargar el perfil.", error);
     setAuthUserSummary(null, user.email);
-    setPerfilMensaje("perfil_mensaje", "No se pudo cargar el perfil. Ejecuta supabase-perfil.sql en Supabase.", "error");
+    setPerfilMensaje("perfil_mensaje", `No se pudo cargar el perfil: ${error.message}. Ejecuta supabase-perfil.sql en Supabase.`, "error");
     return;
   }
 
   if (nombreInput) nombreInput.value = data ? data.nombre || "" : "";
-  if (usuarioInput) usuarioInput.value = data ? data.usuario || "" : "";
+  if (usuarioInput) usuarioInput.value = data ? data.nombre_usuario || "" : "";
   if (telefonoInput) telefonoInput.value = data ? data.telefono || "" : "";
   setPerfilAvatarPreview(data ? data.avatar_url : "", user.email);
   setAuthUserSummary(data, user.email);
@@ -155,7 +156,7 @@ async function guardarPerfil(event) {
     const payload = {
       user_id: user.id,
       nombre,
-      usuario: nombreUsuario,
+      nombre_usuario: nombreUsuario,
       telefono
     };
 
@@ -171,7 +172,7 @@ async function guardarPerfil(event) {
     setPerfilAvatarPreview(avatarUrl || document.getElementById("perfil_avatar_preview").src, email || user.email);
     setAuthUserSummary({
       nombre,
-      usuario: nombreUsuario,
+      nombre_usuario: nombreUsuario,
       avatar_url: avatarUrl || document.getElementById("perfil_avatar_preview").src
     }, email || user.email);
     setPerfilMensaje("perfil_mensaje", "Perfil guardado correctamente.", "success");

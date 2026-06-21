@@ -12,33 +12,72 @@
 
 <body>
   <section id="auth-screen" class="auth-screen">
-    <div class="auth-panel">
-      <div>
+    <div class="auth-landing">
+      <div class="auth-hero">
         <p class="auth-kicker">MUY ALIMENTADO</p>
-        <h1 class="auth-title">Acceso de usuarios</h1>
-        <p class="auth-copy">Inicia sesion para usar la calculadora y guardar tu trabajo de forma segura.</p>
-      </div>
+        <h1 class="auth-hero-title">Utiliza la mejor calculadora nutricional</h1>
+        <p class="auth-hero-copy">Eval&uacute;a pacientes, organiza tiempos de comida y guarda cada cita en un solo lugar.</p>
 
-      <form id="auth-form" class="auth-form">
-        <div class="auth-mode" role="group" aria-label="Modo de acceso">
-          <button type="button" id="auth-login-tab" class="auth-mode-button active">Entrar</button>
-          <button type="button" id="auth-register-tab" class="auth-mode-button">Crear cuenta</button>
+        <div class="auth-hero-points" aria-label="Resumen de herramientas">
+          <span>Requerimientos</span>
+          <span>Macronutrientes</span>
+          <span>Citas guardadas</span>
         </div>
 
-        <label for="auth-usuario" class="auth-register-only auth-hidden">Usuario</label>
-        <input type="text" id="auth-usuario" class="form-control auth-register-only auth-hidden"
-          autocomplete="username" minlength="3" disabled>
+        <div class="auth-visual" aria-hidden="true">
+          <div class="auth-visual-card auth-visual-main">
+            <img src="media/cuerpo%20entero.png" alt="" class="auth-visual-body">
+            <div class="auth-visual-metric auth-visual-metric-top">
+              <span>IMC</span>
+              <strong>24.8</strong>
+            </div>
+            <div class="auth-visual-metric auth-visual-metric-bottom">
+              <span>Kcal/d&iacute;a</span>
+              <strong>2140</strong>
+            </div>
+          </div>
+          <div class="auth-visual-card auth-visual-food">
+            <div class="auth-plate">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div>
+              <strong>Plan diario</strong>
+              <p>6 tiempos de comida</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <label for="auth-email">Correo</label>
-        <input type="email" id="auth-email" class="form-control" autocomplete="email" required>
+      <div class="auth-panel">
+        <div>
+          <p class="auth-kicker">ACCESO SEGURO</p>
+          <h2 class="auth-title">Acceso de usuarios</h2>
+          <p class="auth-copy">Inicia sesi&oacute;n para usar la calculadora y guardar tu trabajo de forma segura.</p>
+        </div>
 
-        <label for="auth-password">Contrasena</label>
-        <input type="password" id="auth-password" class="form-control" autocomplete="current-password" minlength="8"
-          required>
+        <form id="auth-form" class="auth-form">
+          <div class="auth-mode" role="group" aria-label="Modo de acceso">
+            <button type="button" id="auth-login-tab" class="auth-mode-button active">Entrar</button>
+            <button type="button" id="auth-register-tab" class="auth-mode-button">Crear cuenta</button>
+          </div>
 
-        <button type="submit" id="auth-submit" class="btn btn-success w-100">Entrar</button>
-        <p id="auth-message" class="auth-message" aria-live="polite"></p>
-      </form>
+          <label for="auth-usuario" class="auth-register-only auth-hidden">Usuario</label>
+          <input type="text" id="auth-usuario" class="form-control auth-register-only auth-hidden"
+            autocomplete="username" minlength="3" disabled>
+
+          <label for="auth-email">Correo</label>
+          <input type="email" id="auth-email" class="form-control" autocomplete="email" required>
+
+          <label for="auth-password">Contrase&ntilde;a</label>
+          <input type="password" id="auth-password" class="form-control" autocomplete="current-password" minlength="8"
+            required>
+
+          <button type="submit" id="auth-submit" class="btn btn-success w-100">Entrar</button>
+          <p id="auth-message" class="auth-message" aria-live="polite"></p>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -524,46 +563,6 @@
                     <h6>BÚSQUEDA:</h6>
                     <input type="text" id="busqueda" class="form-control" style="width: 100%; max-width: 400px;"
                       onkeyup="buscar()" />
-                    <div id="filtros-nutrientes" class="d-flex flex-wrap mt-2" style="max-width: 400px;">
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="energia_calculada" onclick="toggleFiltro(this)">Energía Cal.</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="proteina" onclick="toggleFiltro(this)">Proteína</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="grasa_total" onclick="toggleFiltro(this)">Grasa total</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="carbohidratos" onclick="toggleFiltro(this)">Carbohidratos</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="fibra"
-                        onclick="toggleFiltro(this)">Fibra</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="ags"
-                        onclick="toggleFiltro(this)">AGS</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agm"
-                        onclick="toggleFiltro(this)">AGM</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="agpi"
-                        onclick="toggleFiltro(this)">AGPI</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="colesterol" onclick="toggleFiltro(this)">Colesterol</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="calcio" onclick="toggleFiltro(this)">Calcio</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="fosforo" onclick="toggleFiltro(this)">Fósforo</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="hierro" onclick="toggleFiltro(this)">Hierro</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="potasio" onclick="toggleFiltro(this)">Potasio</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="sodio"
-                        onclick="toggleFiltro(this)">Sodio</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro" data-nutriente="zinc"
-                        onclick="toggleFiltro(this)">Zinc</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="vitamina_c" onclick="toggleFiltro(this)">Vit. C</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="vitamina_a" onclick="toggleFiltro(this)">Vit. A</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="folatos" onclick="toggleFiltro(this)">Folatos</button>
-                      <button type="button" class="btn btn-outline-primary btn-sm m-1 btn-filtro"
-                        data-nutriente="vitamina_b12" onclick="toggleFiltro(this)">Vit. B12</button>
-                    </div>
                   </div>
                   <div id="buscador" class="scrollable-div">
                     <table id="lista" class="table table-striped table-hover table-sm custom-width-table">
@@ -994,7 +993,16 @@
                   <h5 class="mb-0">Historial de citas</h5>
                   <div class="citas-table-actions">
                     <input type="search" id="citas_filtro" class="form-control form-control-sm citas-filter"
-                      placeholder="Buscar por paciente, cedula o fecha" aria-label="Buscar citas">
+                      placeholder="Buscar por paciente, c&eacute;dula o fecha" aria-label="Buscar citas">
+                    <div class="citas-date-filter">
+                      <label for="citas_fecha_desde">Fecha desde</label>
+                      <input type="date" id="citas_fecha_desde" class="form-control form-control-sm">
+                    </div>
+                    <div class="citas-date-filter">
+                      <label for="citas_fecha_hasta">Fecha hasta</label>
+                      <input type="date" id="citas_fecha_hasta" class="form-control form-control-sm">
+                    </div>
+                    <button type="button" id="citas_limpiar" class="btn btn-outline-secondary btn-sm">Limpiar</button>
                     <button type="button" id="citas_recargar" class="btn btn-outline-secondary btn-sm">Recargar</button>
                   </div>
                 </div>
@@ -1015,6 +1023,7 @@
                     </tbody>
                   </table>
                 </div>
+                <div id="citas_paginacion" class="citas-pagination" aria-live="polite"></div>
               </div>
 
               <div id="cita_detalle" class="cita-detail"></div>

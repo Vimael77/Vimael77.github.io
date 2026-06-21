@@ -1,5 +1,9 @@
 let citas = [];
 let filtroCitas = "";
+let filtroCitasFechaDesde = "";
+let filtroCitasFechaHasta = "";
+let paginaCitasActual = 1;
+const CITAS_POR_PAGINA = 15;
 
 const CAMPOS_NUTRIENTES = [
   ["energia_calculada", "Energia calculada (Kcal)"],
@@ -154,6 +158,22 @@ function obtenerColumnasVisiblesCita() {
   return [];
 }
 
+function obtenerCamposNutrientesVisiblesCita(snapshot) {
+  const camposFijos = new Set(["energia_calculada", "proteina", "grasa_total", "carbohidratos"]);
+  const columnasGuardadas = snapshot
+    && snapshot.configuracion
+    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
+    ? new Set(snapshot.configuracion.columnas_alimentos_visibles)
+    : null;
+
+  return CAMPOS_NUTRIENTES.filter(([campo]) => {
+    if (camposFijos.has(campo)) return true;
+    if (columnasGuardadas) return columnasGuardadas.has(campo);
+    if (typeof esColumnaAlimentosVisible === "function") return esColumnaAlimentosVisible(campo);
+    return true;
+  });
+}
+
 function obtenerGraficoImcCita() {
   if (typeof actualizarIndiceMasaCorporal === "function") {
     actualizarIndiceMasaCorporal();
@@ -195,6 +215,10 @@ function obtenerGraficoImcCita() {
 
   clone.removeAttribute("id");
   clone.classList.add("cita-imc-chart-svg");
+  clone.removeAttribute("width");
+  clone.removeAttribute("height");
+  clone.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  clone.style.overflow = "hidden";
 
   return clone.outerHTML;
 }
@@ -259,7 +283,70 @@ function obtenerSvgSeguroCita(svg) {
   const contenido = String(svg || "").trim();
   if (!contenido || !/^<svg[\s>]/i.test(contenido)) return "";
   if (/<script|<foreignObject|javascript:|on[a-z]+\s*=/i.test(contenido)) return "";
-  return contenido;
+
+  if (typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") {
+    return contenido;
+  }
+
+  try {
+    const documento = new DOMParser().parseFromString(contenido, "image/svg+xml");
+    const svgNormalizado = documento.documentElement;
+    if (!svgNormalizado || svgNormalizado.tagName.toLowerCase() !== "svg") return "";
+
+    const prefijo = `cita_render_${Date.now()}_${Math.random().toString(36).slice(2)}_`;
+    const idMap = {};
+
+    [svgNormalizado].concat(Array.from(svgNormalizado.querySelectorAll("[id]"))).forEach(elemento => {
+      if (!elemento.id) return;
+      const idAnterior = elemento.id;
+      const idSiguiente = `${prefijo}${idAnterior}`;
+      idMap[idAnterior] = idSiguiente;
+      elemento.id = idSiguiente;
+    });
+
+    const actualizarReferencia = function (valor) {
+      let salida = valor;
+      Object.keys(idMap).forEach(idAnterior => {
+        salida = salida
+          .split(`#${idAnterior}`).join(`#${idMap[idAnterior]}`)
+          .split(`url(${idAnterior})`).join(`url(${idMap[idAnterior]})`)
+          .split(`url(#${idAnterior})`).join(`url(#${idMap[idAnterior]})`)
+          .split(idAnterior).join(idMap[idAnterior]);
+      });
+      return salida;
+    };
+
+    [svgNormalizado].concat(Array.from(svgNormalizado.querySelectorAll("*"))).forEach(elemento => {
+      Array.from(elemento.attributes).forEach(attr => {
+        if (attr.name === "id") return;
+        if (Object.keys(idMap).some(idAnterior => attr.value.includes(idAnterior))) {
+          elemento.setAttribute(attr.name, actualizarReferencia(attr.value));
+        }
+      });
+    });
+
+    const clipPath = Array.from(svgNormalizado.querySelectorAll("clipPath")).find(elemento => {
+      return elemento.id && elemento.id.endsWith("imc_plot_clip");
+    });
+    const bandas = Array.from(svgNormalizado.querySelectorAll("g")).find(elemento => {
+      return elemento.id && elemento.id.endsWith("imc_chart_bands");
+    });
+    if (clipPath && bandas) {
+      bandas.setAttribute("clip-path", `url(#${clipPath.id})`);
+    }
+
+    svgNormalizado.classList.add("cita-imc-chart-svg");
+    svgNormalizado.removeAttribute("width");
+    svgNormalizado.removeAttribute("height");
+    svgNormalizado.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svgNormalizado.setAttribute("focusable", "false");
+    svgNormalizado.style.overflow = "hidden";
+
+    return new XMLSerializer().serializeToString(svgNormalizado);
+  } catch (error) {
+    console.warn("No se pudo normalizar el grafico de IMC de la cita.", error);
+    return contenido;
+  }
 }
 
 async function obtenerProfesionalCita(session) {
@@ -269,7 +356,9 @@ async function obtenerProfesionalCita(session) {
   const profesional = {
     user_id: user.id,
     email: user.email || "",
-    usuario: user.user_metadata && user.user_metadata.usuario ? user.user_metadata.usuario : "",
+    usuario: user.user_metadata && (user.user_metadata.nombre_usuario || user.user_metadata.usuario)
+      ? user.user_metadata.nombre_usuario || user.user_metadata.usuario
+      : "",
     nombre: "",
     telefono: ""
   };
@@ -279,12 +368,12 @@ async function obtenerProfesionalCita(session) {
 
   const { data, error } = await client
     .from("profiles")
-    .select("usuario,nombre,telefono")
+    .select("nombre_usuario,nombre,telefono")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (!error && data) {
-    profesional.usuario = data.usuario || profesional.usuario;
+    profesional.usuario = data.nombre_usuario || profesional.usuario;
     profesional.nombre = data.nombre || "";
     profesional.telefono = data.telefono || "";
   }
@@ -417,11 +506,64 @@ function obtenerSnapshotCita() {
   };
 }
 
+function obtenerDialogoGuardarCita() {
+  let dialogo = document.getElementById("cita_guardar_dialogo");
+  if (dialogo) return dialogo;
+
+  dialogo = document.createElement("div");
+  dialogo.id = "cita_guardar_dialogo";
+  dialogo.className = "cita-confirm-overlay";
+  dialogo.innerHTML = `
+    <div class="cita-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="cita_guardar_titulo">
+      <div class="cita-confirm-icon" aria-hidden="true">&#10003;</div>
+      <div class="cita-confirm-content">
+        <h4 id="cita_guardar_titulo">Guardar cita</h4>
+        <p>Se guardara una copia de esta evaluacion para consultarla despues.</p>
+        <div class="cita-confirm-actions">
+          <button type="button" class="btn btn-outline-secondary cita-confirm-cancel">Cancelar</button>
+          <button type="button" class="btn btn-success cita-confirm-accept">Guardar cita</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(dialogo);
+  return dialogo;
+}
+
+function confirmarGuardarCita() {
+  const dialogo = obtenerDialogoGuardarCita();
+  const aceptar = dialogo.querySelector(".cita-confirm-accept");
+  const cancelar = dialogo.querySelector(".cita-confirm-cancel");
+
+  return new Promise(resolve => {
+    const cerrar = resultado => {
+      dialogo.classList.remove("is-open");
+      document.removeEventListener("keydown", manejarTecla);
+      aceptar.onclick = null;
+      cancelar.onclick = null;
+      dialogo.onclick = null;
+      resolve(resultado);
+    };
+
+    const manejarTecla = event => {
+      if (event.key === "Escape") cerrar(false);
+    };
+
+    aceptar.onclick = () => cerrar(true);
+    cancelar.onclick = () => cerrar(false);
+    dialogo.onclick = event => {
+      if (event.target === dialogo) cerrar(false);
+    };
+
+    document.addEventListener("keydown", manejarTecla);
+    dialogo.classList.add("is-open");
+    setTimeout(() => aceptar.focus(), 0);
+  });
+}
+
 async function guardarCita() {
   const client = window.supabaseClient;
   if (!client) return;
-
-  if (!confirm("\u00bfEst\u00e1 seguro que quiere guardar como cita?")) return;
 
   const { data: sessionData } = await client.auth.getSession();
   if (!sessionData.session) {
@@ -435,6 +577,8 @@ async function guardarCita() {
     alert("Selecciona o escribe los datos del paciente antes de guardar la cita.");
     return;
   }
+
+  if (!(await confirmarGuardarCita())) return;
 
   const boton = document.getElementById("guardar_cita_btn");
   if (boton) boton.disabled = true;
@@ -455,8 +599,13 @@ async function guardarCita() {
       return;
     }
 
-    alert("Cita guardada correctamente.");
     await cargarCitas();
+    if (boton) {
+      boton.textContent = "Cita guardada";
+      setTimeout(() => {
+        boton.textContent = "Guardar como cita";
+      }, 1800);
+    }
   } catch (error) {
     alert(`No se pudo guardar la cita: ${error.message}`);
   } finally {
@@ -464,12 +613,32 @@ async function guardarCita() {
   }
 }
 
+function obtenerFechaIsoCita(cita) {
+  const valor = String(cita && cita.fecha_cita ? cita.fecha_cita : "").trim();
+  if (!valor) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(valor)) return valor.slice(0, 10);
+
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return "";
+
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  return `${anio}-${mes}-${dia}`;
+}
+
 function obtenerCitasFiltradas() {
   const filtro = citaNormalizar(filtroCitas);
-  if (!filtro) return citas;
-
   const terminos = filtro.split(/\s+/).filter(Boolean);
+  const fechaDesde = filtroCitasFechaDesde;
+  const fechaHasta = filtroCitasFechaHasta;
+
   return citas.filter(cita => {
+    const fechaCita = obtenerFechaIsoCita(cita);
+    if (fechaDesde && (!fechaCita || fechaCita < fechaDesde)) return false;
+    if (fechaHasta && (!fechaCita || fechaCita > fechaHasta)) return false;
+    if (!terminos.length) return true;
+
     const texto = citaNormalizar([
       cita.paciente_nombre,
       cita.paciente_documento,
@@ -482,22 +651,90 @@ function obtenerCitasFiltradas() {
   });
 }
 
+function obtenerPaginasVisiblesCitas(totalPaginas) {
+  if (totalPaginas <= 7) {
+    return Array.from({ length: totalPaginas }, (_, index) => index + 1);
+  }
+
+  const paginas = new Set([1, totalPaginas]);
+  for (let pagina = paginaCitasActual - 1; pagina <= paginaCitasActual + 1; pagina++) {
+    if (pagina > 1 && pagina < totalPaginas) paginas.add(pagina);
+  }
+
+  return Array.from(paginas).sort((a, b) => a - b);
+}
+
+function renderCitasPaginacion(totalFiltradas) {
+  const contenedor = document.getElementById("citas_paginacion");
+  if (!contenedor) return;
+
+  if (!citas.length) {
+    contenedor.innerHTML = "";
+    return;
+  }
+
+  if (!totalFiltradas) {
+    contenedor.innerHTML = '<span class="citas-pagination-info">0 resultados</span>';
+    return;
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(totalFiltradas / CITAS_POR_PAGINA));
+  paginaCitasActual = Math.min(Math.max(paginaCitasActual, 1), totalPaginas);
+  const inicio = ((paginaCitasActual - 1) * CITAS_POR_PAGINA) + 1;
+  const fin = Math.min(inicio + CITAS_POR_PAGINA - 1, totalFiltradas);
+  const paginas = obtenerPaginasVisiblesCitas(totalPaginas);
+  let paginaAnterior = 0;
+
+  const botonesPagina = paginas.map(pagina => {
+    const separador = paginaAnterior && pagina - paginaAnterior > 1
+      ? '<span class="citas-pagination-ellipsis">...</span>'
+      : "";
+    paginaAnterior = pagina;
+    return `${separador}<button type="button" class="btn btn-sm ${pagina === paginaCitasActual ? "btn-success" : "btn-outline-secondary"} citas-page-button" data-citas-page="${pagina}">${pagina}</button>`;
+  }).join("");
+
+  contenedor.innerHTML = `
+    <span class="citas-pagination-info">Mostrando ${inicio}-${fin} de ${totalFiltradas} citas</span>
+    <div class="citas-pagination-buttons">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-citas-page="${paginaCitasActual - 1}" ${paginaCitasActual <= 1 ? "disabled" : ""}>Anterior</button>
+      ${botonesPagina}
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-citas-page="${paginaCitasActual + 1}" ${paginaCitasActual >= totalPaginas ? "disabled" : ""}>Siguiente</button>
+    </div>
+  `;
+
+  contenedor.querySelectorAll("[data-citas-page]").forEach(boton => {
+    boton.addEventListener("click", () => {
+      const pagina = parseInt(boton.dataset.citasPage, 10);
+      if (!Number.isFinite(pagina)) return;
+      paginaCitasActual = Math.min(Math.max(pagina, 1), totalPaginas);
+      renderCitasTabla();
+    });
+  });
+}
+
 function renderCitasTabla() {
   const tbody = document.getElementById("citas_tbody");
   if (!tbody) return;
 
   if (!citas.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Sin citas guardadas.</td></tr>';
+    renderCitasPaginacion(0);
     return;
   }
 
   const filtradas = obtenerCitasFiltradas();
   if (!filtradas.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Sin resultados para el filtro.</td></tr>';
+    renderCitasPaginacion(0);
     return;
   }
 
-  tbody.innerHTML = filtradas.map(cita => `
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / CITAS_POR_PAGINA));
+  paginaCitasActual = Math.min(Math.max(paginaCitasActual, 1), totalPaginas);
+  const inicio = (paginaCitasActual - 1) * CITAS_POR_PAGINA;
+  const visibles = filtradas.slice(inicio, inicio + CITAS_POR_PAGINA);
+
+  tbody.innerHTML = visibles.map(cita => `
     <tr class="cita-row" data-cita-id="${citaEscape(cita.id)}">
       <td>${citaEscape(citaFormatearFecha(cita.fecha_cita))}</td>
       <td>${citaEscape(cita.paciente_nombre || "")}</td>
@@ -512,6 +749,8 @@ function renderCitasTabla() {
       if (cita) renderDetalleCita(cita);
     });
   });
+
+  renderCitasPaginacion(filtradas.length);
 }
 
 async function cargarCitas() {
@@ -541,21 +780,23 @@ async function cargarCitas() {
   renderCitasTabla();
 }
 
-function tablaObjetoNutricional(titulo, filas) {
+function tablaObjetoNutricional(titulo, filas, snapshot) {
+  const campos = obtenerCamposNutrientesVisiblesCita(snapshot);
+
   return `
     <div class="table-responsive">
       <table class="table table-sm table-bordered">
         <thead class="table-primary">
           <tr>
             <th>${citaEscape(titulo)}</th>
-            ${CAMPOS_NUTRIENTES.map(([, label]) => `<th>${citaEscape(label)}</th>`).join("")}
+            ${campos.map(([, label]) => `<th>${citaEscape(label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
           ${filas.map(fila => `
             <tr>
               <td>${citaEscape(fila.nombre)}</td>
-              ${CAMPOS_NUTRIENTES.map(([campo]) => `<td>${citaFormatearNumero(fila[campo])}</td>`).join("")}
+              ${campos.map(([campo]) => `<td>${citaFormatearNumero(fila[campo])}</td>`).join("")}
             </tr>
           `).join("")}
         </tbody>
@@ -593,9 +834,10 @@ function renderTablaMacronutrientes(macros) {
   `;
 }
 
-function renderTablaAlimentos(alimentosPorTiempo, horasComida) {
+function renderTablaAlimentos(alimentosPorTiempo, horasComida, snapshot) {
   const filas = [];
-  const columnas = CAMPOS_NUTRIENTES.length + 2;
+  const campos = obtenerCamposNutrientesVisiblesCita(snapshot);
+  const columnas = campos.length + 2;
   obtenerTiemposCita().forEach(tiempo => {
     filas.push(`<tr class="table-info"><td colspan="${columnas}"><strong>${citaEscape(obtenerEtiquetaTiempoCita(tiempo, horasComida))}</strong></td></tr>`);
     const items = alimentosPorTiempo && alimentosPorTiempo[tiempo] ? alimentosPorTiempo[tiempo] : [];
@@ -609,7 +851,7 @@ function renderTablaAlimentos(alimentosPorTiempo, horasComida) {
         <tr>
           <td>${citaEscape(item.nombre)}</td>
           <td>${citaFormatearNumero(item.gramos)} g</td>
-          ${CAMPOS_NUTRIENTES.map(([campo]) => `<td>${citaFormatearNumero(item[campo])}</td>`).join("")}
+          ${campos.map(([campo]) => `<td>${citaFormatearNumero(item[campo])}</td>`).join("")}
         </tr>
       `);
     });
@@ -622,7 +864,7 @@ function renderTablaAlimentos(alimentosPorTiempo, horasComida) {
           <tr>
             <th>Alimento</th>
             <th>Gramos</th>
-            ${CAMPOS_NUTRIENTES.map(([, label]) => `<th>${citaEscape(label)}</th>`).join("")}
+            ${campos.map(([, label]) => `<th>${citaEscape(label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>${filas.join("")}</tbody>
@@ -661,9 +903,147 @@ function renderHorariosComidaCita(horasComida) {
   `;
 }
 
+function renderizarSvgImcCitaDesdeDatos(imc) {
+  const peso = citaNumero(imc && imc.peso);
+  let estatura = citaNumero(imc && (imc.estatura_m || imc.estaturaMetros));
+  if (estatura <= 0) estatura = citaNumero(imc && imc.estatura_cm);
+  if (estatura > 3) estatura = estatura / 100;
+
+  let valor = citaNumero(imc && imc.valor !== null && imc.valor !== undefined ? imc.valor : 0);
+  if (valor <= 0 && peso > 0 && estatura > 0) {
+    valor = peso / (estatura * estatura);
+  }
+
+  if (peso <= 0 || estatura <= 0 || valor <= 0) return "";
+
+  const chart = {
+    minPeso: 40,
+    maxPeso: 130,
+    minEstatura: 1.4,
+    maxEstatura: 2,
+    left: 62,
+    top: 54,
+    width: 548,
+    height: 274
+  };
+  chart.right = chart.left + chart.width;
+  chart.bottom = chart.top + chart.height;
+
+  const bandas = [
+    { label: "Delgadez", min: -Infinity, max: 18.5, color: "#ffffff", labelPeso: 55, labelEstatura: 1.76 },
+    { label: "Normal", min: 18.5, max: 25, color: "#00ed19", labelPeso: 68, labelEstatura: 1.76 },
+    { label: "Sobrepeso", min: 25, max: 30, color: "#fff200", labelPeso: 84, labelEstatura: 1.75 },
+    { label: "Obesidad", min: 30, max: 35, color: "#ff9f1a", labelPeso: 100, labelEstatura: 1.74 },
+    { label: "Obesidad clinica", min: 35, max: Infinity, color: "#ff1717", labelPeso: 116, labelEstatura: 1.74 }
+  ];
+
+  const obtenerX = valorPeso => chart.left + ((valorPeso - chart.minPeso) / (chart.maxPeso - chart.minPeso)) * chart.width;
+  const obtenerY = valorEstatura => chart.bottom - ((valorEstatura - chart.minEstatura) / (chart.maxEstatura - chart.minEstatura)) * chart.height;
+  const limitar = (numero, minimo, maximo) => Math.min(Math.max(numero, minimo), maximo);
+  const puntoLimite = (limiteImc, valorEstatura) => {
+    let valorPeso = limiteImc * valorEstatura * valorEstatura;
+    if (limiteImc === -Infinity) valorPeso = chart.minPeso;
+    if (limiteImc === Infinity) valorPeso = chart.maxPeso;
+    return [obtenerX(valorPeso), obtenerY(valorEstatura)];
+  };
+  const crearPathBanda = (minImc, maxImc) => {
+    const pasos = 56;
+    const bordeSuperior = [];
+    const bordeInferior = [];
+
+    for (let i = 0; i <= pasos; i++) {
+      const proporcion = i / pasos;
+      const valorEstatura = chart.minEstatura + ((chart.maxEstatura - chart.minEstatura) * proporcion);
+      bordeSuperior.push(puntoLimite(maxImc, valorEstatura));
+      bordeInferior.unshift(puntoLimite(minImc, valorEstatura));
+    }
+
+    return bordeSuperior.concat(bordeInferior)
+      .map((punto, index) => `${index === 0 ? "M" : "L"} ${punto[0].toFixed(2)} ${punto[1].toFixed(2)}`)
+      .join(" ") + " Z";
+  };
+  const crearPathLinea = limiteImc => {
+    const pasos = 56;
+    const puntos = [];
+
+    for (let i = 0; i <= pasos; i++) {
+      const proporcion = i / pasos;
+      const valorEstatura = chart.minEstatura + ((chart.maxEstatura - chart.minEstatura) * proporcion);
+      puntos.push(puntoLimite(limiteImc, valorEstatura));
+    }
+
+    return puntos
+      .map((punto, index) => `${index === 0 ? "M" : "L"} ${punto[0].toFixed(2)} ${punto[1].toFixed(2)}`)
+      .join(" ");
+  };
+
+  const clipId = `cita_imc_plot_clip_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const marcadorX = limitar(obtenerX(peso), chart.left, chart.right);
+  const marcadorY = limitar(obtenerY(estatura), chart.top, chart.bottom);
+  const marcadorTexto = Number.isFinite(valor) ? valor.toFixed(1) : "";
+
+  const gridPeso = [];
+  for (let valorPeso = chart.minPeso; valorPeso <= chart.maxPeso; valorPeso += 10) {
+    const x = obtenerX(valorPeso);
+    gridPeso.push(`
+      <line class="imc-grid-line" x1="${x.toFixed(2)}" y1="${chart.top}" x2="${x.toFixed(2)}" y2="${chart.bottom}"></line>
+      <text class="imc-tick-label" x="${x.toFixed(2)}" y="${chart.bottom + 20}" text-anchor="middle">${valorPeso}</text>
+    `);
+  }
+
+  const gridEstatura = [];
+  for (let valorEstatura = chart.minEstatura; valorEstatura <= chart.maxEstatura + 0.001; valorEstatura += 0.1) {
+    const estaturaTick = Number(valorEstatura.toFixed(1));
+    const y = obtenerY(estaturaTick);
+    gridEstatura.push(`
+      <line class="imc-grid-line" x1="${chart.left}" y1="${y.toFixed(2)}" x2="${chart.right}" y2="${y.toFixed(2)}"></line>
+      <text class="imc-tick-label" x="${chart.left - 10}" y="${(y + 4).toFixed(2)}" text-anchor="end">${estaturaTick.toFixed(2)}</text>
+    `);
+  }
+
+  return `
+    <svg class="imc-chart cita-imc-chart-svg" viewBox="0 0 680 390" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Indice de Masa Corporal">
+      <defs>
+        <clipPath id="${clipId}">
+          <rect x="${chart.left}" y="${chart.top}" width="${chart.width}" height="${chart.height}"></rect>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#${clipId})">
+        ${bandas.map(banda => `<path class="imc-band" d="${crearPathBanda(banda.min, banda.max)}" fill="${banda.color}"></path>`).join("")}
+        ${[18.5, 25, 30, 35].map(limite => `<path class="imc-boundary" d="${crearPathLinea(limite)}"></path>`).join("")}
+      </g>
+      <g>
+        ${gridPeso.join("")}
+        ${gridEstatura.join("")}
+      </g>
+      <g>
+        <rect class="imc-axis-line" x="${chart.left}" y="${chart.top}" width="${chart.width}" height="${chart.height}" fill="none"></rect>
+        <text class="imc-axis-label" x="${chart.left + (chart.width / 2)}" y="31" text-anchor="middle">Indice de Masa Corporal (IMC)</text>
+        <text class="imc-axis-label" x="${chart.left + (chart.width / 2)}" y="${chart.bottom + 54}" text-anchor="middle">Peso (kg)</text>
+        <text class="imc-axis-label" x="22" y="${chart.top + (chart.height / 2)}" text-anchor="middle" transform="rotate(-90 22 ${chart.top + (chart.height / 2)})">Altura (m)</text>
+      </g>
+      <g>
+        ${bandas.map(banda => {
+          const x = obtenerX(banda.labelPeso);
+          const y = obtenerY(banda.labelEstatura);
+          return `<text class="imc-band-label" x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-55 ${x.toFixed(2)} ${y.toFixed(2)})">${citaEscape(banda.label)}</text>`;
+        }).join("")}
+      </g>
+      <g class="imc-marker" transform="translate(${marcadorX.toFixed(2)} ${marcadorY.toFixed(2)})" visibility="visible">
+        <line x1="-13" y1="0" x2="13" y2="0"></line>
+        <line x1="0" y1="-13" x2="0" y2="13"></line>
+        <circle r="9"></circle>
+        <text x="15" y="-8">${citaEscape(marcadorTexto)}</text>
+      </g>
+    </svg>
+  `;
+}
+
 function renderIndiceMasaCorporalCita(imc) {
   const datos = imc && imc.valido ? imc : null;
-  const grafico = datos ? obtenerSvgSeguroCita(datos.grafico_svg) : "";
+  const grafico = datos
+    ? renderizarSvgImcCitaDesdeDatos(datos) || obtenerSvgSeguroCita(datos.grafico_svg)
+    : "";
 
   return `
     <div class="cita-imc-layout">
@@ -717,6 +1097,47 @@ function renderMedidasAntropometricasCita(medidas) {
   `;
 }
 
+function clonarSnapshotParaPdfCita(snapshot) {
+  try {
+    const copia = JSON.parse(JSON.stringify(snapshot || {}));
+    return copia && typeof copia === "object" && !Array.isArray(copia) ? copia : {};
+  } catch (error) {
+    return snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? { ...snapshot } : {};
+  }
+}
+
+async function descargarPdfCitaGuardada(cita, boton) {
+  if (!cita) return;
+  if (typeof generarPDF !== "function") {
+    alert("No se pudo cargar el generador de PDF.");
+    return;
+  }
+
+  const snapshot = clonarSnapshotParaPdfCita(cita.snapshot);
+  snapshot.paciente = snapshot.paciente || {};
+  snapshot.profesional = snapshot.profesional || {};
+
+  if (!snapshot.paciente.nombre) snapshot.paciente.nombre = cita.paciente_nombre || "";
+  if (!snapshot.paciente.documento) snapshot.paciente.documento = cita.paciente_documento || "";
+  if (!snapshot.paciente.fecha_evaluacion) snapshot.paciente.fecha_evaluacion = cita.fecha_cita || "";
+  snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
+
+  const textoOriginal = boton ? boton.textContent : "";
+  if (boton) {
+    boton.disabled = true;
+    boton.textContent = "Generando PDF...";
+  }
+
+  try {
+    await generarPDF(snapshot);
+  } finally {
+    if (boton) {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    }
+  }
+}
+
 function renderDetalleCita(cita) {
   const detalle = document.getElementById("cita_detalle");
   if (!detalle) return;
@@ -738,7 +1159,10 @@ function renderDetalleCita(cita) {
 
   detalle.innerHTML = `
     <div class="card p-3 cita-detail-section">
-      <h5>Datos del paciente</h5>
+      <div class="cita-detail-heading">
+        <h5>Datos del paciente</h5>
+        <button type="button" class="btn btn-danger btn-sm cita-download-pdf">Descargar PDF</button>
+      </div>
       <div class="row g-2">
         <div class="col-md-4"><strong>Nombre:</strong> ${citaEscape(paciente.nombre)}</div>
         <div class="col-md-4"><strong>C&eacute;dula/Pasaporte:</strong> ${citaEscape(paciente.documento)}</div>
@@ -767,38 +1191,77 @@ function renderDetalleCita(cita) {
       ${renderMedidasAntropometricasCita(paciente.medidas_antropometricas)}
     </div>
 
-    <div class="card p-3 cita-detail-section">
-      <h5>Macronutrientes</h5>
-      ${renderTablaMacronutrientes(snapshot.macronutrientes)}
-    </div>
+    <div class="cita-detail-grid">
+      <div class="card p-3 cita-detail-section cita-compact-card">
+        <h5>Horarios de comida</h5>
+        ${renderHorariosComidaCita(horasComida)}
+      </div>
 
-    <div class="card p-3 cita-detail-section">
-      <h5>Horarios de comida</h5>
-      ${renderHorariosComidaCita(horasComida)}
+      <div class="card p-3 cita-detail-section cita-compact-card">
+        <h5>Macronutrientes</h5>
+        ${renderTablaMacronutrientes(snapshot.macronutrientes)}
+      </div>
     </div>
 
     <div class="card p-3 cita-detail-section">
       <h5>Alimentos seleccionados</h5>
-      ${renderTablaAlimentos(snapshot.alimentos_por_tiempo, horasComida)}
+      ${renderTablaAlimentos(snapshot.alimentos_por_tiempo, horasComida, snapshot)}
     </div>
 
     <div class="card p-3 cita-detail-section">
       <h5>Totales, requerimiento y adecuaci&oacute;n</h5>
-      ${tablaObjetoNutricional("Concepto", filasTotales)}
+      ${tablaObjetoNutricional("Concepto", filasTotales, snapshot)}
     </div>
   `;
+
+  const pdfBtn = detalle.querySelector(".cita-download-pdf");
+  if (pdfBtn) {
+    pdfBtn.addEventListener("click", () => descargarPdfCitaGuardada(cita, pdfBtn));
+  }
 }
 
 function configurarCitas() {
   const guardarBtn = document.getElementById("guardar_cita_btn");
   const recargarBtn = document.getElementById("citas_recargar");
   const filtro = document.getElementById("citas_filtro");
+  const fechaDesde = document.getElementById("citas_fecha_desde");
+  const fechaHasta = document.getElementById("citas_fecha_hasta");
+  const limpiarBtn = document.getElementById("citas_limpiar");
+
+  const actualizarFiltrosCitas = () => {
+    paginaCitasActual = 1;
+    renderCitasTabla();
+  };
 
   if (guardarBtn) guardarBtn.addEventListener("click", guardarCita);
   if (recargarBtn) recargarBtn.addEventListener("click", cargarCitas);
   if (filtro) {
     filtro.addEventListener("input", event => {
       filtroCitas = event.target.value;
+      actualizarFiltrosCitas();
+    });
+  }
+  if (fechaDesde) {
+    fechaDesde.addEventListener("change", event => {
+      filtroCitasFechaDesde = event.target.value;
+      actualizarFiltrosCitas();
+    });
+  }
+  if (fechaHasta) {
+    fechaHasta.addEventListener("change", event => {
+      filtroCitasFechaHasta = event.target.value;
+      actualizarFiltrosCitas();
+    });
+  }
+  if (limpiarBtn) {
+    limpiarBtn.addEventListener("click", () => {
+      filtroCitas = "";
+      filtroCitasFechaDesde = "";
+      filtroCitasFechaHasta = "";
+      paginaCitasActual = 1;
+      if (filtro) filtro.value = "";
+      if (fechaDesde) fechaDesde.value = "";
+      if (fechaHasta) fechaHasta.value = "";
       renderCitasTabla();
     });
   }

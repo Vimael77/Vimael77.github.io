@@ -77,7 +77,7 @@ async function guardarUsuarioPerfilAuth(session, usuario) {
     .from("profiles")
     .upsert({
       user_id: session.user.id,
-      usuario
+      nombre_usuario: usuario
     }, { onConflict: "user_id" });
 
   if (error) {
@@ -178,7 +178,7 @@ async function handleAuthSubmit(event) {
         email,
         password,
         options: {
-          data: { usuario },
+          data: { usuario, nombre_usuario: usuario },
           emailRedirectTo: getAuthRedirectUrl()
         }
       });

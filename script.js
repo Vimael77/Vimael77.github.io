@@ -9,6 +9,7 @@ const baseGramos = 100;
 let contadorFila = 0;
 let contadorAlimento = 0;
 let alimentoPendiente = null;
+let alimentoSeleccionadoMenuId = null;
 let pesoIdealEditadoManualmente = false;
 let pesoIdealStorageScope = "anonimo";
 let pesoIdealSesionActiva = null;
@@ -1265,6 +1266,14 @@ function obtenerNombreArchivoDescarga(extension) {
   return `${nombre} ${fecha}.${extension}`;
 }
 
+function obtenerNombreArchivoDescargaSnapshot(snapshot, extension) {
+  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+  const nombre = limpiarNombreArchivo(paciente.nombre || "");
+  const fecha = formatearFechaNombreArchivo(paciente.fecha_evaluacion || "");
+
+  return `${nombre} ${fecha}.${extension}`;
+}
+
 function obtenerTiempoDesdeTbody(tbody) {
   if (!tbody || !tbody.id || !tbody.id.startsWith("valores_")) return "Desayuno";
   return tbody.id.replace("valores_", "").replace(/_/g, " ");
@@ -1641,6 +1650,10 @@ function calcular() {
 }
 
 let nutrientesActivos = [];
+let ordenAlimentos = {
+  columna: "",
+  direccion: ""
+};
 
 function toggleFiltro(btn) {
   const nutriente = btn.getAttribute('data-nutriente');
@@ -1666,6 +1679,74 @@ function toggleFiltro(btn) {
   
   // Refrescamos la búsqueda
   buscar();
+}
+
+function obtenerValorOrdenAlimento(alimento, columna) {
+  if (columna === "nombre") {
+    return String(alimento.nombre || "").toLowerCase();
+  }
+
+  const valor = parseFloat(alimento[columna]);
+  return Number.isFinite(valor) ? valor : 0;
+}
+
+function compararAlimentosPorColumna(a, b, columna, direccion) {
+  const valorA = obtenerValorOrdenAlimento(a.alimento, columna);
+  const valorB = obtenerValorOrdenAlimento(b.alimento, columna);
+  const factor = direccion === "asc" ? 1 : -1;
+
+  if (typeof valorA === "string" || typeof valorB === "string") {
+    return String(valorA).localeCompare(String(valorB), "es", { sensitivity: "base" }) * factor;
+  }
+
+  if (valorA === valorB) {
+    return String(a.alimento.nombre || "").localeCompare(String(b.alimento.nombre || ""), "es", { sensitivity: "base" });
+  }
+
+  return (valorA - valorB) * factor;
+}
+
+function llevarScrollAlInicioTablaAlimentos() {
+  const contenedor = document.getElementById("buscador");
+  if (!contenedor) return;
+
+  contenedor.scrollTop = 0;
+  contenedor.scrollLeft = 0;
+}
+
+function ordenarAlimentosPorColumna(columna) {
+  const direccionInicial = columna === "nombre" ? "asc" : "desc";
+
+  if (ordenAlimentos.columna === columna) {
+    ordenAlimentos.direccion = ordenAlimentos.direccion === "desc" ? "asc" : "desc";
+  } else {
+    ordenAlimentos.columna = columna;
+    ordenAlimentos.direccion = direccionInicial;
+  }
+
+  buscar();
+  llevarScrollAlInicioTablaAlimentos();
+}
+
+function configurarEncabezadoOrdenAlimentos(th, columna, label) {
+  const activo = ordenAlimentos.columna === columna;
+  const indicador = activo ? (ordenAlimentos.direccion === "desc" ? " ▼" : " ▲") : "";
+
+  th.textContent = `${label}${indicador}`;
+  th.classList.add("food-sort-header");
+  th.dataset.sortCol = columna;
+  th.tabIndex = 0;
+  th.setAttribute("role", "button");
+  th.setAttribute("aria-sort", activo ? (ordenAlimentos.direccion === "desc" ? "descending" : "ascending") : "none");
+  th.addEventListener("click", function () {
+    ordenarAlimentosPorColumna(columna);
+  });
+  th.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      ordenarAlimentosPorColumna(columna);
+    }
+  });
 }
 
 function buscar() {
@@ -1740,6 +1821,31 @@ function buscar() {
   th_folatos.textContent = "Folatos";
   th_vitamina_b12.textContent = "Vitamina B12";
 
+  [
+    [th_nombre, "nombre"],
+    [th_energia_calculada, "energia_calculada"],
+    [th_proteina, "proteina"],
+    [th_grasa_total, "grasa_total"],
+    [th_carbohidratos, "carbohidratos"],
+    [th_fibra, "fibra"],
+    [th_ags, "ags"],
+    [th_agm, "agm"],
+    [th_agpi, "agpi"],
+    [th_colesterol, "colesterol"],
+    [th_calcio, "calcio"],
+    [th_fosforo, "fosforo"],
+    [th_hierro, "hierro"],
+    [th_potasio, "potasio"],
+    [th_sodio, "sodio"],
+    [th_zinc, "zinc"],
+    [th_vitamina_c, "vitamina_c"],
+    [th_vitamina_a, "vitamina_a"],
+    [th_folatos, "folatos"],
+    [th_vitamina_b12, "vitamina_b12"]
+  ].forEach(function ([th, columna]) {
+    configurarEncabezadoOrdenAlimentos(th, columna, th.textContent);
+  });
+
 
   const encabezado = document.createElement('thead');
   encabezado.classList.add('table-primary');
@@ -1804,6 +1910,12 @@ function buscar() {
   // Si hay filtros, ordenamos con la métrica sumada de mayor a menor
   if (nutrientesActivos.length > 0) {
     resultados.sort((a, b) => b.metrica - a.metrica);
+  }
+
+  if (ordenAlimentos.columna) {
+    resultados.sort(function (a, b) {
+      return compararAlimentosPorColumna(a, b, ordenAlimentos.columna, ordenAlimentos.direccion);
+    });
   }
 
   for (let iter = 0; iter < resultados.length; iter++) {
@@ -2009,6 +2121,144 @@ function eliminar(alimento, id) {
     calcular();
   }
 }
+function eliminarAlimentoSeleccionadoPorId(id, confirmar = false) {
+  if (confirmar && !confirm('Eliminar alimento?')) return;
+
+  for (const clave in alimentos_seleccionados) {
+    if (id + "" === alimentos_seleccionados[clave][0] + "") {
+      var row = document.getElementById(id);
+      if (row) row.remove();
+      alimentos_seleccionados.splice(clave, 1);
+      break;
+    }
+  }
+
+  actualizarTotal(alimentos_seleccionados);
+  calcular();
+}
+
+function obtenerAlimentoBaseParaDuplicar(alimentoSeleccionado) {
+  const alimentoBase = alimentos.find(function (alimento) {
+    return alimento.nombre === alimentoSeleccionado.nombre;
+  });
+  if (alimentoBase) return alimentoBase;
+
+  const gramos = parseFloat(alimentoSeleccionado.gramos) || baseGramos;
+  const factor = gramos > 0 ? gramos / 100 : 1;
+  const copia = { nombre: alimentoSeleccionado.nombre || "" };
+
+  obtenerColumnasNutrientesKeys().forEach(function (key) {
+    const valor = parseFloat(alimentoSeleccionado[key]) || 0;
+    copia[key] = factor > 0 ? valor / factor : valor;
+  });
+
+  return copia;
+}
+
+function duplicarAlimentoSeleccionadoPorId(id) {
+  actualizarTiemposDesdeTabla();
+
+  const datosAlimento = obtenerAlimentoSeleccionadoPorId(id);
+  if (!datosAlimento) return;
+
+  const filaOriginal = document.getElementById(id);
+  const alimentoSeleccionado = datosAlimento[1];
+  const gramos = parseFloat(alimentoSeleccionado.gramos) || baseGramos;
+  const tiempo = alimentoSeleccionado.tiempo || obtenerTiempoDesdeTbody(filaOriginal ? filaOriginal.parentElement : null);
+  const alimentoBase = obtenerAlimentoBaseParaDuplicar(alimentoSeleccionado);
+  const filaDuplicada = agregar(gramos, alimentoBase, tiempo);
+
+  if (filaOriginal && filaDuplicada && filaOriginal.parentElement === filaDuplicada.parentElement) {
+    filaOriginal.after(filaDuplicada);
+  }
+}
+
+function crearMenuAlimentoSeleccionado() {
+  let menu = document.getElementById("selectedFoodMenu");
+  if (menu) return menu;
+
+  menu = document.createElement("div");
+  menu.id = "selectedFoodMenu";
+  menu.className = "selected-food-menu";
+  menu.hidden = true;
+  menu.setAttribute("aria-hidden", "true");
+  menu.innerHTML = `
+    <button type="button" class="selected-food-menu-item" data-action="duplicate">Duplicar</button>
+    <button type="button" class="selected-food-menu-item selected-food-menu-delete" data-action="delete">Eliminar</button>
+  `;
+
+  menu.addEventListener("click", function (event) {
+    const boton = event.target.closest("[data-action]");
+    if (!boton || !menu.contains(boton)) return;
+
+    const id = alimentoSeleccionadoMenuId;
+    cerrarMenuAlimentoSeleccionado();
+    if (!id) return;
+
+    if (boton.dataset.action === "duplicate") {
+      duplicarAlimentoSeleccionadoPorId(id);
+      return;
+    }
+
+    if (boton.dataset.action === "delete") {
+      eliminarAlimentoSeleccionadoPorId(id, false);
+    }
+  });
+
+  document.body.appendChild(menu);
+  return menu;
+}
+
+function cerrarMenuAlimentoSeleccionado() {
+  const menu = document.getElementById("selectedFoodMenu");
+  if (!menu) return;
+
+  menu.classList.remove("is-open");
+  menu.hidden = true;
+  menu.setAttribute("aria-hidden", "true");
+  alimentoSeleccionadoMenuId = null;
+  document.removeEventListener("mousedown", cerrarMenuAlimentoClickFuera);
+  document.removeEventListener("keydown", cerrarMenuAlimentoConEscape);
+}
+
+function cerrarMenuAlimentoClickFuera(event) {
+  const menu = document.getElementById("selectedFoodMenu");
+  if (!menu || menu.hidden || menu.contains(event.target)) return;
+  cerrarMenuAlimentoSeleccionado();
+}
+
+function cerrarMenuAlimentoConEscape(event) {
+  if (event.key === "Escape") cerrarMenuAlimentoSeleccionado();
+}
+
+function activarCierreMenuAlimento() {
+  document.removeEventListener("mousedown", cerrarMenuAlimentoClickFuera);
+  document.removeEventListener("keydown", cerrarMenuAlimentoConEscape);
+
+  window.setTimeout(function () {
+    document.addEventListener("mousedown", cerrarMenuAlimentoClickFuera);
+    document.addEventListener("keydown", cerrarMenuAlimentoConEscape);
+  }, 0);
+}
+
+function abrirMenuAlimentoSeleccionado(id, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  cerrarModalTiempo();
+  limpiarResaltadoCruceAlimentos();
+  alimentoSeleccionadoMenuId = id;
+
+  const menu = crearMenuAlimentoSeleccionado();
+  menu.hidden = false;
+  menu.setAttribute("aria-hidden", "false");
+  menu.classList.add("is-open");
+  posicionarPanelTiempo(menu, event);
+  activarCierreMenuAlimento();
+}
+
 function abrirModalTiempo(alimento, event) {
   if (!alimento) return;
   alimentoPendiente = alimento;
@@ -2089,6 +2339,7 @@ function mostrarModalTiempo(event) {
   if (!panel) return;
 
   limpiarRestosModalTiempo();
+  cerrarMenuAlimentoSeleccionado();
   limpiarResaltadoCruceAlimentos();
   if (panel.parentElement !== document.body) {
     document.body.appendChild(panel);
@@ -2153,7 +2404,7 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
   fila.id = contadorFila;
   //fila.setAttribute('data-id', contador);
   let valor_enviar = contadorFila
-  fila.addEventListener('dblclick', () => eliminar(contadorFila, valor_enviar));
+  fila.addEventListener('contextmenu', (event) => abrirMenuAlimentoSeleccionado(valor_enviar, event));
 
   const nombre = document.createElement('td');
   nombre.textContent = alimento.nombre;
@@ -2274,6 +2525,7 @@ function agregar(valorGramos, alimento, tiempo = "Desayuno") {
 
   actualizarTotal(alimentos_seleccionados);
   calcular();
+  return fila;
 }
 
 function actualizarTotal(alimentos_seleccionados) {
@@ -2429,14 +2681,31 @@ function reportePdfFecha(value) {
   return value || "";
 }
 
-function reportePdfCamposNutrientes() {
+function reportePdfCamposNutrientes(snapshot) {
+  const camposFijos = new Set(["energia_calculada", "proteina", "grasa_total", "carbohidratos"]);
+  const columnasSnapshot = snapshot
+    && snapshot.configuracion
+    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
+    ? snapshot.configuracion.columnas_alimentos_visibles
+    : null;
+  const columnasVisiblesSnapshot = columnasSnapshot ? new Set(columnasSnapshot) : null;
   if (typeof CAMPOS_NUTRIENTES !== "undefined" && Array.isArray(CAMPOS_NUTRIENTES)) {
-    return CAMPOS_NUTRIENTES;
+    return CAMPOS_NUTRIENTES.filter(function ([campo]) {
+      if (camposFijos.has(campo)) return true;
+      if (columnasVisiblesSnapshot) return columnasVisiblesSnapshot.has(campo);
+      return typeof esColumnaAlimentosVisible === "function" ? esColumnaAlimentosVisible(campo) : true;
+    });
   }
 
-  return COLUMNAS_NUTRIENTES_ALIMENTOS.map(function (columna) {
-    return [columna.key, columna.label];
-  });
+  return COLUMNAS_NUTRIENTES_ALIMENTOS
+    .filter(function (columna) {
+      if (camposFijos.has(columna.key)) return true;
+      if (columnasVisiblesSnapshot) return columnasVisiblesSnapshot.has(columna.key);
+      return typeof esColumnaAlimentosVisible === "function" ? esColumnaAlimentosVisible(columna.key) : true;
+    })
+    .map(function (columna) {
+      return [columna.key, columna.label];
+    });
 }
 
 function reportePdfInfoTable(items) {
@@ -2471,8 +2740,8 @@ function reportePdfTablaSimple(headers, rows) {
   `;
 }
 
-function reportePdfTablaNutrientes(tituloPrimeraColumna, filas) {
-  const campos = reportePdfCamposNutrientes();
+function reportePdfTablaNutrientes(tituloPrimeraColumna, filas, snapshot) {
+  const campos = reportePdfCamposNutrientes(snapshot);
 
   return `
     <table class="pdf-table pdf-nutrient-table">
@@ -2534,23 +2803,14 @@ function reportePdfMacronutrientes(macros) {
   return reportePdfTablaSimple(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], rows);
 }
 
-function reportePdfRequerimientoEnergetico() {
-  const rows = [
-    ["Harris-Benedict", document.getElementById("res_harris") ? document.getElementById("res_harris").textContent : ""],
-    ["Mifflin-St Jeor", document.getElementById("res_mifflin") ? document.getElementById("res_mifflin").textContent : ""],
-    ["OMS/FAO", document.getElementById("res_oms") ? document.getElementById("res_oms").textContent : ""],
-    ["Promedio usado", document.getElementById("res_promedio") ? document.getElementById("res_promedio").textContent : ""]
-  ].filter(row => row[1]);
-
-  if (!rows.length) return '<p class="pdf-muted">Sin requerimiento energetico calculado.</p>';
-  return reportePdfTablaSimple(["Formula", "Kcal/dia"], rows);
-}
-
 function reportePdfIndiceMasaCorporal(imc) {
   const datos = imc && imc.valido ? imc : null;
-  const grafico = datos && typeof obtenerSvgSeguroCita === "function"
-    ? obtenerSvgSeguroCita(datos.grafico_svg)
+  const graficoGenerado = datos && typeof renderizarSvgImcCitaDesdeDatos === "function"
+    ? renderizarSvgImcCitaDesdeDatos(datos)
     : "";
+  const grafico = graficoGenerado || (datos && typeof obtenerSvgSeguroCita === "function"
+    ? obtenerSvgSeguroCita(datos.grafico_svg)
+    : "");
 
   return `
     <div class="pdf-imc-layout">
@@ -2591,8 +2851,8 @@ function reportePdfMedidasCorporales(medidas) {
   `;
 }
 
-function reportePdfAlimentos(alimentosPorTiempo, horasComida) {
-  const campos = reportePdfCamposNutrientes();
+function reportePdfAlimentos(alimentosPorTiempo, horasComida, snapshot) {
+  const campos = reportePdfCamposNutrientes(snapshot);
   const filas = [];
 
   tiemposComida.forEach(function (tiempo) {
@@ -2646,7 +2906,7 @@ function reportePdfTotales(snapshot, horasComida) {
   filas.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
   filas.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
 
-  return reportePdfTablaNutrientes("Concepto", filas);
+  return reportePdfTablaNutrientes("Concepto", filas, snapshot);
 }
 
 function reportePdfHtml(snapshot) {
@@ -2702,11 +2962,6 @@ function reportePdfHtml(snapshot) {
       </section>
 
       <section class="pdf-section">
-        <h2>Requerimiento energetico calculado</h2>
-        ${reportePdfRequerimientoEnergetico()}
-      </section>
-
-      <section class="pdf-section">
         <h2>Horarios de comida</h2>
         ${reportePdfHorarios(horasComida)}
       </section>
@@ -2718,7 +2973,7 @@ function reportePdfHtml(snapshot) {
 
       <section class="pdf-section">
         <h2>Alimentos seleccionados</h2>
-        ${reportePdfAlimentos(snapshot.alimentos_por_tiempo, horasComida)}
+        ${reportePdfAlimentos(snapshot.alimentos_por_tiempo, horasComida, snapshot)}
       </section>
 
       <section class="pdf-section">
@@ -2955,7 +3210,7 @@ function generarPDFResumenAnterior() {
   });
 }
 
-async function generarPDF() {
+async function generarPDFHtmlAnterior() {
   try {
     if (typeof obtenerSnapshotCita !== "function") {
       alert("No se pudo preparar la informacion de la cita para el PDF.");
@@ -2997,9 +3252,9 @@ async function generarPDF() {
   }
 }
 
-async function generarPDF() {
+async function generarPDF(snapshotEntrada = null, opciones = {}) {
   try {
-    if (typeof obtenerSnapshotCita !== "function") {
+    if (!snapshotEntrada && typeof obtenerSnapshotCita !== "function") {
       alert("No se pudo preparar la informacion de la cita para el PDF.");
       return;
     }
@@ -3010,8 +3265,15 @@ async function generarPDF() {
       return;
     }
 
-    const snapshot = obtenerSnapshotCita();
-    if (window.supabaseClient && typeof obtenerProfesionalCita === "function") {
+    const snapshot = snapshotEntrada
+      ? JSON.parse(JSON.stringify(snapshotEntrada))
+      : obtenerSnapshotCita();
+
+    if ((!snapshot.imc || !snapshot.imc.valido) && typeof obtenerImcDesdeSnapshot === "function") {
+      snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
+    }
+
+    if (!snapshotEntrada && window.supabaseClient && typeof obtenerProfesionalCita === "function") {
       try {
         const { data: sessionData } = await window.supabaseClient.auth.getSession();
         if (sessionData && sessionData.session) {
@@ -3035,16 +3297,35 @@ async function generarPDF() {
       return Number.isFinite(n) ? n.toFixed(2) : limpiar(value);
     };
     const fecha = value => (typeof citaFormatearFecha === "function" ? citaFormatearFecha(value) : limpiar(value));
-    const camposResumen = [
-      ["energia_calculada", "Kcal"],
-      ["proteina", "Prot"],
-      ["grasa_total", "Grasa"],
-      ["carbohidratos", "Carb"],
-      ["fibra", "Fibra"],
-      ["calcio", "Calcio"],
-      ["hierro", "Hierro"],
-      ["sodio", "Sodio"]
-    ];
+    const etiquetasCortasNutrientes = {
+      energia_calculada: "Kcal",
+      proteina: "Prot",
+      grasa_total: "Grasa",
+      carbohidratos: "Carb",
+      fibra: "Fibra",
+      ags: "AGS",
+      agm: "AGM",
+      agpi: "AGPI",
+      colesterol: "Col.",
+      calcio: "Ca",
+      fosforo: "P",
+      hierro: "Fe",
+      potasio: "K",
+      sodio: "Na",
+      zinc: "Zn",
+      vitamina_c: "Vit. C",
+      vitamina_a: "Vit. A",
+      folatos: "Fol.",
+      vitamina_b12: "B12"
+    };
+    let camposResumen = obtenerCamposResumen(snapshot);
+
+    function obtenerCamposResumen(snapshotActual) {
+      return reportePdfCamposNutrientes(snapshotActual).map(([campo, label]) => [
+        campo,
+        etiquetasCortasNutrientes[campo] || label
+      ]);
+    }
 
     function nuevaPagina() {
       doc.addPage();
@@ -3076,43 +3357,50 @@ async function generarPDF() {
       y += partes.length * (opts.lineHeight || 4.2);
     }
 
-    function tabla(headers, rows, widths) {
-      const rowHeight = 6;
+    function tabla(headers, rows, widths, opciones = {}) {
+      const rowHeight = opciones.rowHeight || 6;
+      const headerHeight = opciones.headerHeight || rowHeight;
+      const headerFontSize = opciones.headerFontSize || 6.5;
+      const bodyFontSize = opciones.bodyFontSize || 6.3;
+      const lineHeight = opciones.lineHeight || 3.2;
       const colWidths = widths || headers.map(() => usableWidth / headers.length);
 
       function header() {
-        asegurar(rowHeight * 2);
+        asegurar(headerHeight + rowHeight);
         let x = margin;
         headers.forEach((headerText, index) => {
           doc.setFillColor(220, 238, 255);
           doc.setDrawColor(190, 205, 220);
-          doc.rect(x, y, colWidths[index], rowHeight, "FD");
+          doc.rect(x, y, colWidths[index], headerHeight, "FD");
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(6.5);
+          doc.setFontSize(headerFontSize);
           doc.setTextColor(16, 32, 47);
           doc.text(doc.splitTextToSize(limpiar(headerText), colWidths[index] - 2), x + 1, y + 4);
           x += colWidths[index];
         });
-        y += rowHeight;
+        y += headerHeight;
       }
 
       header();
       rows.forEach(row => {
-        if (y + rowHeight > pageHeight - margin) {
+        const textos = row.map((cell, index) => doc.splitTextToSize(limpiar(cell), colWidths[index] - 2));
+        const altoFila = Math.max(rowHeight, Math.max(...textos.map(partes => partes.length)) * lineHeight + 2);
+
+        if (y + altoFila > pageHeight - margin) {
           nuevaPagina();
           header();
         }
         let x = margin;
         row.forEach((cell, index) => {
           doc.setDrawColor(217, 225, 229);
-          doc.rect(x, y, colWidths[index], rowHeight);
+          doc.rect(x, y, colWidths[index], altoFila);
           doc.setFont("helvetica", "normal");
-          doc.setFontSize(6.3);
+          doc.setFontSize(bodyFontSize);
           doc.setTextColor(35, 45, 55);
-          doc.text(doc.splitTextToSize(limpiar(cell), colWidths[index] - 2), x + 1, y + 4);
+          doc.text(textos[index], x + 1, y + 4);
           x += colWidths[index];
         });
-        y += rowHeight;
+        y += altoFila;
       });
       y += 4;
     }
@@ -3142,9 +3430,119 @@ async function generarPDF() {
 
     function tablaNutricion(nombrePrimeraColumna, filas) {
       const headers = [nombrePrimeraColumna].concat(camposResumen.map(([, label]) => label));
-      const widths = [54].concat(camposResumen.map(() => (usableWidth - 54) / camposResumen.length));
+      const primeraColumna = camposResumen.length > 12 ? 42 : 54;
+      const widths = [primeraColumna].concat(camposResumen.map(() => (usableWidth - primeraColumna) / camposResumen.length));
       const rows = filas.map(fila => [fila.nombre || ""].concat(camposResumen.map(([campo]) => numero(fila[campo]))));
-      tabla(headers, rows, widths);
+      tabla(headers, rows, widths, {
+        headerHeight: camposResumen.length > 12 ? 8 : 6,
+        headerFontSize: camposResumen.length > 12 ? 5.2 : 6.5,
+        bodyFontSize: camposResumen.length > 12 ? 5.1 : 6.3,
+        rowHeight: camposResumen.length > 12 ? 5 : 6,
+        lineHeight: camposResumen.length > 12 ? 2.8 : 3.2
+      });
+    }
+
+    function tablaAlimentosPdf(items) {
+      const nombreWidth = camposResumen.length > 12 ? 74 : 92;
+      const gramosWidth = 14;
+      const nutrientWidth = (usableWidth - nombreWidth - gramosWidth) / camposResumen.length;
+      const headers = ["Alimento", "g"].concat(camposResumen.map(([, label]) => label));
+      const rows = items.map(item => [
+        item.nombre,
+        numero(item.gramos)
+      ].concat(camposResumen.map(([campo]) => numero(item[campo]))));
+
+      tabla(
+        headers,
+        rows,
+        [nombreWidth, gramosWidth].concat(camposResumen.map(() => nutrientWidth)),
+        {
+          headerHeight: camposResumen.length > 12 ? 8 : 6,
+          headerFontSize: camposResumen.length > 12 ? 5.1 : 6.3,
+          bodyFontSize: camposResumen.length > 12 ? 5 : 6.1,
+          rowHeight: camposResumen.length > 12 ? 5 : 6,
+          lineHeight: camposResumen.length > 12 ? 2.8 : 3.2
+        }
+      );
+    }
+
+    function tablaLocal(xInicial, yInicial, anchoTabla, headers, rows, widths) {
+      const rowHeight = 6;
+      const colWidths = widths || headers.map(() => anchoTabla / headers.length);
+      let yLocal = yInicial;
+
+      const dibujarFila = (cells, esHeader) => {
+        let x = xInicial;
+        cells.forEach((cell, index) => {
+          if (esHeader) {
+            doc.setFillColor(220, 238, 255);
+            doc.setDrawColor(190, 205, 220);
+            doc.rect(x, yLocal, colWidths[index], rowHeight, "FD");
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(6.4);
+            doc.setTextColor(16, 32, 47);
+          } else {
+            doc.setDrawColor(217, 225, 229);
+            doc.rect(x, yLocal, colWidths[index], rowHeight);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(6.2);
+            doc.setTextColor(35, 45, 55);
+          }
+          doc.text(doc.splitTextToSize(limpiar(cell), colWidths[index] - 2), x + 1, yLocal + 4);
+          x += colWidths[index];
+        });
+        yLocal += rowHeight;
+      };
+
+      dibujarFila(headers, true);
+      rows.forEach(row => dibujarFila(row, false));
+      return yLocal - yInicial;
+    }
+
+    function tablaHorariosMacronutrientesLadoALado(horasComida, macros) {
+      const gap = 7;
+      const anchoPanel = (usableWidth - gap) / 2;
+      const altoEstimado = 51;
+      asegurar(altoEstimado);
+      const yInicio = y;
+
+      const panel = (xPanel, titulo) => {
+        doc.setFillColor(238, 247, 240);
+        doc.setDrawColor(197, 214, 203);
+        doc.rect(xPanel, yInicio, anchoPanel, 8, "FD");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(20, 32, 47);
+        doc.text(limpiar(titulo), xPanel + 3, yInicio + 5.5);
+      };
+
+      panel(margin, "Horarios de comida");
+      panel(margin + anchoPanel + gap, "Distribucion de macronutrientes");
+
+      const altoHorarios = tablaLocal(
+        margin,
+        yInicio + 10,
+        anchoPanel,
+        ["Tiempo de comida", "Hora"],
+        tiemposComida.map(tiempo => [tiempo, horasComida[tiempo] || ""]),
+        [anchoPanel * 0.62, anchoPanel * 0.38]
+      );
+      const altoMacros = tablaLocal(
+        margin + anchoPanel + gap,
+        yInicio + 10,
+        anchoPanel,
+        ["Macronutriente", "%", "Kcal", "Gramos", "g/kg"],
+        (macros || []).map(item => [
+          item.macronutriente,
+          item.porcentaje,
+          item.kcal,
+          item.gramos,
+          item.gkg
+        ]),
+        [42, 20, 31, 35, anchoPanel - 128]
+      );
+
+      y = yInicio + 10 + Math.max(altoHorarios, altoMacros) + 6;
     }
 
     function buscarImagenProyecto(src) {
@@ -3350,6 +3748,23 @@ async function generarPDF() {
       });
     }
 
+    function obtenerSvgImcPdf(snapshotActual) {
+      const datosImc = snapshotActual && snapshotActual.imc ? snapshotActual.imc : null;
+      if (datosImc && typeof renderizarSvgImcCitaDesdeDatos === "function") {
+        const htmlSvg = renderizarSvgImcCitaDesdeDatos(datosImc);
+        const contenedor = document.createElement("div");
+        contenedor.innerHTML = htmlSvg;
+        const svgGenerado = contenedor.querySelector("svg");
+        if (svgGenerado) return svgGenerado;
+      }
+
+      if (!snapshotEntrada && typeof actualizarIndiceMasaCorporal === "function") {
+        actualizarIndiceMasaCorporal();
+      }
+
+      return !snapshotEntrada ? document.getElementById("imc_chart") : null;
+    }
+
     function agregarImagenPdf(imagen, formato, x, yImagen, ancho, alto, mensajeError) {
       if (!imagen) return false;
       try {
@@ -3400,15 +3815,14 @@ async function generarPDF() {
       ["Correo", profesional.email]
     ], 2);
 
-    asegurar(138);
+    asegurar(106);
     seccion("Indice de masa corporal");
-    if (typeof actualizarIndiceMasaCorporal === "function") actualizarIndiceMasaCorporal();
-    const graficoImc = await svgAImagenPng(document.getElementById("imc_chart"));
+    const graficoImc = await svgAImagenPng(obtenerSvgImcPdf(snapshot));
     const yImc = y;
-    const resumenImcAncho = 62;
-    const graficoImcX = margin + resumenImcAncho + 7;
-    const graficoImcAncho = usableWidth - resumenImcAncho - 7;
-    const graficoImcAlto = Math.min(121, graficoImcAncho * (390 / 680));
+    const resumenImcAncho = 52;
+    const graficoImcX = margin + resumenImcAncho + 6;
+    const graficoImcAncho = Math.min(154, usableWidth - resumenImcAncho - 6);
+    const graficoImcAlto = graficoImcAncho * (390 / 680);
     const resumenImcItems = [
       ["IMC", imc.valido ? numero(imc.valor) : ""],
       ["Clasificacion", imc.clasificacion || ""],
@@ -3417,8 +3831,8 @@ async function generarPDF() {
     ];
 
     resumenImcItems.forEach((item, index) => {
-      const itemY = yImc + (index * 22);
-      const itemAlto = 17;
+      const itemY = yImc + (index * 17.5);
+      const itemAlto = 14;
       doc.setFillColor(248, 250, 250);
       doc.setDrawColor(217, 225, 229);
       if (typeof doc.roundedRect === "function") {
@@ -3427,12 +3841,12 @@ async function generarPDF() {
         doc.rect(margin, itemY, resumenImcAncho, itemAlto, "FD");
       }
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
+      doc.setFontSize(6.4);
       doc.setTextColor(88, 99, 112);
-      doc.text(limpiar(item[0]), margin + 3, itemY + 5);
-      doc.setFontSize(9);
+      doc.text(limpiar(item[0]), margin + 3, itemY + 4.8);
+      doc.setFontSize(7.8);
       doc.setTextColor(17, 24, 39);
-      doc.text(doc.splitTextToSize(limpiar(item[1]) || "--", resumenImcAncho - 6), margin + 3, itemY + 12);
+      doc.text(doc.splitTextToSize(limpiar(item[1]) || "--", resumenImcAncho - 6), margin + 3, itemY + 10.4);
     });
 
     doc.setFillColor(255, 255, 255);
@@ -3450,7 +3864,7 @@ async function generarPDF() {
       doc.setTextColor(100, 110, 120);
       doc.text("Grafico de IMC no disponible.", graficoImcX + (graficoImcAncho / 2), yImc + (graficoImcAlto / 2), { align: "center" });
     }
-    y = yImc + Math.max(graficoImcAlto, 83) + 7;
+    y = yImc + Math.max(graficoImcAlto, 67) + 6;
 
     const [siluetaMedidas, iconoBrazos, iconoAbdomen, iconoMuslos, iconoPantorrillas] = await Promise.all([
       cargarImagen("media/cuerpo%20entero.png"),
@@ -3551,25 +3965,7 @@ async function generarPDF() {
     doc.text(lineasObservaciones, margin + 2, yObservaciones + 8);
     y = yObservaciones + altoObservaciones + 9;
 
-    seccion("Requerimiento energetico calculado");
-    tabla(["Formula", "Kcal/dia"], [
-      ["Harris-Benedict", document.getElementById("res_harris") ? document.getElementById("res_harris").textContent : ""],
-      ["Mifflin-St Jeor", document.getElementById("res_mifflin") ? document.getElementById("res_mifflin").textContent : ""],
-      ["OMS/FAO", document.getElementById("res_oms") ? document.getElementById("res_oms").textContent : ""],
-      ["Promedio usado", document.getElementById("res_promedio") ? document.getElementById("res_promedio").textContent : ""]
-    ].filter(row => row[1]), [70, usableWidth - 70]);
-
-    seccion("Horarios de comida");
-    tabla(["Tiempo de comida", "Hora"], tiemposComida.map(tiempo => [tiempo, horasComida[tiempo] || ""]), [80, usableWidth - 80]);
-
-    seccion("Distribucion de macronutrientes");
-    tabla(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], (snapshot.macronutrientes || []).map(item => [
-      item.macronutriente,
-      item.porcentaje,
-      item.kcal,
-      item.gramos,
-      item.gkg
-    ]), [60, 35, 50, 55, usableWidth - 200]);
+    tablaHorariosMacronutrientesLadoALado(horasComida, snapshot.macronutrientes);
 
     seccion("Alimentos seleccionados");
     tiemposComida.forEach(tiempo => {
@@ -3587,14 +3983,7 @@ async function generarPDF() {
         y += 1;
         return;
       }
-      tabla(["Alimento", "g", "Kcal", "Prot", "Grasa", "Carb"], items.map(item => [
-        item.nombre,
-        numero(item.gramos),
-        numero(item.energia_calculada),
-        numero(item.proteina),
-        numero(item.grasa_total),
-        numero(item.carbohidratos)
-      ]), [usableWidth - 95, 18, 22, 18, 18, 19]);
+      tablaAlimentosPdf(items);
     });
 
     seccion("Totales, requerimiento y adecuacion");
@@ -3607,7 +3996,9 @@ async function generarPDF() {
     filasTotales.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
     tablaNutricion("Concepto", filasTotales);
 
-    doc.save(obtenerNombreArchivoDescarga("pdf"));
+    doc.save(opciones.filename || (snapshotEntrada
+      ? obtenerNombreArchivoDescargaSnapshot(snapshot, "pdf")
+      : obtenerNombreArchivoDescarga("pdf")));
   } catch (err) {
     console.error("Error generando PDF", err);
     alert("No se pudo generar el PDF. Revisa la consola para ver el detalle.");
