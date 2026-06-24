@@ -1315,7 +1315,7 @@ async function cargarCitas() {
 
   let { data, error } = await client
     .from("citas")
-    .select("id,user_id,paciente_id,fecha_cita,snapshot,created_at,pacientes(nombres,apellidos,documento,fecha_nacimiento,pais_nacimiento,sexo),cita_alimentos(alimento_id,alimento_nombre,tiempo,gramos,orden),cita_mediciones(*),cita_evaluaciones(*),cita_requerimientos(*),cita_macronutrientes(*),cita_horarios(*),cita_columnas_visibles(*)")
+    .select("id,user_id,paciente_id,fecha_cita,snapshot,created_at,pacientes!citas_paciente_usuario_fkey(nombres,apellidos,documento,fecha_nacimiento,pais_nacimiento,sexo),cita_alimentos(alimento_id,alimento_nombre,tiempo,gramos,orden),cita_mediciones(*),cita_evaluaciones(*),cita_requerimientos(*),cita_macronutrientes(*),cita_horarios(*),cita_columnas_visibles(*)")
     .order("fecha_cita", { ascending: false })
     .order("created_at", { ascending: false });
 
