@@ -534,14 +534,31 @@ body {
 
 .citas-table-actions {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 8px;
 }
 
 .citas-filter {
-    width: 300px;
+    flex: 0 1 auto;
+}
+
+#citas_filtro.citas-filter {
+    width: min(420px, 100%);
+    max-width: 100%;
+}
+
+.cita-selection-heading,
+.cita-selection-cell {
+    width: 38px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.cita-selection-cell .form-check-input {
+    margin: 0;
+    cursor: pointer;
 }
 
 .citas-date-filter {
@@ -1532,6 +1549,41 @@ table td {
     cursor: not-allowed;
 }
 
+.patient-derived-field[readonly],
+.patient-derived-field:disabled {
+    background-color: #f3f5f6;
+    color: #44515c;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.patient-search-control {
+    position: relative;
+}
+
+.patient-results-select {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% - 0.25rem);
+    left: calc(var(--bs-gutter-x, 1.5rem) * 0.5);
+    width: calc(100% - var(--bs-gutter-x, 1.5rem));
+    max-width: 46rem;
+    max-height: 13rem;
+    height: auto;
+    background-image: none;
+    color: #17212b;
+    padding: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(15, 23, 42, 0.15);
+}
+
+.patient-results-select option {
+    padding: 0.55rem 0.75rem;
+}
+
+.patient-results-select[hidden] {
+    display: none;
+}
+
 .contenedor-flex {
     display: flex;
     justify-content: space-between;
@@ -1762,6 +1814,7 @@ body {
     }
 
     .citas-filter,
+    #citas_filtro.citas-filter,
     .citas-date-filter,
     .citas-date-filter .form-control {
         width: 100%;
@@ -2009,6 +2062,10 @@ body {
     }
 
     .citas-filter {
+        width: 100%;
+    }
+
+    #citas_filtro.citas-filter {
         width: 100%;
     }
 }

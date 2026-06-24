@@ -122,21 +122,25 @@ function obtenerPacientesFiltrados() {
   });
 }
 
-function calcularEdad(fechaNacimiento) {
+function calcularEdad(fechaNacimiento, fechaReferencia) {
   if (!fechaNacimiento) return "";
 
   const nacimiento = new Date(`${fechaNacimiento}T00:00:00`);
   if (Number.isNaN(nacimiento.getTime())) return "";
 
-  const hoy = new Date();
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const mes = hoy.getMonth() - nacimiento.getMonth();
+  const referencia = fechaReferencia
+    ? new Date(`${fechaReferencia}T00:00:00`)
+    : new Date();
+  if (Number.isNaN(referencia.getTime())) return "";
 
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+  let edad = referencia.getFullYear() - nacimiento.getFullYear();
+  const mes = referencia.getMonth() - nacimiento.getMonth();
+
+  if (mes < 0 || (mes === 0 && referencia.getDate() < nacimiento.getDate())) {
     edad -= 1;
   }
 
-  return edad > 0 ? String(edad) : "";
+  return edad >= 0 ? String(edad) : "";
 }
 
 function setPacienteMensaje(message, type) {
@@ -254,51 +258,87 @@ function renderPacientesTabla() {
 }
 
 function renderPacientesSelector() {
-  const datalist = document.getElementById("calc_pacientes_lista");
+  const selector = document.getElementById("calc_paciente_selector");
   const pacienteIdInput = document.getElementById("calc_paciente_id");
   const pacienteBusqueda = document.getElementById("calc_paciente_busqueda");
-  if (!datalist) return;
+  if (!selector) return;
 
   const valorActual = pacienteIdInput ? pacienteIdInput.value : "";
-  datalist.innerHTML = pacientes.map(paciente => (
-    `<option value="${escapeHtml(obtenerEtiquetaPaciente(paciente))}"></option>`
-  )).join("");
+  const filtro = normalizarTexto(pacienteBusqueda ? pacienteBusqueda.value : "");
+  const terminos = filtro.split(/\s+/).filter(Boolean);
+  const pacientesFiltrados = pacientes.filter(paciente => {
+    if (!terminos.length) return true;
+    const etiqueta = normalizarTexto(obtenerEtiquetaPaciente(paciente));
+    return terminos.every(termino => etiqueta.includes(termino));
+  });
+  const pacienteActual = pacientes.find(paciente => paciente.id === valorActual);
+  const opciones = pacienteActual && !pacientesFiltrados.some(paciente => paciente.id === valorActual)
+    ? [pacienteActual, ...pacientesFiltrados]
+    : pacientesFiltrados;
+  const textoOpcionInicial = !pacientes.length
+    ? "No hay pacientes registrados"
+    : "No se encontraron pacientes";
+
+  selector.innerHTML = opciones.length
+    ? opciones.map(paciente => (
+      `<option value="${escapeHtml(paciente.id)}">${escapeHtml(obtenerEtiquetaPaciente(paciente))}</option>`
+    )).join("")
+    : `<option value="" disabled>${textoOpcionInicial}</option>`;
+  selector.size = Math.max(2, Math.min(5, opciones.length || 1));
 
   if (pacienteIdInput && !pacientes.some(paciente => paciente.id === valorActual)) {
     pacienteIdInput.value = "";
-    if (pacienteBusqueda) pacienteBusqueda.value = "";
+    selector.selectedIndex = -1;
     return;
   }
 
-  if (pacienteBusqueda && valorActual) {
-    const pacienteActual = pacientes.find(paciente => paciente.id === valorActual);
-    if (pacienteActual) pacienteBusqueda.value = obtenerEtiquetaPaciente(pacienteActual);
+  if (valorActual) {
+    selector.value = valorActual;
+  } else if (opciones.length) {
+    selector.selectedIndex = -1;
   }
+}
+
+function mostrarResultadosPacientes() {
+  const selector = document.getElementById("calc_paciente_selector");
+  const buscador = document.getElementById("calc_paciente_busqueda");
+  if (!selector || !buscador) return;
+
+  renderPacientesSelector();
+  selector.hidden = false;
+  buscador.setAttribute("aria-expanded", "true");
+}
+
+function ocultarResultadosPacientes() {
+  const selector = document.getElementById("calc_paciente_selector");
+  const buscador = document.getElementById("calc_paciente_busqueda");
+  if (selector) selector.hidden = true;
+  if (buscador) buscador.setAttribute("aria-expanded", "false");
 }
 
 function obtenerEtiquetaPaciente(paciente) {
   return `${paciente.nombres} ${paciente.apellidos} - ${paciente.documento}`.trim();
 }
 
-function encontrarPacientePorBusqueda(value) {
-  const texto = normalizarTexto(value);
-  if (!texto) return null;
-
-  return pacientes.find(paciente => (
-    normalizarTexto(obtenerEtiquetaPaciente(paciente)) === texto ||
-    normalizarTexto(paciente.documento) === texto
-  )) || null;
+function limpiarDatosPacienteCalculadora() {
+  ["calc_nombre", "calc_id", "calc_edad", "calc_genero"].forEach(id => {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.value = "";
+  });
 }
 
 function aplicarPacienteEnCalculadora(pacienteId) {
   const paciente = pacientes.find(item => item.id === pacienteId);
   const detalle = document.getElementById("calc_paciente_detalle");
   const pacienteIdInput = document.getElementById("calc_paciente_id");
+  const selector = document.getElementById("calc_paciente_selector");
   const pacienteBusqueda = document.getElementById("calc_paciente_busqueda");
 
   if (!paciente) {
     if (detalle) detalle.textContent = "";
     if (pacienteIdInput) pacienteIdInput.value = "";
+    if (selector) selector.value = "";
+    limpiarDatosPacienteCalculadora();
     return;
   }
 
@@ -306,14 +346,22 @@ function aplicarPacienteEnCalculadora(pacienteId) {
   const documentoInput = document.getElementById("calc_id");
   const edadInput = document.getElementById("calc_edad");
   const generoInput = document.getElementById("calc_genero");
-  const edad = calcularEdad(paciente.fecha_nacimiento);
+  const fechaEvaluacion = document.getElementById("calc_fecha");
+  const edad = calcularEdad(
+    paciente.fecha_nacimiento,
+    fechaEvaluacion ? fechaEvaluacion.value : ""
+  );
   const genero = obtenerGeneroCalculadoraDesdeSexo(paciente.sexo);
 
   if (nombreInput) nombreInput.value = `${paciente.nombres} ${paciente.apellidos}`.trim();
   if (documentoInput) documentoInput.value = paciente.documento;
-  if (edadInput && edad) edadInput.value = edad;
+  if (edadInput) {
+    edadInput.value = edad;
+    edadInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
   if (generoInput && genero) generoInput.value = genero;
   if (pacienteIdInput) pacienteIdInput.value = paciente.id;
+  if (selector) selector.value = paciente.id;
   if (pacienteBusqueda) pacienteBusqueda.value = obtenerEtiquetaPaciente(paciente);
   if (detalle) {
     detalle.textContent = `${paciente.sexo || "Sexo no registrado"} | ${paciente.pais_nacimiento} | Nacimiento: ${paciente.fecha_nacimiento}`;
@@ -321,23 +369,26 @@ function aplicarPacienteEnCalculadora(pacienteId) {
 }
 
 function configurarBuscadorPacienteCalculadora(input) {
-  input.addEventListener("change", function () {
-    const paciente = encontrarPacientePorBusqueda(input.value);
-    aplicarPacienteEnCalculadora(paciente ? paciente.id : "");
-  });
+  input.addEventListener("focus", mostrarResultadosPacientes);
 
   input.addEventListener("input", function () {
-    const pacienteIdInput = document.getElementById("calc_paciente_id");
-    const detalle = document.getElementById("calc_paciente_detalle");
-    const paciente = encontrarPacientePorBusqueda(input.value);
+    aplicarPacienteEnCalculadora("");
+    mostrarResultadosPacientes();
+  });
 
-    if (paciente) {
-      aplicarPacienteEnCalculadora(paciente.id);
+  input.addEventListener("keydown", function (event) {
+    const selector = document.getElementById("calc_paciente_selector");
+    if (event.key === "Escape") {
+      ocultarResultadosPacientes();
       return;
     }
+    if (event.key !== "ArrowDown") return;
+    if (!selector || !selector.options.length || selector.options[0].disabled) return;
 
-    if (pacienteIdInput) pacienteIdInput.value = "";
-    if (detalle) detalle.textContent = "";
+    event.preventDefault();
+    mostrarResultadosPacientes();
+    selector.focus();
+    selector.selectedIndex = 0;
   });
 }
 
@@ -549,6 +600,9 @@ function configurarPacientes() {
   const form = document.getElementById("paciente-form");
   const recargar = document.getElementById("paciente_recargar");
   const pacienteBusqueda = document.getElementById("calc_paciente_busqueda");
+  const pacienteSelector = document.getElementById("calc_paciente_selector");
+  const pacienteControl = document.getElementById("calc_paciente_control");
+  const fechaEvaluacion = document.getElementById("calc_fecha");
   const filtro = document.getElementById("paciente_filtro");
   const cancelarEdicion = document.getElementById("paciente_cancelar_edicion");
   const pacientesTablaBody = document.getElementById("pacientes_tabla_body");
@@ -570,6 +624,37 @@ function configurarPacientes() {
   }
   if (pacienteBusqueda) {
     configurarBuscadorPacienteCalculadora(pacienteBusqueda);
+  }
+  if (pacienteSelector) {
+    pacienteSelector.addEventListener("click", () => {
+      if (!pacienteSelector.value) return;
+      aplicarPacienteEnCalculadora(pacienteSelector.value);
+      ocultarResultadosPacientes();
+    });
+    pacienteSelector.addEventListener("keydown", event => {
+      if (event.key === "Enter" && pacienteSelector.value) {
+        event.preventDefault();
+        aplicarPacienteEnCalculadora(pacienteSelector.value);
+        ocultarResultadosPacientes();
+        if (pacienteBusqueda) pacienteBusqueda.focus();
+      } else if (event.key === "Escape") {
+        ocultarResultadosPacientes();
+        if (pacienteBusqueda) pacienteBusqueda.focus();
+      }
+    });
+  }
+  document.addEventListener("click", event => {
+    if (pacienteControl && !pacienteControl.contains(event.target)) {
+      ocultarResultadosPacientes();
+    }
+  });
+  if (fechaEvaluacion) {
+    fechaEvaluacion.addEventListener("change", () => {
+      const pacienteIdInput = document.getElementById("calc_paciente_id");
+      if (pacienteIdInput && pacienteIdInput.value) {
+        aplicarPacienteEnCalculadora(pacienteIdInput.value);
+      }
+    });
   }
 
   cargarListaPaisesNacimiento();

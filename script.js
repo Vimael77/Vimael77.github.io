@@ -1,4 +1,5 @@
 const alimentos = [];
+window.alimentos = alimentos;
 var alimentos_seleccionados = [];
 var alimentos_seleccionados_en_orden = {};
 var alimentos_total = {};
@@ -6,6 +7,33 @@ var alimentos_total_kc = {};
 var alimentos_requerimiento = {};
 var alimentos_adecuacion = {};
 const baseGramos = 100;
+const COLUMNAS_ALIMENTOS_SUPABASE = [
+  "nombre",
+  "energia_calculada",
+  "proteina",
+  "grasa_total",
+  "carbohidratos",
+  "fibra",
+  "ags",
+  "agm",
+  "agpi",
+  "colesterol",
+  "calcio",
+  "fosforo",
+  "hierro",
+  "potasio",
+  "sodio",
+  "zinc",
+  "vitamina_c",
+  "vitamina_a",
+  "folatos",
+  "vitamina_b12"
+];
+const SELECT_ALIMENTOS_SUPABASE = ["id"].concat(COLUMNAS_ALIMENTOS_SUPABASE);
+const TAMANO_PAGINA_ALIMENTOS_SUPABASE = 1000;
+let alimentosOrigen = "supabase";
+window.alimentosOrigen = alimentosOrigen;
+let alimentosRemotosCargados = false;
 let contadorFila = 0;
 let contadorAlimento = 0;
 let alimentoPendiente = null;
@@ -87,6 +115,84 @@ const IMC_BANDAS = [
   { label: "Obesidad", min: 30, max: 35, color: "#ff9f1a", labelPeso: 100, labelEstatura: 1.74 },
   { label: "Obesidad clinica", min: 35, max: Infinity, color: "#ff1717", labelPeso: 116, labelEstatura: 1.74 }
 ];
+
+function normalizarNumeroAlimento(valor) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function normalizarAlimentoSupabase(alimento) {
+  const normalizado = {};
+  if (alimento.id !== null && alimento.id !== undefined) {
+    normalizado.id = alimento.id;
+    normalizado.alimento_id = alimento.id;
+  }
+  COLUMNAS_ALIMENTOS_SUPABASE.forEach(function (columna) {
+    normalizado[columna] = columna === "nombre"
+      ? String(alimento[columna] || "")
+      : normalizarNumeroAlimento(alimento[columna]);
+  });
+  return normalizado;
+}
+
+function reemplazarBaseAlimentos(nuevosAlimentos, origen) {
+  if (!Array.isArray(nuevosAlimentos) || !nuevosAlimentos.length) return false;
+
+  alimentos.splice(0, alimentos.length, ...nuevosAlimentos);
+  alimentosOrigen = origen || "local";
+  window.alimentosOrigen = alimentosOrigen;
+  if (typeof buscar === "function") buscar();
+  return true;
+}
+
+async function cargarAlimentosSupabase() {
+  const client = window.supabaseClient;
+  if (alimentosRemotosCargados) return false;
+  if (!client) {
+    alimentosOrigen = "error";
+    window.alimentosOrigen = alimentosOrigen;
+    if (typeof buscar === "function") buscar();
+    return false;
+  }
+
+  try {
+    const remotos = [];
+    let inicio = 0;
+
+    while (true) {
+      const fin = inicio + TAMANO_PAGINA_ALIMENTOS_SUPABASE - 1;
+      const { data, error } = await client
+        .from("alimentos")
+        .select(SELECT_ALIMENTOS_SUPABASE.join(","))
+        .eq("activo", true)
+        .order("nombre", { ascending: true })
+        .range(inicio, fin);
+
+      if (error) throw error;
+      if (!data || !data.length) break;
+
+      remotos.push(...data.map(normalizarAlimentoSupabase));
+      if (data.length < TAMANO_PAGINA_ALIMENTOS_SUPABASE) break;
+      inicio += TAMANO_PAGINA_ALIMENTOS_SUPABASE;
+    }
+
+    if (!remotos.length) {
+      alimentosOrigen = "error";
+      window.alimentosOrigen = alimentosOrigen;
+      if (typeof buscar === "function") buscar();
+      return false;
+    }
+
+    alimentosRemotosCargados = reemplazarBaseAlimentos(remotos, "supabase");
+    return alimentosRemotosCargados;
+  } catch (error) {
+    alimentosOrigen = "error";
+    window.alimentosOrigen = alimentosOrigen;
+    if (typeof buscar === "function") buscar();
+    console.warn("No se pudieron cargar los alimentos desde Supabase.", error);
+    return false;
+  }
+}
 
 function obtenerFechaActualInput() {
   const hoy = new Date();
@@ -1876,6 +1982,20 @@ function buscar() {
 
   const tbody = document.createElement('tbody');
 
+  if (!alimentos.length) {
+    const filaEstado = document.createElement('tr');
+    const celdaEstado = document.createElement('td');
+    celdaEstado.colSpan = COLUMNAS_ALIMENTOS_SUPABASE.length;
+    celdaEstado.classList.add('text-muted');
+    celdaEstado.textContent = alimentosOrigen === "error"
+      ? "No se pudieron cargar los alimentos desde Supabase."
+      : "Cargando alimentos...";
+    filaEstado.appendChild(celdaEstado);
+    tbody.appendChild(filaEstado);
+    lista.appendChild(tbody);
+    return;
+  }
+
   let resultados = [];
 
   for (let i = 0; i < alimentos.length; i++) {
@@ -2725,9 +2845,10 @@ function reportePdfInfoTable(items) {
   `;
 }
 
-function reportePdfTablaSimple(headers, rows) {
+function reportePdfTablaSimple(headers, rows, className = "") {
+  const clases = ["pdf-table", className].filter(Boolean).join(" ");
   return `
-    <table class="pdf-table">
+    <table class="${clases}">
       <thead>
         <tr>${headers.map(header => `<th>${reportePdfEscape(header)}</th>`).join("")}</tr>
       </thead>
@@ -2800,7 +2921,7 @@ function reportePdfMacronutrientes(macros) {
     item.gkg
   ]);
 
-  return reportePdfTablaSimple(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], rows);
+  return reportePdfTablaSimple(["Macronutriente", "%", "Kcal", "Gramos totales", "g/kg"], rows, "pdf-macro-table");
 }
 
 function reportePdfIndiceMasaCorporal(imc) {
@@ -2927,6 +3048,12 @@ function reportePdfHtml(snapshot) {
         .pdf-info-table th, .pdf-info-table td, .pdf-table th, .pdf-table td { border: 1px solid #d9e1e5; padding: 4px; vertical-align: top; }
         .pdf-info-table th { width: 150px; background: #f4f7f5; text-align: left; }
         .pdf-table th { background: #dceeff; color: #10202f; font-weight: 700; }
+        .pdf-macro-table { table-layout: fixed; }
+        .pdf-macro-table th:nth-child(1), .pdf-macro-table td:nth-child(1) { width: 30%; }
+        .pdf-macro-table th:nth-child(2), .pdf-macro-table td:nth-child(2) { width: 13%; }
+        .pdf-macro-table th:nth-child(3), .pdf-macro-table td:nth-child(3) { width: 22%; }
+        .pdf-macro-table th:nth-child(4), .pdf-macro-table td:nth-child(4) { width: 20%; }
+        .pdf-macro-table th:nth-child(5), .pdf-macro-table td:nth-child(5) { width: 15%; white-space: nowrap; }
         .pdf-nutrient-table, .pdf-food-table { font-size: 6.5px; table-layout: fixed; }
         .pdf-nutrient-table th:first-child, .pdf-nutrient-table td:first-child, .pdf-food-table th:first-child, .pdf-food-table td:first-child { width: 88px; text-align: left; }
         .pdf-time-row td { background: #eef7f0; font-weight: 700; text-align: left; }
@@ -3219,6 +3346,13 @@ async function generarPDFHtmlAnterior() {
 
     const snapshot = obtenerSnapshotCita();
 
+    if (typeof hidratarAlimentosPorTiempoCita === "function") {
+      snapshot.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
+    }
+    if (typeof hidratarTotalesCita === "function") {
+      snapshot.totales = hidratarTotalesCita(snapshot.totales, snapshot.alimentos_por_tiempo);
+    }
+
     if (window.supabaseClient && typeof obtenerProfesionalCita === "function") {
       try {
         const { data: sessionData } = await window.supabaseClient.auth.getSession();
@@ -3271,6 +3405,13 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
 
     if ((!snapshot.imc || !snapshot.imc.valido) && typeof obtenerImcDesdeSnapshot === "function") {
       snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
+    }
+
+    if (typeof hidratarAlimentosPorTiempoCita === "function") {
+      snapshot.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
+    }
+    if (typeof hidratarTotalesCita === "function") {
+      snapshot.totales = hidratarTotalesCita(snapshot.totales, snapshot.alimentos_por_tiempo);
     }
 
     if (!snapshotEntrada && window.supabaseClient && typeof obtenerProfesionalCita === "function") {
@@ -3539,7 +3680,13 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
           item.gramos,
           item.gkg
         ]),
-        [42, 20, 31, 35, anchoPanel - 128]
+        [
+          anchoPanel * 0.28,
+          anchoPanel * 0.12,
+          anchoPanel * 0.20,
+          anchoPanel * 0.20,
+          anchoPanel * 0.20
+        ]
       );
 
       y = yInicio + 10 + Math.max(altoHorarios, altoMacros) + 6;
@@ -4150,8 +4297,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (fecha) fecha.value = obtenerFechaActualInput();
   if (peso) peso.value = '70';
   if (estatura) estatura.value = '170';
-  if (edad) edad.value = '30';
-  if (genero) genero.value = 'M';
+  if (edad) edad.value = '';
+  if (genero) genero.value = '';
   if (actividad) actividad.value = '1.55';
 
   const macroProteina = document.getElementById('macro_proteina_porcentaje');
@@ -4178,4 +4325,6 @@ document.addEventListener('DOMContentLoaded', function() {
   configurarEventosMedidasAntropometricas();
   inicializarIconosLucide();
   actualizarRequerimientoMacronutrientes();
+  buscar();
+  cargarAlimentosSupabase();
 });

@@ -3,6 +3,7 @@ let filtroCitas = "";
 let filtroCitasFechaDesde = "";
 let filtroCitasFechaHasta = "";
 let paginaCitasActual = 1;
+let citasSeleccionadas = new Set();
 const CITAS_POR_PAGINA = 15;
 
 const CAMPOS_NUTRIENTES = [
@@ -174,55 +175,6 @@ function obtenerCamposNutrientesVisiblesCita(snapshot) {
   });
 }
 
-function obtenerGraficoImcCita() {
-  if (typeof actualizarIndiceMasaCorporal === "function") {
-    actualizarIndiceMasaCorporal();
-  }
-
-  const chart = document.getElementById("imc_chart");
-  if (!chart) return "";
-
-  const clone = chart.cloneNode(true);
-  const prefijo = `cita_${Date.now()}_`;
-  const idMap = {};
-
-  [clone].concat(Array.from(clone.querySelectorAll("[id]"))).forEach(elemento => {
-    if (!elemento.id) return;
-    const idAnterior = elemento.id;
-    const idSiguiente = `${prefijo}${idAnterior}`;
-    idMap[idAnterior] = idSiguiente;
-    elemento.id = idSiguiente;
-  });
-
-  const actualizarReferencia = function (valor) {
-    let salida = valor;
-    Object.keys(idMap).forEach(idAnterior => {
-      salida = salida
-        .split(`#${idAnterior}`).join(`#${idMap[idAnterior]}`)
-        .split(idAnterior).join(idMap[idAnterior]);
-    });
-    return salida;
-  };
-
-  [clone].concat(Array.from(clone.querySelectorAll("*"))).forEach(elemento => {
-    Array.from(elemento.attributes).forEach(attr => {
-      if (attr.name === "id") return;
-      if (Object.keys(idMap).some(idAnterior => attr.value.includes(idAnterior))) {
-        elemento.setAttribute(attr.name, actualizarReferencia(attr.value));
-      }
-    });
-  });
-
-  clone.removeAttribute("id");
-  clone.classList.add("cita-imc-chart-svg");
-  clone.removeAttribute("width");
-  clone.removeAttribute("height");
-  clone.setAttribute("preserveAspectRatio", "xMidYMid meet");
-  clone.style.overflow = "hidden";
-
-  return clone.outerHTML;
-}
-
 function obtenerImcCita() {
   const datos = typeof obtenerIndiceMasaCorporalActual === "function"
     ? obtenerIndiceMasaCorporalActual()
@@ -235,8 +187,7 @@ function obtenerImcCita() {
       estatura_cm: citaNumero(citaValor("calc_estatura")),
       estatura_m: 0,
       valor: 0,
-      clasificacion: "",
-      grafico_svg: ""
+      clasificacion: ""
     };
   }
 
@@ -246,8 +197,7 @@ function obtenerImcCita() {
     estatura_cm: citaNumero(citaValor("calc_estatura")),
     estatura_m: citaNumero(datos.estaturaMetros),
     valor: citaNumero(datos.imc),
-    clasificacion: datos.clasificacion || "",
-    grafico_svg: obtenerGraficoImcCita()
+    clasificacion: datos.clasificacion || ""
   };
 }
 
@@ -261,7 +211,7 @@ function obtenerImcDesdeSnapshot(snapshot) {
   const imc = peso > 0 && estaturaM > 0 ? peso / (estaturaM * estaturaM) : 0;
 
   if (!imc || !Number.isFinite(imc)) {
-    return { valido: false, peso, estatura_cm: estaturaCm, estatura_m: estaturaM, valor: 0, clasificacion: "", grafico_svg: "" };
+    return { valido: false, peso, estatura_cm: estaturaCm, estatura_m: estaturaM, valor: 0, clasificacion: "" };
   }
 
   const clasificacion = typeof obtenerClasificacionImc === "function"
@@ -274,8 +224,7 @@ function obtenerImcDesdeSnapshot(snapshot) {
     estatura_cm: estaturaCm,
     estatura_m: estaturaM,
     valor: citaNumero(imc),
-    clasificacion,
-    grafico_svg: ""
+    clasificacion
   };
 }
 
@@ -432,35 +381,504 @@ function obtenerAlimentosPorTiempoCita() {
     if (!item) continue;
     const tiempo = porTiempo[item.tiempo] ? item.tiempo : "Desayuno";
     porTiempo[tiempo].push({
+      alimento_id: item.alimento_id || item.id || null,
       nombre: item.nombre || "",
-      gramos: citaNumero(item.gramos),
-      ...citaClonarNutricion(item)
+      gramos: citaNumero(item.gramos)
     });
   }
 
   return porTiempo;
 }
 
-function obtenerTotalesCita() {
-  if (typeof calcular === "function") calcular();
-  if (typeof total_kilocalorias === "function") total_kilocalorias();
+function clonarDatosCita(datos) {
+  try {
+    return JSON.parse(JSON.stringify(datos || {}));
+  } catch (_error) {
+    return datos && typeof datos === "object" ? { ...datos } : {};
+  }
+}
 
+function obtenerFilasAlimentosRelacionalesCita(alimentosPorTiempo, citaId) {
+  const filas = [];
+  const alimentos = alimentosPorTiempo && typeof alimentosPorTiempo === "object"
+    ? alimentosPorTiempo
+    : {};
+
+  obtenerTiemposCita().forEach(tiempo => {
+    const items = Array.isArray(alimentos[tiempo]) ? alimentos[tiempo] : [];
+    items.forEach((item, index) => {
+      if (!item) return;
+      filas.push({
+        cita_id: citaId,
+        alimento_id: item.alimento_id || item.id || null,
+        alimento_nombre: item.nombre || "",
+        tiempo,
+        gramos: citaNumero(item.gramos),
+        orden: index + 1
+      });
+    });
+  });
+
+  return filas;
+}
+
+function agruparAlimentosRelacionalesCita(filas) {
+  const porTiempo = {};
+  obtenerTiemposCita().forEach(tiempo => {
+    porTiempo[tiempo] = [];
+  });
+
+  (Array.isArray(filas) ? filas : [])
+    .slice()
+    .sort((a, b) => {
+      const tiempoA = obtenerTiemposCita().indexOf(a.tiempo);
+      const tiempoB = obtenerTiemposCita().indexOf(b.tiempo);
+      if (tiempoA !== tiempoB) return tiempoA - tiempoB;
+      return citaNumero(a.orden) - citaNumero(b.orden);
+    })
+    .forEach(item => {
+      const tiempo = porTiempo[item.tiempo] ? item.tiempo : "Desayuno";
+      porTiempo[tiempo].push({
+        alimento_id: item.alimento_id || null,
+        nombre: item.alimento_nombre || "",
+        gramos: citaNumero(item.gramos)
+      });
+    });
+
+  return porTiempo;
+}
+
+function contarAlimentosSnapshotCita(snapshot) {
+  const alimentos = snapshot && snapshot.alimentos_por_tiempo;
+  if (!alimentos || typeof alimentos !== "object") return 0;
+  return Object.values(alimentos).reduce((total, items) => {
+    return total + (Array.isArray(items) ? items.length : 0);
+  }, 0);
+}
+
+function obtenerMedicionRelacionalCita(cita) {
+  return obtenerRelacionUnoCita(cita, "cita_mediciones");
+}
+
+function obtenerRelacionUnoCita(cita, nombre) {
+  const relacion = cita ? cita[nombre] : null;
+  if (Array.isArray(relacion)) return relacion[0] || null;
+  return relacion && typeof relacion === "object" ? relacion : null;
+}
+
+function obtenerRelacionListaCita(cita, nombre) {
+  const relacion = cita ? cita[nombre] : null;
+  return Array.isArray(relacion) ? relacion : [];
+}
+
+function calcularEdadEnFechaCita(fechaNacimiento, fechaEvaluacion) {
+  if (!fechaNacimiento || !fechaEvaluacion) return "";
+  const nacimiento = new Date(`${String(fechaNacimiento).slice(0, 10)}T00:00:00`);
+  const evaluacion = new Date(`${String(fechaEvaluacion).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(nacimiento.getTime()) || Number.isNaN(evaluacion.getTime())) return "";
+
+  let edad = evaluacion.getFullYear() - nacimiento.getFullYear();
+  const mes = evaluacion.getMonth() - nacimiento.getMonth();
+  if (mes < 0 || (mes === 0 && evaluacion.getDate() < nacimiento.getDate())) edad--;
+  return edad >= 0 ? edad : "";
+}
+
+function obtenerGeneroDesdeSexoCita(sexo) {
+  const normalizado = citaNormalizar(sexo);
+  if (normalizado === "masculino") return "M";
+  if (normalizado === "femenino") return "F";
+  return "";
+}
+
+function integrarContextoRelacionalCita(snapshot, cita) {
+  const evaluacion = obtenerRelacionUnoCita(cita, "cita_evaluaciones");
+  const paciente = obtenerRelacionUnoCita(cita, "pacientes");
+  if (!evaluacion || !paciente) return snapshot;
+  const nombreCompleto = `${paciente.nombres || ""} ${paciente.apellidos || ""}`.trim();
+  const genero = obtenerGeneroDesdeSexoCita(paciente.sexo);
+
+  snapshot.paciente = {
+    ...(snapshot.paciente || {}),
+    paciente_id: cita.paciente_id || null,
+    nombre: nombreCompleto,
+    nombres: paciente.nombres || "",
+    apellidos: paciente.apellidos || "",
+    documento: paciente.documento || "",
+    fecha_nacimiento: paciente.fecha_nacimiento || "",
+    pais_nacimiento: paciente.pais_nacimiento || "",
+    sexo: paciente.sexo || "",
+    fecha_evaluacion: cita.fecha_cita || "",
+    edad: calcularEdadEnFechaCita(paciente.fecha_nacimiento, cita.fecha_cita),
+    genero,
+    genero_texto: paciente.sexo || "",
+    actividad: evaluacion.actividad ?? "",
+    actividad_texto: evaluacion.actividad_texto || ""
+  };
+  snapshot.profesional = {
+    user_id: evaluacion.profesional_user_id || cita.user_id || "",
+    email: evaluacion.profesional_email || "",
+    nombre: evaluacion.profesional_nombre || "",
+    usuario: evaluacion.profesional_usuario || "",
+    telefono: evaluacion.profesional_telefono || ""
+  };
+  snapshot.guardado_en = cita.created_at || "";
+  return snapshot;
+}
+
+function integrarMedicionesRelacionalesCita(snapshot, cita) {
+  const medicion = obtenerMedicionRelacionalCita(cita);
+  if (!medicion) return snapshot;
+
+  snapshot.paciente = snapshot.paciente && typeof snapshot.paciente === "object"
+    ? snapshot.paciente
+    : {};
+
+  snapshot.paciente.peso = medicion.peso;
+  snapshot.paciente.peso_ideal = medicion.peso_ideal;
+  snapshot.paciente.estatura = medicion.estatura_cm;
+  snapshot.paciente.medidas_antropometricas = {
+    brazo_izquierdo: medicion.brazo_izquierdo,
+    brazo_derecho: medicion.brazo_derecho,
+    abdomen: medicion.abdomen,
+    abdomen_bajo: medicion.abdomen_bajo,
+    muslo_izquierdo: medicion.muslo_izquierdo,
+    muslo_derecho: medicion.muslo_derecho,
+    pantorrilla_izquierda: medicion.pantorrilla_izquierda,
+    pantorrilla_derecha: medicion.pantorrilla_derecha,
+    observaciones: medicion.observaciones || ""
+  };
+
+  const valorImc = citaNumeroOpcional(medicion.imc, 4);
+  const estaturaCm = citaNumeroOpcional(medicion.estatura_cm);
+  snapshot.imc = {
+    valido: valorImc !== null && valorImc > 0,
+    peso: citaNumeroOpcional(medicion.peso),
+    estatura_cm: estaturaCm,
+    estatura_m: estaturaCm !== null ? citaNumeroOpcional(estaturaCm / 100, 4) : null,
+    valor: valorImc,
+    clasificacion: medicion.clasificacion_imc || ""
+  };
+
+  return snapshot;
+}
+
+function integrarRequerimientosRelacionalesCita(snapshot, cita) {
+  const requerimientos = obtenerRelacionUnoCita(cita, "cita_requerimientos");
+  if (!requerimientos) return snapshot;
+
+  const requerimiento = {};
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    requerimiento[campo] = citaNumero(requerimientos[campo]);
+  });
+  snapshot.totales = { requerimiento };
+  return snapshot;
+}
+
+function formatearNumeroMacroCita(value, decimales = 2) {
+  const numero = citaNumeroOpcional(value, decimales);
+  return numero === null ? "" : numero.toFixed(decimales);
+}
+
+function integrarMacronutrientesRelacionalesCita(snapshot, cita) {
+  const macros = obtenerRelacionListaCita(cita, "cita_macronutrientes");
+  if (!macros.length) return snapshot;
+
+  snapshot.macronutrientes = macros
+    .slice()
+    .sort((a, b) => citaNumero(a.orden) - citaNumero(b.orden))
+    .map(item => ({
+      macronutriente: item.macronutriente || "",
+      porcentaje: `${formatearNumeroMacroCita(item.porcentaje)}%`,
+      kcal: `${formatearNumeroMacroCita(item.kcal)} kcal`,
+      gramos: `${formatearNumeroMacroCita(item.gramos)} g`,
+      gkg: `${formatearNumeroMacroCita(item.gkg)} g/kg`
+    }));
+  return snapshot;
+}
+
+function integrarHorariosRelacionalesCita(snapshot, cita) {
+  const horas = {};
+  obtenerTiemposCita().forEach(tiempo => {
+    horas[tiempo] = "";
+  });
+
+  obtenerRelacionListaCita(cita, "cita_horarios").forEach(item => {
+    if (!Object.prototype.hasOwnProperty.call(horas, item.tiempo)) return;
+    horas[item.tiempo] = item.hora ? String(item.hora).slice(0, 5) : "";
+  });
+  snapshot.horas_comida = horas;
+  return snapshot;
+}
+
+function integrarColumnasRelacionalesCita(snapshot, cita) {
+  const columnas = obtenerRelacionListaCita(cita, "cita_columnas_visibles")
+    .slice()
+    .sort((a, b) => citaNumero(a.orden) - citaNumero(b.orden))
+    .map(item => item.columna)
+    .filter(Boolean);
+  snapshot.configuracion = { columnas_alimentos_visibles: columnas };
+  return snapshot;
+}
+
+function integrarDatosRelacionalesCita(cita) {
+  const resultado = { ...cita };
+  const tieneNucleoRelacional = Boolean(
+    obtenerRelacionUnoCita(cita, "pacientes")
+    &&
+    obtenerRelacionUnoCita(cita, "cita_evaluaciones")
+    && obtenerRelacionUnoCita(cita, "cita_mediciones")
+    && obtenerRelacionUnoCita(cita, "cita_requerimientos")
+    && obtenerRelacionListaCita(cita, "cita_macronutrientes").length
+  );
+  let snapshot = tieneNucleoRelacional
+    ? { version: 11 }
+    : clonarDatosCita(cita && cita.snapshot);
+  const filas = cita && Array.isArray(cita.cita_alimentos) ? cita.cita_alimentos : [];
+  const cantidadSnapshot = contarAlimentosSnapshotCita(snapshot);
+  const migracionCompleta = filas.length > 0
+    && (cantidadSnapshot === 0 || filas.length === cantidadSnapshot);
+
+  if (migracionCompleta) {
+    snapshot.alimentos_por_tiempo = agruparAlimentosRelacionalesCita(filas);
+  }
+
+  snapshot = integrarContextoRelacionalCita(snapshot, cita);
+  snapshot = integrarMedicionesRelacionalesCita(snapshot, cita);
+  snapshot = integrarRequerimientosRelacionalesCita(snapshot, cita);
+  snapshot = integrarMacronutrientesRelacionalesCita(snapshot, cita);
+  snapshot = integrarHorariosRelacionalesCita(snapshot, cita);
+  snapshot = integrarColumnasRelacionalesCita(snapshot, cita);
+  resultado.snapshot = snapshot;
+  resultado.paciente_nombre = snapshot.paciente ? snapshot.paciente.nombre || "" : "";
+  resultado.paciente_documento = snapshot.paciente ? snapshot.paciente.documento || "" : "";
+  return resultado;
+}
+
+function citaNumeroOpcional(value, decimales = 2) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const numero = parseFloat(String(value).replace(",", "."));
+  if (!Number.isFinite(numero)) return null;
+  return Number(numero.toFixed(decimales));
+}
+
+function obtenerFilaMedicionesRelacionalesCita(snapshot, citaId) {
+  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+  const medidas = paciente.medidas_antropometricas && typeof paciente.medidas_antropometricas === "object"
+    ? paciente.medidas_antropometricas
+    : {};
+  const imc = obtenerImcDesdeSnapshot(snapshot);
+
+  return {
+    cita_id: citaId,
+    peso: citaNumeroOpcional(paciente.peso ?? imc.peso),
+    peso_ideal: citaNumeroOpcional(paciente.peso_ideal),
+    estatura_cm: citaNumeroOpcional(paciente.estatura ?? imc.estatura_cm),
+    imc: imc && imc.valido ? citaNumeroOpcional(imc.valor, 4) : null,
+    clasificacion_imc: imc && imc.valido ? String(imc.clasificacion || "") : "",
+    brazo_izquierdo: citaNumeroOpcional(medidas.brazo_izquierdo),
+    brazo_derecho: citaNumeroOpcional(medidas.brazo_derecho),
+    abdomen: citaNumeroOpcional(medidas.abdomen),
+    abdomen_bajo: citaNumeroOpcional(medidas.abdomen_bajo),
+    muslo_izquierdo: citaNumeroOpcional(medidas.muslo_izquierdo),
+    muslo_derecho: citaNumeroOpcional(medidas.muslo_derecho),
+    pantorrilla_izquierda: citaNumeroOpcional(medidas.pantorrilla_izquierda),
+    pantorrilla_derecha: citaNumeroOpcional(medidas.pantorrilla_derecha),
+    observaciones: String(medidas.observaciones || "").trim()
+  };
+}
+
+function obtenerFilaEvaluacionRelacionalCita(snapshot, citaId) {
+  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+  const profesional = snapshot && snapshot.profesional ? snapshot.profesional : {};
+
+  return {
+    cita_id: citaId,
+    actividad: citaNumeroOpcional(paciente.actividad, 4),
+    actividad_texto: paciente.actividad_texto || "",
+    profesional_user_id: profesional.user_id || null,
+    profesional_email: profesional.email || "",
+    profesional_nombre: profesional.nombre || "",
+    profesional_usuario: profesional.usuario || "",
+    profesional_telefono: profesional.telefono || ""
+  };
+}
+
+function obtenerFilaRequerimientosRelacionalesCita(snapshot, citaId) {
+  const requerimiento = snapshot && snapshot.totales && snapshot.totales.requerimiento
+    ? snapshot.totales.requerimiento
+    : {};
+  const fila = { cita_id: citaId };
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    fila[campo] = citaNumeroOpcional(requerimiento[campo], 4);
+  });
+  return fila;
+}
+
+function obtenerFilasMacronutrientesRelacionalesCita(snapshot, citaId) {
+  const macros = snapshot && Array.isArray(snapshot.macronutrientes)
+    ? snapshot.macronutrientes
+    : [];
+
+  return macros.map((item, index) => ({
+    cita_id: citaId,
+    macronutriente: item.macronutriente || "",
+    porcentaje: citaNumeroOpcional(item.porcentaje, 4),
+    kcal: citaNumeroOpcional(item.kcal, 4),
+    gramos: citaNumeroOpcional(item.gramos, 4),
+    gkg: citaNumeroOpcional(item.gkg, 4),
+    orden: index + 1
+  }));
+}
+
+function obtenerFilasHorariosRelacionalesCita(snapshot, citaId) {
+  const horas = snapshot && snapshot.horas_comida ? snapshot.horas_comida : {};
+  return obtenerTiemposCita().map((tiempo, index) => ({
+    cita_id: citaId,
+    tiempo,
+    hora: horas[tiempo] || null,
+    orden: index + 1
+  }));
+}
+
+function obtenerFilasColumnasRelacionalesCita(snapshot, citaId) {
+  const columnas = snapshot
+    && snapshot.configuracion
+    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
+    ? snapshot.configuracion.columnas_alimentos_visibles
+    : [];
+
+  return columnas.map((columna, index) => ({
+    cita_id: citaId,
+    columna,
+    orden: index + 1
+  }));
+}
+
+function obtenerIndiceAlimentosCita() {
+  const base = Array.isArray(window.alimentos)
+    ? window.alimentos
+    : (typeof alimentos !== "undefined" && Array.isArray(alimentos) ? alimentos : []);
+  const porId = new Map();
+  const porNombre = new Map();
+
+  base.forEach(alimento => {
+    if (!alimento) return;
+    const id = alimento.alimento_id || alimento.id;
+    if (id !== null && id !== undefined) porId.set(String(id), alimento);
+    if (alimento.nombre) porNombre.set(citaNormalizar(alimento.nombre), alimento);
+  });
+
+  return { porId, porNombre };
+}
+
+function buscarAlimentoBaseCita(item, indice) {
+  if (!item || !indice) return null;
+  const id = item.alimento_id || item.id;
+  if (id !== null && id !== undefined && indice.porId.has(String(id))) {
+    return indice.porId.get(String(id));
+  }
+
+  const nombre = citaNormalizar(item.nombre);
+  return nombre ? indice.porNombre.get(nombre) || null : null;
+}
+
+function alimentoSnapshotTieneNutrientesCita(item) {
+  return Boolean(item && CAMPOS_NUTRIENTES.some(([campo]) => item[campo] !== null && item[campo] !== undefined));
+}
+
+function hidratarAlimentoSnapshotCita(item, indice) {
+  const datos = item && typeof item === "object" ? item : {};
+  if (alimentoSnapshotTieneNutrientesCita(datos)) return { ...datos };
+
+  const base = buscarAlimentoBaseCita(datos, indice) || {};
+  const gramos = citaNumero(datos.gramos);
+  const factor = gramos > 0 ? gramos / 100 : 0;
+  const hidratado = {
+    alimento_id: datos.alimento_id || datos.id || base.alimento_id || base.id || null,
+    nombre: datos.nombre || base.nombre || "",
+    gramos
+  };
+
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    hidratado[campo] = citaNumero(base[campo]) * factor;
+  });
+
+  return hidratado;
+}
+
+function hidratarAlimentosPorTiempoCita(alimentosPorTiempo) {
+  const hidratados = {};
+  const indice = obtenerIndiceAlimentosCita();
+
+  obtenerTiemposCita().forEach(tiempo => {
+    const items = alimentosPorTiempo && Array.isArray(alimentosPorTiempo[tiempo])
+      ? alimentosPorTiempo[tiempo]
+      : [];
+    hidratados[tiempo] = items.map(item => hidratarAlimentoSnapshotCita(item, indice));
+  });
+
+  return hidratados;
+}
+
+function crearNutricionCeroCita() {
+  const salida = {};
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    salida[campo] = 0;
+  });
+  return salida;
+}
+
+function calcularTotalesDesdeAlimentosCita(alimentosPorTiempo, requerimientoEntrada) {
   const subtotales = {};
-  const tiempos = obtenerTiemposCita();
-  tiempos.forEach(tiempo => {
-    subtotales[tiempo] = citaClonarNutricion(window.alimentos_subtotales ? window.alimentos_subtotales[tiempo] : {});
+  const total = crearNutricionCeroCita();
+  const requerimiento = citaClonarNutricion(requerimientoEntrada || {});
+  const adecuacion = {};
+
+  obtenerTiemposCita().forEach(tiempo => {
+    subtotales[tiempo] = crearNutricionCeroCita();
+    const items = alimentosPorTiempo && Array.isArray(alimentosPorTiempo[tiempo])
+      ? alimentosPorTiempo[tiempo]
+      : [];
+
+    items.forEach(item => {
+      CAMPOS_NUTRIENTES.forEach(([campo]) => {
+        const valor = citaNumero(item ? item[campo] : 0);
+        subtotales[tiempo][campo] += valor;
+        total[campo] += valor;
+      });
+    });
+  });
+
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    const base = citaNumero(requerimiento[campo]);
+    adecuacion[campo] = base > 0 ? citaNumero((total[campo] / base) * 100) : 0;
   });
 
   return {
     subtotales,
-    total: citaClonarNutricion(typeof alimentos_total !== "undefined" ? alimentos_total : {}),
+    total,
     total_kilocalorias: {
-      proteina: citaNumero(typeof alimentos_total_kc !== "undefined" ? alimentos_total_kc.proteina : 0),
-      grasa_total: citaNumero(typeof alimentos_total_kc !== "undefined" ? alimentos_total_kc.grasa_total : 0),
-      carbohidratos: citaNumero(typeof alimentos_total_kc !== "undefined" ? alimentos_total_kc.carbohidratos : 0)
+      proteina: citaNumero(total.proteina * 4),
+      grasa_total: citaNumero(total.grasa_total * 9),
+      carbohidratos: citaNumero(total.carbohidratos * 4)
     },
-    requerimiento: citaClonarNutricion(typeof alimentos_requerimiento !== "undefined" ? alimentos_requerimiento : {}),
-    adecuacion: citaClonarNutricion(typeof alimentos_adecuacion !== "undefined" ? alimentos_adecuacion : {})
+    requerimiento,
+    adecuacion
+  };
+}
+
+function hidratarTotalesCita(totales, alimentosPorTiempo) {
+  const datos = totales && typeof totales === "object" ? totales : {};
+  if (datos.subtotales && datos.total && datos.adecuacion) return datos;
+  return calcularTotalesDesdeAlimentosCita(alimentosPorTiempo, datos.requerimiento);
+}
+
+function obtenerTotalesCita() {
+  if (typeof calcular === "function") calcular();
+  if (typeof total_kilocalorias === "function") total_kilocalorias();
+
+  return {
+    requerimiento: citaClonarNutricion(typeof alimentos_requerimiento !== "undefined" ? alimentos_requerimiento : {})
   };
 }
 
@@ -491,7 +909,7 @@ function obtenerSnapshotCita() {
   };
 
   return {
-    version: 4,
+    version: 11,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
@@ -573,8 +991,13 @@ async function guardarCita() {
 
   const snapshot = obtenerSnapshotCita();
   snapshot.profesional = await obtenerProfesionalCita(sessionData.session);
-  if (!snapshot.paciente.nombre && !snapshot.paciente.documento) {
-    alert("Selecciona o escribe los datos del paciente antes de guardar la cita.");
+  const pacienteSeleccionado = snapshot.paciente.paciente_id
+    && typeof pacientes !== "undefined"
+    && Array.isArray(pacientes)
+    ? pacientes.find(item => item.id === snapshot.paciente.paciente_id)
+    : null;
+  if (!pacienteSeleccionado) {
+    alert("Debes seleccionar un paciente registrado antes de guardar la cita.");
     return;
   }
 
@@ -584,24 +1007,81 @@ async function guardarCita() {
   if (boton) boton.disabled = true;
 
   try {
-    const { error } = await client
+    const { data: citaGuardada, error } = await client
       .from("citas")
       .insert({
         paciente_id: snapshot.paciente.paciente_id,
-        paciente_nombre: snapshot.paciente.nombre,
-        paciente_documento: snapshot.paciente.documento,
         fecha_cita: snapshot.paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
         snapshot
-      });
+      })
+      .select("id")
+      .single();
 
     if (error) {
       alert(`No se pudo guardar la cita: ${error.message}`);
       return;
     }
 
+    if (!citaGuardada || citaGuardada.id === null || citaGuardada.id === undefined) {
+      alert("La cita se guardo, pero Supabase no devolvio su identificador.");
+      return;
+    }
+
+    const filasAlimentos = obtenerFilasAlimentosRelacionalesCita(
+      snapshot.alimentos_por_tiempo,
+      citaGuardada.id
+    );
+    const filasMacros = obtenerFilasMacronutrientesRelacionalesCita(snapshot, citaGuardada.id);
+    const filasHorarios = obtenerFilasHorariosRelacionalesCita(snapshot, citaGuardada.id);
+    const filasColumnas = obtenerFilasColumnasRelacionalesCita(snapshot, citaGuardada.id);
+    const operaciones = [
+      ["alimentos", filasAlimentos.length
+        ? client.from("cita_alimentos").insert(filasAlimentos)
+        : Promise.resolve({ error: null })],
+      ["mediciones", client
+        .from("cita_mediciones")
+        .insert(obtenerFilaMedicionesRelacionalesCita(snapshot, citaGuardada.id))],
+      ["evaluacion", client
+        .from("cita_evaluaciones")
+        .insert(obtenerFilaEvaluacionRelacionalCita(snapshot, citaGuardada.id))],
+      ["requerimientos", client
+        .from("cita_requerimientos")
+        .insert(obtenerFilaRequerimientosRelacionalesCita(snapshot, citaGuardada.id))],
+      ["macronutrientes", filasMacros.length
+        ? client.from("cita_macronutrientes").insert(filasMacros)
+        : Promise.resolve({ error: null })],
+      ["horarios", client.from("cita_horarios").insert(filasHorarios)],
+      ["configuracion", filasColumnas.length
+        ? client.from("cita_columnas_visibles").insert(filasColumnas)
+        : Promise.resolve({ error: null })]
+    ];
+    const resultados = await Promise.all(operaciones.map(([, operacion]) => operacion));
+    const erroresRelacionales = resultados
+      .map((resultado, index) => ({
+        nombre: operaciones[index][0],
+        error: resultado ? resultado.error : null
+      }))
+      .filter(item => item.error);
+
+    if (!erroresRelacionales.length) {
+      const { error: errorCompactar } = await client
+        .from("citas")
+        .update({ snapshot: { version: 11 } })
+        .eq("id", citaGuardada.id);
+
+      if (errorCompactar) {
+        console.warn("La cita se guardo, pero no se pudo compactar su snapshot.", errorCompactar.message);
+      }
+    } else {
+      erroresRelacionales.forEach(item => {
+        console.warn(`No se pudo guardar ${item.nombre} de la cita.`, item.error.message);
+      });
+      alert(`La cita se guardo con snapshot de respaldo. Faltaron estas relaciones: ${erroresRelacionales.map(item => item.nombre).join(", ")}.`);
+    }
+
     await cargarCitas();
     if (boton) {
-      boton.textContent = "Cita guardada";
+      boton.textContent = erroresRelacionales.length ? "Cita guardada con respaldo" : "Cita guardada";
       setTimeout(() => {
         boton.textContent = "Guardar como cita";
       }, 1800);
@@ -664,6 +1144,54 @@ function obtenerPaginasVisiblesCitas(totalPaginas) {
   return Array.from(paginas).sort((a, b) => a - b);
 }
 
+function sincronizarSeleccionCitas() {
+  const idsExistentes = new Set(citas.map(cita => String(cita.id)));
+  citasSeleccionadas.forEach(id => {
+    if (!idsExistentes.has(String(id))) citasSeleccionadas.delete(id);
+  });
+}
+
+function obtenerIdsCitasFiltradas() {
+  return obtenerCitasFiltradas()
+    .map(cita => cita.id)
+    .filter(id => id !== null && id !== undefined)
+    .map(id => String(id));
+}
+
+function actualizarControlesSeleccionCitas() {
+  sincronizarSeleccionCitas();
+
+  const seleccionarBtn = document.getElementById("citas_seleccionar_todo");
+  const eliminarBtn = document.getElementById("citas_eliminar");
+  const totalSeleccionadas = citasSeleccionadas.size;
+  const idsFiltradas = obtenerIdsCitasFiltradas();
+  const todasFiltradasSeleccionadas = idsFiltradas.length > 0 && idsFiltradas.every(id => citasSeleccionadas.has(id));
+
+  if (seleccionarBtn) {
+    seleccionarBtn.disabled = idsFiltradas.length === 0;
+    seleccionarBtn.textContent = todasFiltradasSeleccionadas ? "Quitar seleccion" : "Seleccionar todo";
+  }
+
+  if (eliminarBtn) {
+    eliminarBtn.disabled = totalSeleccionadas === 0;
+    eliminarBtn.textContent = totalSeleccionadas > 0 ? `Eliminar (${totalSeleccionadas})` : "Eliminar";
+  }
+}
+
+function alternarSeleccionTodasCitas() {
+  const idsFiltradas = obtenerIdsCitasFiltradas();
+  if (!idsFiltradas.length) return;
+
+  const todasFiltradasSeleccionadas = idsFiltradas.every(id => citasSeleccionadas.has(id));
+  if (todasFiltradasSeleccionadas) {
+    idsFiltradas.forEach(id => citasSeleccionadas.delete(id));
+  } else {
+    idsFiltradas.forEach(id => citasSeleccionadas.add(id));
+  }
+
+  renderCitasTabla();
+}
+
 function renderCitasPaginacion(totalFiltradas) {
   const contenedor = document.getElementById("citas_paginacion");
   if (!contenedor) return;
@@ -717,15 +1245,17 @@ function renderCitasTabla() {
   if (!tbody) return;
 
   if (!citas.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Sin citas guardadas.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Sin citas guardadas.</td></tr>';
     renderCitasPaginacion(0);
+    actualizarControlesSeleccionCitas();
     return;
   }
 
   const filtradas = obtenerCitasFiltradas();
   if (!filtradas.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Sin resultados para el filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Sin resultados para el filtro.</td></tr>';
     renderCitasPaginacion(0);
+    actualizarControlesSeleccionCitas();
     return;
   }
 
@@ -736,6 +1266,9 @@ function renderCitasTabla() {
 
   tbody.innerHTML = visibles.map(cita => `
     <tr class="cita-row" data-cita-id="${citaEscape(cita.id)}">
+      <td class="cita-selection-cell">
+        <input type="checkbox" class="form-check-input cita-row-check" value="${citaEscape(cita.id)}" aria-label="Seleccionar cita de ${citaEscape(cita.paciente_nombre || "paciente")}" ${citasSeleccionadas.has(String(cita.id)) ? "checked" : ""}>
+      </td>
       <td>${citaEscape(citaFormatearFecha(cita.fecha_cita))}</td>
       <td>${citaEscape(cita.paciente_nombre || "")}</td>
       <td>${citaEscape(cita.paciente_documento || "")}</td>
@@ -743,14 +1276,29 @@ function renderCitasTabla() {
     </tr>
   `).join("");
 
+  tbody.querySelectorAll(".cita-row-check").forEach(check => {
+    check.addEventListener("click", event => event.stopPropagation());
+    check.addEventListener("change", () => {
+      const id = String(check.value);
+      if (check.checked) {
+        citasSeleccionadas.add(id);
+      } else {
+        citasSeleccionadas.delete(id);
+      }
+      actualizarControlesSeleccionCitas();
+    });
+  });
+
   tbody.querySelectorAll(".cita-row").forEach(row => {
-    row.addEventListener("click", () => {
-      const cita = citas.find(item => item.id === row.dataset.citaId);
+    row.addEventListener("click", event => {
+      if (event.target.closest(".cita-selection-cell")) return;
+      const cita = citas.find(item => String(item.id) === row.dataset.citaId);
       if (cita) renderDetalleCita(cita);
     });
   });
 
   renderCitasPaginacion(filtradas.length);
+  actualizarControlesSeleccionCitas();
 }
 
 async function cargarCitas() {
@@ -760,24 +1308,73 @@ async function cargarCitas() {
   const { data: sessionData } = await client.auth.getSession();
   if (!sessionData.session) {
     citas = [];
+    citasSeleccionadas.clear();
     renderCitasTabla();
     return;
   }
 
-  const { data, error } = await client
+  let { data, error } = await client
     .from("citas")
-    .select("id,paciente_id,paciente_nombre,paciente_documento,fecha_cita,snapshot,created_at")
+    .select("id,user_id,paciente_id,fecha_cita,snapshot,created_at,pacientes(nombres,apellidos,documento,fecha_nacimiento,pais_nacimiento,sexo),cita_alimentos(alimento_id,alimento_nombre,tiempo,gramos,orden),cita_mediciones(*),cita_evaluaciones(*),cita_requerimientos(*),cita_macronutrientes(*),cita_horarios(*),cita_columnas_visibles(*)")
     .order("fecha_cita", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) {
     const detalle = document.getElementById("cita_detalle");
-    if (detalle) detalle.innerHTML = '<div class="alert alert-warning">No se pudieron cargar las citas. Ejecuta supabase-citas.sql en Supabase.</div>';
+    if (detalle) detalle.innerHTML = `<div class="alert alert-warning">No se pudieron cargar todos los datos relacionales de las citas: ${citaEscape(error.message)}</div>`;
     return;
   }
 
-  citas = data || [];
+  citas = (data || []).map(integrarDatosRelacionalesCita);
+  citasSeleccionadas.clear();
   renderCitasTabla();
+}
+
+async function eliminarCitasSeleccionadas() {
+  if (!citasSeleccionadas.size) return;
+
+  const confirmar = window.confirm("Está seguro?");
+  if (!confirmar) return;
+
+  const client = window.supabaseClient;
+  if (!client) {
+    alert("No hay conexion con Supabase.");
+    return;
+  }
+
+  const { data: sessionData } = await client.auth.getSession();
+  if (!sessionData.session) {
+    alert("Debes iniciar sesion para eliminar citas.");
+    return;
+  }
+
+  const ids = Array.from(citasSeleccionadas);
+  const eliminarBtn = document.getElementById("citas_eliminar");
+  if (eliminarBtn) {
+    eliminarBtn.disabled = true;
+    eliminarBtn.textContent = "Eliminando...";
+  }
+
+  try {
+    const { error } = await client
+      .from("citas")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      alert(`No se pudieron eliminar las citas: ${error.message}`);
+      return;
+    }
+
+    citasSeleccionadas.clear();
+    const detalle = document.getElementById("cita_detalle");
+    if (detalle) detalle.innerHTML = "";
+    await cargarCitas();
+  } catch (error) {
+    alert(`No se pudieron eliminar las citas: ${error.message}`);
+  } finally {
+    actualizarControlesSeleccionCitas();
+  }
 }
 
 function tablaObjetoNutricional(titulo, filas, snapshot) {
@@ -1121,6 +1718,8 @@ async function descargarPdfCitaGuardada(cita, boton) {
   if (!snapshot.paciente.documento) snapshot.paciente.documento = cita.paciente_documento || "";
   if (!snapshot.paciente.fecha_evaluacion) snapshot.paciente.fecha_evaluacion = cita.fecha_cita || "";
   snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
+  snapshot.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
+  snapshot.totales = hidratarTotalesCita(snapshot.totales, snapshot.alimentos_por_tiempo);
 
   const textoOriginal = boton ? boton.textContent : "";
   if (boton) {
@@ -1146,8 +1745,9 @@ function renderDetalleCita(cita) {
   const paciente = snapshot.paciente || {};
   const profesional = snapshot.profesional || {};
   const imc = obtenerImcDesdeSnapshot(snapshot);
-  const totales = snapshot.totales || {};
   const horasComida = snapshot.horas_comida || {};
+  const alimentosPorTiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
+  const totales = hidratarTotalesCita(snapshot.totales, alimentosPorTiempo);
   const filasTotales = [];
 
   obtenerTiemposCita().forEach(tiempo => {
@@ -1205,7 +1805,7 @@ function renderDetalleCita(cita) {
 
     <div class="card p-3 cita-detail-section">
       <h5>Alimentos seleccionados</h5>
-      ${renderTablaAlimentos(snapshot.alimentos_por_tiempo, horasComida, snapshot)}
+      ${renderTablaAlimentos(alimentosPorTiempo, horasComida, snapshot)}
     </div>
 
     <div class="card p-3 cita-detail-section">
@@ -1227,14 +1827,19 @@ function configurarCitas() {
   const fechaDesde = document.getElementById("citas_fecha_desde");
   const fechaHasta = document.getElementById("citas_fecha_hasta");
   const limpiarBtn = document.getElementById("citas_limpiar");
+  const seleccionarTodoBtn = document.getElementById("citas_seleccionar_todo");
+  const eliminarBtn = document.getElementById("citas_eliminar");
 
   const actualizarFiltrosCitas = () => {
     paginaCitasActual = 1;
+    citasSeleccionadas.clear();
     renderCitasTabla();
   };
 
   if (guardarBtn) guardarBtn.addEventListener("click", guardarCita);
   if (recargarBtn) recargarBtn.addEventListener("click", cargarCitas);
+  if (seleccionarTodoBtn) seleccionarTodoBtn.addEventListener("click", alternarSeleccionTodasCitas);
+  if (eliminarBtn) eliminarBtn.addEventListener("click", eliminarCitasSeleccionadas);
   if (filtro) {
     filtro.addEventListener("input", event => {
       filtroCitas = event.target.value;
@@ -1259,6 +1864,7 @@ function configurarCitas() {
       filtroCitasFechaDesde = "";
       filtroCitasFechaHasta = "";
       paginaCitasActual = 1;
+      citasSeleccionadas.clear();
       if (filtro) filtro.value = "";
       if (fechaDesde) fechaDesde.value = "";
       if (fechaHasta) fechaHasta.value = "";

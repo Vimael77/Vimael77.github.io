@@ -223,22 +223,27 @@
                   </div>
                   <div class="card p-3 mb-3">
                     <div class="row g-3">
-                      <div class="col-md-12">
-                        <label class="form-label" for="calc_paciente_busqueda">Paciente registrado</label>
+                      <div class="col-md-12 patient-search-control" id="calc_paciente_control">
+                        <label class="form-label" for="calc_paciente_busqueda">Buscar paciente</label>
                         <input type="search" id="calc_paciente_busqueda" class="form-control"
-                          list="calc_pacientes_lista" placeholder="Buscar por nombres, apellidos o cedula/pasaporte"
-                          autocomplete="off">
-                        <datalist id="calc_pacientes_lista"></datalist>
+                          placeholder="Buscar por nombres, apellidos o cedula/pasaporte" autocomplete="off"
+                          aria-controls="calc_paciente_selector" aria-expanded="false">
+                        <select id="calc_paciente_selector" class="form-select patient-results-select"
+                          aria-label="Resultados de pacientes" hidden>
+                          <option value="" disabled>No hay pacientes registrados</option>
+                        </select>
                         <input type="hidden" id="calc_paciente_id">
                         <div id="calc_paciente_detalle" class="form-text"></div>
                       </div>
                       <div class="col-md-5">
-                        <label class="form-label">Nombre (Opcional)</label>
-                        <input type="text" id="calc_nombre" class="form-control" placeholder="Ej. Juan Pérez">
+                        <label class="form-label" for="calc_nombre">Nombre</label>
+                        <input type="text" id="calc_nombre" class="form-control patient-derived-field" readonly
+                          aria-readonly="true">
                       </div>
                       <div class="col-md-4">
-                        <label class="form-label">Cédula / Pasaporte</label>
-                        <input type="text" id="calc_id" class="form-control" placeholder="Ej. 123456789">
+                        <label class="form-label" for="calc_id">Cédula / Pasaporte</label>
+                        <input type="text" id="calc_id" class="form-control patient-derived-field" readonly
+                          aria-readonly="true">
                       </div>
                       <div class="col-md-3">
                         <label class="form-label">Fecha de Evaluación</label>
@@ -253,12 +258,15 @@
                         <input type="number" id="calc_estatura" class="form-control" min="1" step="0.1" value="170">
                       </div>
                       <div class="col-md-2 mt-3">
-                        <label class="form-label">Edad (años)</label>
-                        <input type="number" id="calc_edad" class="form-control" min="1" value="30">
+                        <label class="form-label" for="calc_edad">Edad (años)</label>
+                        <input type="number" id="calc_edad" class="form-control patient-derived-field" min="0"
+                          readonly aria-readonly="true">
                       </div>
                       <div class="col-md-2 mt-3">
-                        <label class="form-label">Género</label>
-                        <select id="calc_genero" class="form-select" style="height: 38px;">
+                        <label class="form-label" for="calc_genero">Género</label>
+                        <select id="calc_genero" class="form-select patient-derived-field" style="height: 38px;"
+                          disabled aria-disabled="true">
+                          <option value="">Seleccione un paciente</option>
                           <option value="M">Masculino</option>
                           <option value="F">Femenino</option>
                         </select>
@@ -1002,6 +1010,8 @@
                       <label for="citas_fecha_hasta">Fecha hasta</label>
                       <input type="date" id="citas_fecha_hasta" class="form-control form-control-sm">
                     </div>
+                    <button type="button" id="citas_seleccionar_todo" class="btn btn-outline-secondary btn-sm">Seleccionar todo</button>
+                    <button type="button" id="citas_eliminar" class="btn btn-outline-danger btn-sm" disabled>Eliminar</button>
                     <button type="button" id="citas_limpiar" class="btn btn-outline-secondary btn-sm">Limpiar</button>
                     <button type="button" id="citas_recargar" class="btn btn-outline-secondary btn-sm">Recargar</button>
                   </div>
@@ -1010,6 +1020,7 @@
                   <table class="table table-sm table-striped mb-0">
                     <thead>
                       <tr>
+                        <th class="cita-selection-heading" aria-label="Seleccionar citas"></th>
                         <th>Fecha</th>
                         <th>Paciente</th>
                         <th>C&eacute;dula/Pasaporte</th>
@@ -1018,7 +1029,7 @@
                     </thead>
                     <tbody id="citas_tbody">
                       <tr>
-                        <td colspan="4" class="text-muted">Sin citas guardadas.</td>
+                        <td colspan="5" class="text-muted">Sin citas guardadas.</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1293,7 +1304,6 @@
   <script src="citas.js"></script>
   <script src="pdf-assets.js"></script>
   <script src="script.js"></script>
-  <script src="alimentos.js"></script>
   <script src="recetas.js"></script>
   <script src="generador.js"></script>
 
