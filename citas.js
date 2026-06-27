@@ -39,6 +39,15 @@ const CAMPOS_MEDIDAS_CITA = [
   ["pantorrilla_derecha", "Pantorrilla derecha"]
 ];
 
+const COLUMNAS_HORARIOS_CITA = [
+  ["Desayuno", "hora_desayuno"],
+  ["Media Ma\u00f1ana", "hora_media_manana"],
+  ["Almuerzo", "hora_almuerzo"],
+  ["Media Tarde", "hora_media_tarde"],
+  ["Merienda", "hora_merienda"],
+  ["Cena", "hora_cena"]
+];
+
 function obtenerTiemposCita() {
   if (typeof tiemposComida !== "undefined" && Array.isArray(tiemposComida)) {
     return tiemposComida;
@@ -421,16 +430,10 @@ function citaNumeroOpcional(value, decimales = 2) {
   return Number(numero.toFixed(decimales));
 }
 
-function citaJsonObjeto(value) {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value;
-  if (typeof value !== "string" || !value.trim()) return {};
-
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-  } catch (_error) {
-    return {};
-  }
+function citaEnteroOpcional(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const numero = parseInt(String(value), 10);
+  return Number.isFinite(numero) ? numero : null;
 }
 
 function citaJsonArray(value) {
@@ -455,33 +458,47 @@ function obtenerNombreCompletoPacienteCita(paciente) {
   return `${paciente.nombres || ""} ${paciente.apellidos || ""}`.trim();
 }
 
-function normalizarAlimentosTablaUnicaCita(value) {
-  const datos = citaJsonObjeto(value);
+function normalizarAlimentosRelacionalesCita(value) {
+  const datos = Array.isArray(value) ? value : [];
   const salida = {};
   obtenerTiemposCita().forEach(tiempo => {
     salida[tiempo] = [];
   });
 
-  Object.keys(datos).forEach(tiempo => {
-    const destino = Object.prototype.hasOwnProperty.call(salida, tiempo) ? tiempo : tiempo || "Desayuno";
-    const items = Array.isArray(datos[tiempo]) ? datos[tiempo] : [];
-    if (!Object.prototype.hasOwnProperty.call(salida, destino)) salida[destino] = [];
-    salida[destino] = items.map(item => ({
-      alimento_id: item ? item.alimento_id || item.id || null : null,
-      nombre: item ? item.nombre || item.alimento_nombre || "" : "",
-      gramos: citaNumero(item ? item.gramos : 0)
-    }));
-  });
+  datos
+    .slice()
+    .sort((a, b) => {
+      const tiempoA = String(a && a.tiempo ? a.tiempo : "");
+      const tiempoB = String(b && b.tiempo ? b.tiempo : "");
+      if (tiempoA !== tiempoB) return tiempoA.localeCompare(tiempoB);
+      return citaNumero(a && a.orden) - citaNumero(b && b.orden);
+    })
+    .forEach(item => {
+      const tiempo = item && item.tiempo ? item.tiempo : "Desayuno";
+      const destino = Object.prototype.hasOwnProperty.call(salida, tiempo) ? tiempo : tiempo || "Desayuno";
+      if (!Object.prototype.hasOwnProperty.call(salida, destino)) salida[destino] = [];
+      salida[destino].push({
+        alimento_id: item ? item.alimento_id || item.id || null : null,
+        nombre: item ? item.alimento_nombre || item.nombre || "" : "",
+        gramos: citaNumero(item ? item.gramos : 0)
+      });
+    });
 
   return salida;
 }
 
-function normalizarHorariosTablaUnicaCita(value) {
-  const datos = citaJsonObjeto(value);
+function normalizarHorariosTablaUnicaCita(cita) {
   const salida = {};
-  obtenerTiemposCita().forEach(tiempo => {
-    salida[tiempo] = datos[tiempo] ? String(datos[tiempo]).slice(0, 5) : "";
+
+  COLUMNAS_HORARIOS_CITA.forEach(([tiempo, columna]) => {
+    const valor = cita && cita[columna] ? String(cita[columna]).slice(0, 5) : "";
+    salida[tiempo] = valor;
   });
+
+  obtenerTiemposCita().forEach(tiempo => {
+    if (!Object.prototype.hasOwnProperty.call(salida, tiempo)) salida[tiempo] = "";
+  });
+
   return salida;
 }
 
@@ -502,14 +519,36 @@ function formatearMacroTablaUnicaCita(value, unidad) {
   return unidad === "%" ? `${numero}%` : `${numero} ${unidad}`;
 }
 
-function normalizarMacronutrientesTablaUnicaCita(value) {
-  return citaJsonArray(value).map(item => ({
-    macronutriente: item ? item.macronutriente || "" : "",
-    porcentaje: formatearMacroTablaUnicaCita(item ? item.porcentaje : "", "%"),
-    kcal: formatearMacroTablaUnicaCita(item ? item.kcal : "", "kcal"),
-    gramos: formatearMacroTablaUnicaCita(item ? item.gramos : "", "g"),
-    gkg: formatearMacroTablaUnicaCita(item ? item.gkg : "", "g/kg")
-  }));
+function normalizarMacronutrientesTablaUnicaCita(cita) {
+  const energia = citaNumeroOpcional(cita ? cita.req_energia_calculada : null, 4);
+  const pesoReferencia = citaNumeroOpcional(cita ? cita.peso_ideal || cita.peso : null, 4);
+  const proteinaPorcentaje = citaNumeroOpcional(cita ? cita.macro_proteina_porcentaje : null, 4);
+  const grasaPorcentaje = citaNumeroOpcional(cita ? cita.macro_grasa_porcentaje : null, 4);
+  const carbohidratosPorcentaje = proteinaPorcentaje !== null && grasaPorcentaje !== null
+    ? Math.max(0, 100 - proteinaPorcentaje - grasaPorcentaje)
+    : null;
+
+  const crearMacro = (macronutriente, porcentaje, kcalPorGramo) => {
+    const kcal = energia !== null && porcentaje !== null ? citaNumeroOpcional((energia * porcentaje) / 100, 4) : null;
+    const gramos = kcal !== null ? citaNumeroOpcional(kcal / kcalPorGramo, 4) : null;
+    const gkg = gramos !== null && pesoReferencia !== null && pesoReferencia > 0
+      ? citaNumeroOpcional(gramos / pesoReferencia, 4)
+      : null;
+
+    return {
+      macronutriente,
+      porcentaje: porcentaje === null ? "" : formatearMacroTablaUnicaCita(porcentaje, "%"),
+      kcal: kcal === null ? "" : formatearMacroTablaUnicaCita(kcal, "kcal"),
+      gramos: gramos === null ? "" : formatearMacroTablaUnicaCita(gramos, "g"),
+      gkg: gkg === null ? "" : formatearMacroTablaUnicaCita(gkg, "g/kg")
+    };
+  };
+
+  return [
+    crearMacro("Proteinas", proteinaPorcentaje, 4),
+    crearMacro("Grasas", grasaPorcentaje, 9),
+    crearMacro("Carbohidratos", carbohidratosPorcentaje, 4)
+  ];
 }
 
 function obtenerRequerimientoTablaUnicaCita(cita) {
@@ -530,10 +569,18 @@ function obtenerFilaCitaTablaUnica(datos) {
   const requerimiento = datos && datos.totales && datos.totales.requerimiento
     ? datos.totales.requerimiento
     : {};
+  const macronutrientes = Array.isArray(datos.macronutrientes) ? datos.macronutrientes : [];
+  const macronutrientesPorNombre = new Map(macronutrientes.map(item => [
+    citaNormalizar(item && item.macronutriente),
+    item || {}
+  ]));
+  const horasComida = datos.horas_comida && typeof datos.horas_comida === "object"
+    ? datos.horas_comida
+    : {};
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-    cita_schema_version: 12,
+    cita_schema_version: 14,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -555,25 +602,55 @@ function obtenerFilaCitaTablaUnica(datos) {
     pantorrilla_izquierda: citaNumeroOpcional(medidas.pantorrilla_izquierda),
     pantorrilla_derecha: citaNumeroOpcional(medidas.pantorrilla_derecha),
     observaciones: String(medidas.observaciones || "").trim(),
-    alimentos_por_tiempo: datos.alimentos_por_tiempo || {},
-    macronutrientes: (Array.isArray(datos.macronutrientes) ? datos.macronutrientes : []).map(item => ({
-      macronutriente: item.macronutriente || "",
-      porcentaje: citaNumeroOpcional(item.porcentaje, 4),
-      kcal: citaNumeroOpcional(item.kcal, 4),
-      gramos: citaNumeroOpcional(item.gramos, 4),
-      gkg: citaNumeroOpcional(item.gkg, 4)
-    })),
-    horas_comida: datos.horas_comida || {},
     columnas_alimentos_visibles: datos.configuracion && Array.isArray(datos.configuracion.columnas_alimentos_visibles)
       ? datos.configuracion.columnas_alimentos_visibles
       : []
   };
+
+  const macroProteina = macronutrientesPorNombre.get(citaNormalizar("Proteinas")) || {};
+  const macroGrasa = macronutrientesPorNombre.get(citaNormalizar("Grasas")) || {};
+  fila.macro_proteina_porcentaje = citaNumeroOpcional(macroProteina.porcentaje, 4);
+  fila.macro_grasa_porcentaje = citaNumeroOpcional(macroGrasa.porcentaje, 4);
+
+  COLUMNAS_HORARIOS_CITA.forEach(([tiempo, columna]) => {
+    const hora = horasComida[tiempo] ? String(horasComida[tiempo]).slice(0, 5) : "";
+    fila[columna] = hora || null;
+  });
 
   CAMPOS_NUTRIENTES.forEach(([campo]) => {
     fila[`req_${campo}`] = citaNumeroOpcional(requerimiento[campo], 4);
   });
 
   return fila;
+}
+
+function obtenerFilasAlimentosRelacionalesCita(citaId, alimentosPorTiempo) {
+  const filas = [];
+  const datos = alimentosPorTiempo && typeof alimentosPorTiempo === "object"
+    ? alimentosPorTiempo
+    : {};
+
+  obtenerTiemposCita().forEach(tiempo => {
+    const items = Array.isArray(datos[tiempo]) ? datos[tiempo] : [];
+    items.forEach((item, index) => {
+      if (!item) return;
+      const nombre = String(item.nombre || item.alimento_nombre || "").trim();
+      const alimentoId = citaEnteroOpcional(item.alimento_id || item.id);
+      const gramos = citaNumeroOpcional(item.gramos, 4) || 0;
+      if (!nombre && alimentoId === null && gramos <= 0) return;
+
+      filas.push({
+        cita_id: citaId,
+        alimento_id: alimentoId,
+        alimento_nombre: nombre || "Alimento sin nombre",
+        tiempo,
+        gramos,
+        orden: index + 1
+      });
+    });
+  });
+
+  return filas;
 }
 
 function integrarDatosTablaUnicaCita(cita) {
@@ -639,9 +716,9 @@ function integrarDatosTablaUnicaCita(cita) {
     configuracion: {
       columnas_alimentos_visibles: normalizarColumnasTablaUnicaCita(cita.columnas_alimentos_visibles)
     },
-    macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita.macronutrientes),
-    horas_comida: normalizarHorariosTablaUnicaCita(cita.horas_comida),
-    alimentos_por_tiempo: normalizarAlimentosTablaUnicaCita(cita.alimentos_por_tiempo),
+    macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita),
+    horas_comida: normalizarHorariosTablaUnicaCita(cita),
+    alimentos_por_tiempo: normalizarAlimentosRelacionalesCita(cita.cita_alimentos),
     totales: {
       requerimiento: obtenerRequerimientoTablaUnicaCita(cita)
     }
@@ -808,7 +885,7 @@ function obtenerDatosCita() {
   };
 
   return {
-    version: 11,
+    version: 14,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
@@ -921,6 +998,22 @@ async function guardarCita() {
     if (!citaGuardada || citaGuardada.id === null || citaGuardada.id === undefined) {
       alert("La cita se guardo, pero Supabase no devolvio su identificador.");
       return;
+    }
+
+    const filasAlimentos = obtenerFilasAlimentosRelacionalesCita(citaGuardada.id, datos.alimentos_por_tiempo);
+    if (filasAlimentos.length) {
+      const { error: alimentosError } = await client
+        .from("cita_alimentos")
+        .insert(filasAlimentos);
+
+      if (alimentosError) {
+        await client
+          .from("citas")
+          .delete()
+          .eq("id", citaGuardada.id);
+        alert(`No se pudieron guardar los alimentos de la cita: ${alimentosError.message}`);
+        return;
+      }
     }
 
     await cargarCitas();
@@ -1157,19 +1250,64 @@ async function cargarCitas() {
     return;
   }
 
+  const columnasCitas = [
+    "id", "user_id", "paciente_id", "fecha_cita", "created_at", "cita_schema_version",
+    "actividad", "actividad_texto", "profesional_user_id", "profesional_email",
+    "profesional_nombre", "profesional_usuario", "profesional_telefono",
+    "peso", "peso_ideal", "estatura_cm", "imc", "clasificacion_imc",
+    "brazo_izquierdo", "brazo_derecho", "abdomen", "abdomen_bajo",
+    "muslo_izquierdo", "muslo_derecho", "pantorrilla_izquierda", "pantorrilla_derecha",
+    "observaciones", "req_energia_calculada", "req_proteina", "req_grasa_total",
+    "req_carbohidratos", "req_fibra", "req_ags", "req_agm", "req_agpi",
+    "req_colesterol", "req_calcio", "req_fosforo", "req_hierro", "req_potasio",
+    "req_sodio", "req_zinc", "req_vitamina_c", "req_vitamina_a", "req_folatos",
+    "req_vitamina_b12", "macro_proteina_porcentaje", "macro_grasa_porcentaje",
+    "hora_desayuno", "hora_media_manana", "hora_almuerzo", "hora_media_tarde",
+    "hora_merienda", "hora_cena", "columnas_alimentos_visibles"
+  ].join(",");
+
   let { data, error } = await client
     .from("citas")
-    .select("id,user_id,paciente_id,fecha_cita,created_at,cita_schema_version,actividad,actividad_texto,profesional_user_id,profesional_email,profesional_nombre,profesional_usuario,profesional_telefono,peso,peso_ideal,estatura_cm,imc,clasificacion_imc,brazo_izquierdo,brazo_derecho,abdomen,abdomen_bajo,muslo_izquierdo,muslo_derecho,pantorrilla_izquierda,pantorrilla_derecha,observaciones,req_energia_calculada,req_proteina,req_grasa_total,req_carbohidratos,req_fibra,req_ags,req_agm,req_agpi,req_colesterol,req_calcio,req_fosforo,req_hierro,req_potasio,req_sodio,req_zinc,req_vitamina_c,req_vitamina_a,req_folatos,req_vitamina_b12,alimentos_por_tiempo,macronutrientes,horas_comida,columnas_alimentos_visibles")
+    .select(columnasCitas)
     .order("fecha_cita", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) {
     const detalle = document.getElementById("cita_detalle");
-    if (detalle) detalle.innerHTML = `<div class="alert alert-warning">No se pudieron cargar las citas desde la tabla unificada. Ejecuta supabase-citas-tabla-unica.sql y recarga la pagina. Detalle: ${citaEscape(error.message)}</div>`;
+    if (detalle) detalle.innerHTML = `<div class="alert alert-warning">No se pudieron cargar las citas. Ejecuta el SQL del modelo recomendado y recarga la pagina. Detalle: ${citaEscape(error.message)}</div>`;
     return;
   }
 
-  citas = (data || []).map(integrarDatosTablaUnicaCita);
+  const idsCitas = (data || [])
+    .map(cita => cita.id)
+    .filter(id => id !== null && id !== undefined);
+  const alimentosPorCita = new Map();
+
+  if (idsCitas.length) {
+    const { data: alimentosData, error: alimentosError } = await client
+      .from("cita_alimentos")
+      .select("cita_id,alimento_id,alimento_nombre,tiempo,gramos,orden")
+      .in("cita_id", idsCitas)
+      .order("cita_id", { ascending: true })
+      .order("tiempo", { ascending: true })
+      .order("orden", { ascending: true });
+
+    if (alimentosError) {
+      const detalle = document.getElementById("cita_detalle");
+      if (detalle) detalle.innerHTML = `<div class="alert alert-warning">Las citas cargaron, pero no se pudieron cargar sus alimentos. Detalle: ${citaEscape(alimentosError.message)}</div>`;
+    } else {
+      (alimentosData || []).forEach(item => {
+        const key = String(item.cita_id);
+        if (!alimentosPorCita.has(key)) alimentosPorCita.set(key, []);
+        alimentosPorCita.get(key).push(item);
+      });
+    }
+  }
+
+  citas = (data || []).map(cita => integrarDatosTablaUnicaCita({
+    ...cita,
+    cita_alimentos: alimentosPorCita.get(String(cita.id)) || []
+  }));
   citasSeleccionadas.clear();
   renderCitasTabla();
 }

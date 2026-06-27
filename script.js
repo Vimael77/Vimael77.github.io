@@ -3339,12 +3339,14 @@ function generarPDFResumenAnterior() {
 
 async function generarPDFHtmlAnterior() {
   try {
-    if (typeof obtenerSnapshotCita !== "function") {
+    const snapshot = typeof obtenerDatosActualesParaPdf === "function"
+      ? obtenerDatosActualesParaPdf()
+      : null;
+
+    if (!snapshot) {
       alert("No se pudo preparar la informacion de la cita para el PDF.");
       return;
     }
-
-    const snapshot = obtenerSnapshotCita();
 
     if (typeof hidratarAlimentosPorTiempoCita === "function") {
       snapshot.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
@@ -3386,9 +3388,21 @@ async function generarPDFHtmlAnterior() {
   }
 }
 
+function obtenerDatosActualesParaPdf() {
+  if (typeof obtenerDatosCita === "function") {
+    return obtenerDatosCita();
+  }
+
+  if (typeof obtenerSnapshotCita === "function") {
+    return obtenerSnapshotCita();
+  }
+
+  return null;
+}
+
 async function generarPDF(snapshotEntrada = null, opciones = {}) {
   try {
-    if (!snapshotEntrada && typeof obtenerSnapshotCita !== "function") {
+    if (!snapshotEntrada && typeof obtenerDatosActualesParaPdf !== "function") {
       alert("No se pudo preparar la informacion de la cita para el PDF.");
       return;
     }
@@ -3401,9 +3415,16 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
 
     const snapshot = snapshotEntrada
       ? JSON.parse(JSON.stringify(snapshotEntrada))
-      : obtenerSnapshotCita();
+      : obtenerDatosActualesParaPdf();
 
-    if ((!snapshot.imc || !snapshot.imc.valido) && typeof obtenerImcDesdeSnapshot === "function") {
+    if (!snapshot) {
+      alert("No se pudo preparar la informacion de la cita para el PDF.");
+      return;
+    }
+
+    if ((!snapshot.imc || !snapshot.imc.valido) && typeof obtenerImcDesdeDatosCita === "function") {
+      snapshot.imc = obtenerImcDesdeDatosCita(snapshot);
+    } else if ((!snapshot.imc || !snapshot.imc.valido) && typeof obtenerImcDesdeSnapshot === "function") {
       snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
     }
 
