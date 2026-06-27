@@ -159,12 +159,12 @@ function obtenerColumnasVisiblesCita() {
   return [];
 }
 
-function obtenerCamposNutrientesVisiblesCita(snapshot) {
+function obtenerCamposNutrientesVisiblesCita(datos) {
   const camposFijos = new Set(["energia_calculada", "proteina", "grasa_total", "carbohidratos"]);
-  const columnasGuardadas = snapshot
-    && snapshot.configuracion
-    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
-    ? new Set(snapshot.configuracion.columnas_alimentos_visibles)
+  const columnasGuardadas = datos
+    && datos.configuracion
+    && Array.isArray(datos.configuracion.columnas_alimentos_visibles)
+    ? new Set(datos.configuracion.columnas_alimentos_visibles)
     : null;
 
   return CAMPOS_NUTRIENTES.filter(([campo]) => {
@@ -201,10 +201,10 @@ function obtenerImcCita() {
   };
 }
 
-function obtenerImcDesdeSnapshot(snapshot) {
-  if (snapshot && snapshot.imc && snapshot.imc.valido) return snapshot.imc;
+function obtenerImcDesdeDatosCita(datos) {
+  if (datos && datos.imc && datos.imc.valido) return datos.imc;
 
-  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+  const paciente = datos && datos.paciente ? datos.paciente : {};
   const peso = citaNumero(paciente.peso);
   const estaturaCm = citaNumero(paciente.estatura);
   const estaturaM = estaturaCm > 3 ? estaturaCm / 100 : estaturaCm;
@@ -390,87 +390,6 @@ function obtenerAlimentosPorTiempoCita() {
   return porTiempo;
 }
 
-function clonarDatosCita(datos) {
-  try {
-    return JSON.parse(JSON.stringify(datos || {}));
-  } catch (_error) {
-    return datos && typeof datos === "object" ? { ...datos } : {};
-  }
-}
-
-function obtenerFilasAlimentosRelacionalesCita(alimentosPorTiempo, citaId) {
-  const filas = [];
-  const alimentos = alimentosPorTiempo && typeof alimentosPorTiempo === "object"
-    ? alimentosPorTiempo
-    : {};
-
-  obtenerTiemposCita().forEach(tiempo => {
-    const items = Array.isArray(alimentos[tiempo]) ? alimentos[tiempo] : [];
-    items.forEach((item, index) => {
-      if (!item) return;
-      filas.push({
-        cita_id: citaId,
-        alimento_id: item.alimento_id || item.id || null,
-        alimento_nombre: item.nombre || "",
-        tiempo,
-        gramos: citaNumero(item.gramos),
-        orden: index + 1
-      });
-    });
-  });
-
-  return filas;
-}
-
-function agruparAlimentosRelacionalesCita(filas) {
-  const porTiempo = {};
-  obtenerTiemposCita().forEach(tiempo => {
-    porTiempo[tiempo] = [];
-  });
-
-  (Array.isArray(filas) ? filas : [])
-    .slice()
-    .sort((a, b) => {
-      const tiempoA = obtenerTiemposCita().indexOf(a.tiempo);
-      const tiempoB = obtenerTiemposCita().indexOf(b.tiempo);
-      if (tiempoA !== tiempoB) return tiempoA - tiempoB;
-      return citaNumero(a.orden) - citaNumero(b.orden);
-    })
-    .forEach(item => {
-      const tiempo = porTiempo[item.tiempo] ? item.tiempo : "Desayuno";
-      porTiempo[tiempo].push({
-        alimento_id: item.alimento_id || null,
-        nombre: item.alimento_nombre || "",
-        gramos: citaNumero(item.gramos)
-      });
-    });
-
-  return porTiempo;
-}
-
-function contarAlimentosSnapshotCita(snapshot) {
-  const alimentos = snapshot && snapshot.alimentos_por_tiempo;
-  if (!alimentos || typeof alimentos !== "object") return 0;
-  return Object.values(alimentos).reduce((total, items) => {
-    return total + (Array.isArray(items) ? items.length : 0);
-  }, 0);
-}
-
-function obtenerMedicionRelacionalCita(cita) {
-  return obtenerRelacionUnoCita(cita, "cita_mediciones");
-}
-
-function obtenerRelacionUnoCita(cita, nombre) {
-  const relacion = cita ? cita[nombre] : null;
-  if (Array.isArray(relacion)) return relacion[0] || null;
-  return relacion && typeof relacion === "object" ? relacion : null;
-}
-
-function obtenerRelacionListaCita(cita, nombre) {
-  const relacion = cita ? cita[nombre] : null;
-  return Array.isArray(relacion) ? relacion : [];
-}
-
 function calcularEdadEnFechaCita(fechaNacimiento, fechaEvaluacion) {
   if (!fechaNacimiento || !fechaEvaluacion) return "";
   const nacimiento = new Date(`${String(fechaNacimiento).slice(0, 10)}T00:00:00`);
@@ -490,168 +409,9 @@ function obtenerGeneroDesdeSexoCita(sexo) {
   return "";
 }
 
-function integrarContextoRelacionalCita(snapshot, cita) {
-  const evaluacion = obtenerRelacionUnoCita(cita, "cita_evaluaciones");
-  const paciente = obtenerRelacionUnoCita(cita, "pacientes");
-  if (!evaluacion || !paciente) return snapshot;
-  const nombreCompleto = `${paciente.nombres || ""} ${paciente.apellidos || ""}`.trim();
-  const genero = obtenerGeneroDesdeSexoCita(paciente.sexo);
-
-  snapshot.paciente = {
-    ...(snapshot.paciente || {}),
-    paciente_id: cita.paciente_id || null,
-    nombre: nombreCompleto,
-    nombres: paciente.nombres || "",
-    apellidos: paciente.apellidos || "",
-    documento: paciente.documento || "",
-    fecha_nacimiento: paciente.fecha_nacimiento || "",
-    pais_nacimiento: paciente.pais_nacimiento || "",
-    sexo: paciente.sexo || "",
-    fecha_evaluacion: cita.fecha_cita || "",
-    edad: calcularEdadEnFechaCita(paciente.fecha_nacimiento, cita.fecha_cita),
-    genero,
-    genero_texto: paciente.sexo || "",
-    actividad: evaluacion.actividad ?? "",
-    actividad_texto: evaluacion.actividad_texto || ""
-  };
-  snapshot.profesional = {
-    user_id: evaluacion.profesional_user_id || cita.user_id || "",
-    email: evaluacion.profesional_email || "",
-    nombre: evaluacion.profesional_nombre || "",
-    usuario: evaluacion.profesional_usuario || "",
-    telefono: evaluacion.profesional_telefono || ""
-  };
-  snapshot.guardado_en = cita.created_at || "";
-  return snapshot;
-}
-
-function integrarMedicionesRelacionalesCita(snapshot, cita) {
-  const medicion = obtenerMedicionRelacionalCita(cita);
-  if (!medicion) return snapshot;
-
-  snapshot.paciente = snapshot.paciente && typeof snapshot.paciente === "object"
-    ? snapshot.paciente
-    : {};
-
-  snapshot.paciente.peso = medicion.peso;
-  snapshot.paciente.peso_ideal = medicion.peso_ideal;
-  snapshot.paciente.estatura = medicion.estatura_cm;
-  snapshot.paciente.medidas_antropometricas = {
-    brazo_izquierdo: medicion.brazo_izquierdo,
-    brazo_derecho: medicion.brazo_derecho,
-    abdomen: medicion.abdomen,
-    abdomen_bajo: medicion.abdomen_bajo,
-    muslo_izquierdo: medicion.muslo_izquierdo,
-    muslo_derecho: medicion.muslo_derecho,
-    pantorrilla_izquierda: medicion.pantorrilla_izquierda,
-    pantorrilla_derecha: medicion.pantorrilla_derecha,
-    observaciones: medicion.observaciones || ""
-  };
-
-  const valorImc = citaNumeroOpcional(medicion.imc, 4);
-  const estaturaCm = citaNumeroOpcional(medicion.estatura_cm);
-  snapshot.imc = {
-    valido: valorImc !== null && valorImc > 0,
-    peso: citaNumeroOpcional(medicion.peso),
-    estatura_cm: estaturaCm,
-    estatura_m: estaturaCm !== null ? citaNumeroOpcional(estaturaCm / 100, 4) : null,
-    valor: valorImc,
-    clasificacion: medicion.clasificacion_imc || ""
-  };
-
-  return snapshot;
-}
-
-function integrarRequerimientosRelacionalesCita(snapshot, cita) {
-  const requerimientos = obtenerRelacionUnoCita(cita, "cita_requerimientos");
-  if (!requerimientos) return snapshot;
-
-  const requerimiento = {};
-  CAMPOS_NUTRIENTES.forEach(([campo]) => {
-    requerimiento[campo] = citaNumero(requerimientos[campo]);
-  });
-  snapshot.totales = { requerimiento };
-  return snapshot;
-}
-
 function formatearNumeroMacroCita(value, decimales = 2) {
   const numero = citaNumeroOpcional(value, decimales);
   return numero === null ? "" : numero.toFixed(decimales);
-}
-
-function integrarMacronutrientesRelacionalesCita(snapshot, cita) {
-  const macros = obtenerRelacionListaCita(cita, "cita_macronutrientes");
-  if (!macros.length) return snapshot;
-
-  snapshot.macronutrientes = macros
-    .slice()
-    .sort((a, b) => citaNumero(a.orden) - citaNumero(b.orden))
-    .map(item => ({
-      macronutriente: item.macronutriente || "",
-      porcentaje: `${formatearNumeroMacroCita(item.porcentaje)}%`,
-      kcal: `${formatearNumeroMacroCita(item.kcal)} kcal`,
-      gramos: `${formatearNumeroMacroCita(item.gramos)} g`,
-      gkg: `${formatearNumeroMacroCita(item.gkg)} g/kg`
-    }));
-  return snapshot;
-}
-
-function integrarHorariosRelacionalesCita(snapshot, cita) {
-  const horas = {};
-  obtenerTiemposCita().forEach(tiempo => {
-    horas[tiempo] = "";
-  });
-
-  obtenerRelacionListaCita(cita, "cita_horarios").forEach(item => {
-    if (!Object.prototype.hasOwnProperty.call(horas, item.tiempo)) return;
-    horas[item.tiempo] = item.hora ? String(item.hora).slice(0, 5) : "";
-  });
-  snapshot.horas_comida = horas;
-  return snapshot;
-}
-
-function integrarColumnasRelacionalesCita(snapshot, cita) {
-  const columnas = obtenerRelacionListaCita(cita, "cita_columnas_visibles")
-    .slice()
-    .sort((a, b) => citaNumero(a.orden) - citaNumero(b.orden))
-    .map(item => item.columna)
-    .filter(Boolean);
-  snapshot.configuracion = { columnas_alimentos_visibles: columnas };
-  return snapshot;
-}
-
-function integrarDatosRelacionalesCita(cita) {
-  const resultado = { ...cita };
-  const tieneNucleoRelacional = Boolean(
-    obtenerRelacionUnoCita(cita, "pacientes")
-    &&
-    obtenerRelacionUnoCita(cita, "cita_evaluaciones")
-    && obtenerRelacionUnoCita(cita, "cita_mediciones")
-    && obtenerRelacionUnoCita(cita, "cita_requerimientos")
-    && obtenerRelacionListaCita(cita, "cita_macronutrientes").length
-  );
-  let snapshot = tieneNucleoRelacional
-    ? { version: 11 }
-    : clonarDatosCita(cita && cita.snapshot);
-  const filas = cita && Array.isArray(cita.cita_alimentos) ? cita.cita_alimentos : [];
-  const cantidadSnapshot = contarAlimentosSnapshotCita(snapshot);
-  const migracionCompleta = filas.length > 0
-    && (cantidadSnapshot === 0 || filas.length === cantidadSnapshot);
-
-  if (migracionCompleta) {
-    snapshot.alimentos_por_tiempo = agruparAlimentosRelacionalesCita(filas);
-  }
-
-  snapshot = integrarContextoRelacionalCita(snapshot, cita);
-  snapshot = integrarMedicionesRelacionalesCita(snapshot, cita);
-  snapshot = integrarRequerimientosRelacionalesCita(snapshot, cita);
-  snapshot = integrarMacronutrientesRelacionalesCita(snapshot, cita);
-  snapshot = integrarHorariosRelacionalesCita(snapshot, cita);
-  snapshot = integrarColumnasRelacionalesCita(snapshot, cita);
-  resultado.snapshot = snapshot;
-  resultado.paciente_nombre = snapshot.paciente ? snapshot.paciente.nombre || "" : "";
-  resultado.paciente_documento = snapshot.paciente ? snapshot.paciente.documento || "" : "";
-  return resultado;
 }
 
 function citaNumeroOpcional(value, decimales = 2) {
@@ -661,15 +421,126 @@ function citaNumeroOpcional(value, decimales = 2) {
   return Number(numero.toFixed(decimales));
 }
 
-function obtenerFilaMedicionesRelacionalesCita(snapshot, citaId) {
-  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
+function citaJsonObjeto(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function citaJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function obtenerPacienteLocalCita(pacienteId) {
+  if (!pacienteId || typeof pacientes === "undefined" || !Array.isArray(pacientes)) return null;
+  return pacientes.find(item => String(item.id) === String(pacienteId)) || null;
+}
+
+function obtenerNombreCompletoPacienteCita(paciente) {
+  if (!paciente) return "";
+  return `${paciente.nombres || ""} ${paciente.apellidos || ""}`.trim();
+}
+
+function normalizarAlimentosTablaUnicaCita(value) {
+  const datos = citaJsonObjeto(value);
+  const salida = {};
+  obtenerTiemposCita().forEach(tiempo => {
+    salida[tiempo] = [];
+  });
+
+  Object.keys(datos).forEach(tiempo => {
+    const destino = Object.prototype.hasOwnProperty.call(salida, tiempo) ? tiempo : tiempo || "Desayuno";
+    const items = Array.isArray(datos[tiempo]) ? datos[tiempo] : [];
+    if (!Object.prototype.hasOwnProperty.call(salida, destino)) salida[destino] = [];
+    salida[destino] = items.map(item => ({
+      alimento_id: item ? item.alimento_id || item.id || null : null,
+      nombre: item ? item.nombre || item.alimento_nombre || "" : "",
+      gramos: citaNumero(item ? item.gramos : 0)
+    }));
+  });
+
+  return salida;
+}
+
+function normalizarHorariosTablaUnicaCita(value) {
+  const datos = citaJsonObjeto(value);
+  const salida = {};
+  obtenerTiemposCita().forEach(tiempo => {
+    salida[tiempo] = datos[tiempo] ? String(datos[tiempo]).slice(0, 5) : "";
+  });
+  return salida;
+}
+
+function normalizarColumnasTablaUnicaCita(value) {
+  return citaJsonArray(value)
+    .map(columna => String(columna || "").trim())
+    .filter(Boolean);
+}
+
+function formatearMacroTablaUnicaCita(value, unidad) {
+  const texto = String(value ?? "").trim();
+  if (!texto) return "";
+  if (unidad === "%" && texto.includes("%")) return texto;
+  if (unidad !== "%" && texto.toLowerCase().includes(unidad.toLowerCase())) return texto;
+
+  const numero = formatearNumeroMacroCita(value);
+  if (!numero) return texto;
+  return unidad === "%" ? `${numero}%` : `${numero} ${unidad}`;
+}
+
+function normalizarMacronutrientesTablaUnicaCita(value) {
+  return citaJsonArray(value).map(item => ({
+    macronutriente: item ? item.macronutriente || "" : "",
+    porcentaje: formatearMacroTablaUnicaCita(item ? item.porcentaje : "", "%"),
+    kcal: formatearMacroTablaUnicaCita(item ? item.kcal : "", "kcal"),
+    gramos: formatearMacroTablaUnicaCita(item ? item.gramos : "", "g"),
+    gkg: formatearMacroTablaUnicaCita(item ? item.gkg : "", "g/kg")
+  }));
+}
+
+function obtenerRequerimientoTablaUnicaCita(cita) {
+  const requerimiento = {};
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    requerimiento[campo] = citaNumero(cita ? cita[`req_${campo}`] : 0);
+  });
+  return requerimiento;
+}
+
+function obtenerFilaCitaTablaUnica(datos) {
+  const paciente = datos && datos.paciente ? datos.paciente : {};
+  const profesional = datos && datos.profesional ? datos.profesional : {};
   const medidas = paciente.medidas_antropometricas && typeof paciente.medidas_antropometricas === "object"
     ? paciente.medidas_antropometricas
     : {};
-  const imc = obtenerImcDesdeSnapshot(snapshot);
-
-  return {
-    cita_id: citaId,
+  const imc = obtenerImcDesdeDatosCita(datos);
+  const requerimiento = datos && datos.totales && datos.totales.requerimiento
+    ? datos.totales.requerimiento
+    : {};
+  const fila = {
+    paciente_id: paciente.paciente_id,
+    fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
+    cita_schema_version: 12,
+    actividad: citaNumeroOpcional(paciente.actividad, 4),
+    actividad_texto: paciente.actividad_texto || "",
+    profesional_user_id: profesional.user_id || null,
+    profesional_email: profesional.email || "",
+    profesional_nombre: profesional.nombre || "",
+    profesional_usuario: profesional.usuario || "",
+    profesional_telefono: profesional.telefono || "",
     peso: citaNumeroOpcional(paciente.peso ?? imc.peso),
     peso_ideal: citaNumeroOpcional(paciente.peso_ideal),
     estatura_cm: citaNumeroOpcional(paciente.estatura ?? imc.estatura_cm),
@@ -683,75 +554,103 @@ function obtenerFilaMedicionesRelacionalesCita(snapshot, citaId) {
     muslo_derecho: citaNumeroOpcional(medidas.muslo_derecho),
     pantorrilla_izquierda: citaNumeroOpcional(medidas.pantorrilla_izquierda),
     pantorrilla_derecha: citaNumeroOpcional(medidas.pantorrilla_derecha),
-    observaciones: String(medidas.observaciones || "").trim()
+    observaciones: String(medidas.observaciones || "").trim(),
+    alimentos_por_tiempo: datos.alimentos_por_tiempo || {},
+    macronutrientes: (Array.isArray(datos.macronutrientes) ? datos.macronutrientes : []).map(item => ({
+      macronutriente: item.macronutriente || "",
+      porcentaje: citaNumeroOpcional(item.porcentaje, 4),
+      kcal: citaNumeroOpcional(item.kcal, 4),
+      gramos: citaNumeroOpcional(item.gramos, 4),
+      gkg: citaNumeroOpcional(item.gkg, 4)
+    })),
+    horas_comida: datos.horas_comida || {},
+    columnas_alimentos_visibles: datos.configuracion && Array.isArray(datos.configuracion.columnas_alimentos_visibles)
+      ? datos.configuracion.columnas_alimentos_visibles
+      : []
   };
-}
 
-function obtenerFilaEvaluacionRelacionalCita(snapshot, citaId) {
-  const paciente = snapshot && snapshot.paciente ? snapshot.paciente : {};
-  const profesional = snapshot && snapshot.profesional ? snapshot.profesional : {};
-
-  return {
-    cita_id: citaId,
-    actividad: citaNumeroOpcional(paciente.actividad, 4),
-    actividad_texto: paciente.actividad_texto || "",
-    profesional_user_id: profesional.user_id || null,
-    profesional_email: profesional.email || "",
-    profesional_nombre: profesional.nombre || "",
-    profesional_usuario: profesional.usuario || "",
-    profesional_telefono: profesional.telefono || ""
-  };
-}
-
-function obtenerFilaRequerimientosRelacionalesCita(snapshot, citaId) {
-  const requerimiento = snapshot && snapshot.totales && snapshot.totales.requerimiento
-    ? snapshot.totales.requerimiento
-    : {};
-  const fila = { cita_id: citaId };
   CAMPOS_NUTRIENTES.forEach(([campo]) => {
-    fila[campo] = citaNumeroOpcional(requerimiento[campo], 4);
+    fila[`req_${campo}`] = citaNumeroOpcional(requerimiento[campo], 4);
   });
+
   return fila;
 }
 
-function obtenerFilasMacronutrientesRelacionalesCita(snapshot, citaId) {
-  const macros = snapshot && Array.isArray(snapshot.macronutrientes)
-    ? snapshot.macronutrientes
-    : [];
+function integrarDatosTablaUnicaCita(cita) {
+  const resultado = { ...cita };
+  const paciente = obtenerPacienteLocalCita(cita.paciente_id);
+  const nombreCompleto = obtenerNombreCompletoPacienteCita(paciente);
+  const fechaNacimiento = paciente ? paciente.fecha_nacimiento || "" : "";
+  const sexo = paciente ? paciente.sexo || "" : "";
+  const documento = paciente ? paciente.documento || "" : "";
+  const paisNacimiento = paciente ? paciente.pais_nacimiento || "" : "";
+  const genero = obtenerGeneroDesdeSexoCita(sexo);
+  const estaturaCm = citaNumeroOpcional(cita.estatura_cm);
+  const valorImc = citaNumeroOpcional(cita.imc, 4);
 
-  return macros.map((item, index) => ({
-    cita_id: citaId,
-    macronutriente: item.macronutriente || "",
-    porcentaje: citaNumeroOpcional(item.porcentaje, 4),
-    kcal: citaNumeroOpcional(item.kcal, 4),
-    gramos: citaNumeroOpcional(item.gramos, 4),
-    gkg: citaNumeroOpcional(item.gkg, 4),
-    orden: index + 1
-  }));
-}
+  const datos = {
+    version: cita.cita_schema_version || 12,
+    guardado_en: cita.created_at || "",
+    paciente: {
+      paciente_id: cita.paciente_id || null,
+      nombre: nombreCompleto,
+      nombres: paciente ? paciente.nombres || "" : "",
+      apellidos: paciente ? paciente.apellidos || "" : "",
+      documento,
+      fecha_nacimiento: fechaNacimiento,
+      pais_nacimiento: paisNacimiento,
+      sexo,
+      fecha_evaluacion: cita.fecha_cita || "",
+      edad: calcularEdadEnFechaCita(fechaNacimiento, cita.fecha_cita),
+      genero,
+      genero_texto: sexo,
+      actividad: cita.actividad ?? "",
+      actividad_texto: cita.actividad_texto || "",
+      peso: cita.peso ?? "",
+      peso_ideal: cita.peso_ideal ?? "",
+      estatura: cita.estatura_cm ?? "",
+      medidas_antropometricas: {
+        brazo_izquierdo: cita.brazo_izquierdo,
+        brazo_derecho: cita.brazo_derecho,
+        abdomen: cita.abdomen,
+        abdomen_bajo: cita.abdomen_bajo,
+        muslo_izquierdo: cita.muslo_izquierdo,
+        muslo_derecho: cita.muslo_derecho,
+        pantorrilla_izquierda: cita.pantorrilla_izquierda,
+        pantorrilla_derecha: cita.pantorrilla_derecha,
+        observaciones: cita.observaciones || ""
+      }
+    },
+    profesional: {
+      user_id: cita.profesional_user_id || cita.user_id || "",
+      email: cita.profesional_email || "",
+      nombre: cita.profesional_nombre || "",
+      usuario: cita.profesional_usuario || "",
+      telefono: cita.profesional_telefono || ""
+    },
+    imc: {
+      valido: valorImc !== null && valorImc > 0,
+      peso: citaNumeroOpcional(cita.peso),
+      estatura_cm: estaturaCm,
+      estatura_m: estaturaCm !== null ? citaNumeroOpcional(estaturaCm / 100, 4) : null,
+      valor: valorImc,
+      clasificacion: cita.clasificacion_imc || ""
+    },
+    configuracion: {
+      columnas_alimentos_visibles: normalizarColumnasTablaUnicaCita(cita.columnas_alimentos_visibles)
+    },
+    macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita.macronutrientes),
+    horas_comida: normalizarHorariosTablaUnicaCita(cita.horas_comida),
+    alimentos_por_tiempo: normalizarAlimentosTablaUnicaCita(cita.alimentos_por_tiempo),
+    totales: {
+      requerimiento: obtenerRequerimientoTablaUnicaCita(cita)
+    }
+  };
 
-function obtenerFilasHorariosRelacionalesCita(snapshot, citaId) {
-  const horas = snapshot && snapshot.horas_comida ? snapshot.horas_comida : {};
-  return obtenerTiemposCita().map((tiempo, index) => ({
-    cita_id: citaId,
-    tiempo,
-    hora: horas[tiempo] || null,
-    orden: index + 1
-  }));
-}
-
-function obtenerFilasColumnasRelacionalesCita(snapshot, citaId) {
-  const columnas = snapshot
-    && snapshot.configuracion
-    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
-    ? snapshot.configuracion.columnas_alimentos_visibles
-    : [];
-
-  return columnas.map((columna, index) => ({
-    cita_id: citaId,
-    columna,
-    orden: index + 1
-  }));
+  resultado.datos = datos;
+  resultado.paciente_nombre = datos.paciente.nombre || "";
+  resultado.paciente_documento = datos.paciente.documento || "";
+  return resultado;
 }
 
 function obtenerIndiceAlimentosCita() {
@@ -782,13 +681,13 @@ function buscarAlimentoBaseCita(item, indice) {
   return nombre ? indice.porNombre.get(nombre) || null : null;
 }
 
-function alimentoSnapshotTieneNutrientesCita(item) {
+function alimentoDatosTieneNutrientesCita(item) {
   return Boolean(item && CAMPOS_NUTRIENTES.some(([campo]) => item[campo] !== null && item[campo] !== undefined));
 }
 
-function hidratarAlimentoSnapshotCita(item, indice) {
+function hidratarAlimentoDatosCita(item, indice) {
   const datos = item && typeof item === "object" ? item : {};
-  if (alimentoSnapshotTieneNutrientesCita(datos)) return { ...datos };
+  if (alimentoDatosTieneNutrientesCita(datos)) return { ...datos };
 
   const base = buscarAlimentoBaseCita(datos, indice) || {};
   const gramos = citaNumero(datos.gramos);
@@ -814,7 +713,7 @@ function hidratarAlimentosPorTiempoCita(alimentosPorTiempo) {
     const items = alimentosPorTiempo && Array.isArray(alimentosPorTiempo[tiempo])
       ? alimentosPorTiempo[tiempo]
       : [];
-    hidratados[tiempo] = items.map(item => hidratarAlimentoSnapshotCita(item, indice));
+    hidratados[tiempo] = items.map(item => hidratarAlimentoDatosCita(item, indice));
   });
 
   return hidratados;
@@ -882,7 +781,7 @@ function obtenerTotalesCita() {
   };
 }
 
-function obtenerSnapshotCita() {
+function obtenerDatosCita() {
   const pacienteId = citaValor("calc_paciente_id") || null;
   const pacienteRegistrado = pacienteId && typeof pacientes !== "undefined" && Array.isArray(pacientes)
     ? pacientes.find(item => item.id === pacienteId)
@@ -989,12 +888,12 @@ async function guardarCita() {
     return;
   }
 
-  const snapshot = obtenerSnapshotCita();
-  snapshot.profesional = await obtenerProfesionalCita(sessionData.session);
-  const pacienteSeleccionado = snapshot.paciente.paciente_id
+  const datos = obtenerDatosCita();
+  datos.profesional = await obtenerProfesionalCita(sessionData.session);
+  const pacienteSeleccionado = datos.paciente.paciente_id
     && typeof pacientes !== "undefined"
     && Array.isArray(pacientes)
-    ? pacientes.find(item => item.id === snapshot.paciente.paciente_id)
+    ? pacientes.find(item => item.id === datos.paciente.paciente_id)
     : null;
   if (!pacienteSeleccionado) {
     alert("Debes seleccionar un paciente registrado antes de guardar la cita.");
@@ -1007,13 +906,10 @@ async function guardarCita() {
   if (boton) boton.disabled = true;
 
   try {
+    const filaCita = obtenerFilaCitaTablaUnica(datos);
     const { data: citaGuardada, error } = await client
       .from("citas")
-      .insert({
-        paciente_id: snapshot.paciente.paciente_id,
-        fecha_cita: snapshot.paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-        snapshot
-      })
+      .insert(filaCita)
       .select("id")
       .single();
 
@@ -1027,61 +923,9 @@ async function guardarCita() {
       return;
     }
 
-    const filasAlimentos = obtenerFilasAlimentosRelacionalesCita(
-      snapshot.alimentos_por_tiempo,
-      citaGuardada.id
-    );
-    const filasMacros = obtenerFilasMacronutrientesRelacionalesCita(snapshot, citaGuardada.id);
-    const filasHorarios = obtenerFilasHorariosRelacionalesCita(snapshot, citaGuardada.id);
-    const filasColumnas = obtenerFilasColumnasRelacionalesCita(snapshot, citaGuardada.id);
-    const operaciones = [
-      ["alimentos", filasAlimentos.length
-        ? client.from("cita_alimentos").insert(filasAlimentos)
-        : Promise.resolve({ error: null })],
-      ["mediciones", client
-        .from("cita_mediciones")
-        .insert(obtenerFilaMedicionesRelacionalesCita(snapshot, citaGuardada.id))],
-      ["evaluacion", client
-        .from("cita_evaluaciones")
-        .insert(obtenerFilaEvaluacionRelacionalCita(snapshot, citaGuardada.id))],
-      ["requerimientos", client
-        .from("cita_requerimientos")
-        .insert(obtenerFilaRequerimientosRelacionalesCita(snapshot, citaGuardada.id))],
-      ["macronutrientes", filasMacros.length
-        ? client.from("cita_macronutrientes").insert(filasMacros)
-        : Promise.resolve({ error: null })],
-      ["horarios", client.from("cita_horarios").insert(filasHorarios)],
-      ["configuracion", filasColumnas.length
-        ? client.from("cita_columnas_visibles").insert(filasColumnas)
-        : Promise.resolve({ error: null })]
-    ];
-    const resultados = await Promise.all(operaciones.map(([, operacion]) => operacion));
-    const erroresRelacionales = resultados
-      .map((resultado, index) => ({
-        nombre: operaciones[index][0],
-        error: resultado ? resultado.error : null
-      }))
-      .filter(item => item.error);
-
-    if (!erroresRelacionales.length) {
-      const { error: errorCompactar } = await client
-        .from("citas")
-        .update({ snapshot: { version: 11 } })
-        .eq("id", citaGuardada.id);
-
-      if (errorCompactar) {
-        console.warn("La cita se guardo, pero no se pudo compactar su snapshot.", errorCompactar.message);
-      }
-    } else {
-      erroresRelacionales.forEach(item => {
-        console.warn(`No se pudo guardar ${item.nombre} de la cita.`, item.error.message);
-      });
-      alert(`La cita se guardo con snapshot de respaldo. Faltaron estas relaciones: ${erroresRelacionales.map(item => item.nombre).join(", ")}.`);
-    }
-
     await cargarCitas();
     if (boton) {
-      boton.textContent = erroresRelacionales.length ? "Cita guardada con respaldo" : "Cita guardada";
+      boton.textContent = "Cita guardada";
       setTimeout(() => {
         boton.textContent = "Guardar como cita";
       }, 1800);
@@ -1315,17 +1159,17 @@ async function cargarCitas() {
 
   let { data, error } = await client
     .from("citas")
-    .select("id,user_id,paciente_id,fecha_cita,snapshot,created_at,pacientes!citas_paciente_usuario_fkey(nombres,apellidos,documento,fecha_nacimiento,pais_nacimiento,sexo),cita_alimentos(alimento_id,alimento_nombre,tiempo,gramos,orden),cita_mediciones(*),cita_evaluaciones(*),cita_requerimientos(*),cita_macronutrientes(*),cita_horarios(*),cita_columnas_visibles(*)")
+    .select("id,user_id,paciente_id,fecha_cita,created_at,cita_schema_version,actividad,actividad_texto,profesional_user_id,profesional_email,profesional_nombre,profesional_usuario,profesional_telefono,peso,peso_ideal,estatura_cm,imc,clasificacion_imc,brazo_izquierdo,brazo_derecho,abdomen,abdomen_bajo,muslo_izquierdo,muslo_derecho,pantorrilla_izquierda,pantorrilla_derecha,observaciones,req_energia_calculada,req_proteina,req_grasa_total,req_carbohidratos,req_fibra,req_ags,req_agm,req_agpi,req_colesterol,req_calcio,req_fosforo,req_hierro,req_potasio,req_sodio,req_zinc,req_vitamina_c,req_vitamina_a,req_folatos,req_vitamina_b12,alimentos_por_tiempo,macronutrientes,horas_comida,columnas_alimentos_visibles")
     .order("fecha_cita", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) {
     const detalle = document.getElementById("cita_detalle");
-    if (detalle) detalle.innerHTML = `<div class="alert alert-warning">No se pudieron cargar todos los datos relacionales de las citas: ${citaEscape(error.message)}</div>`;
+    if (detalle) detalle.innerHTML = `<div class="alert alert-warning">No se pudieron cargar las citas desde la tabla unificada. Ejecuta supabase-citas-tabla-unica.sql y recarga la pagina. Detalle: ${citaEscape(error.message)}</div>`;
     return;
   }
 
-  citas = (data || []).map(integrarDatosRelacionalesCita);
+  citas = (data || []).map(integrarDatosTablaUnicaCita);
   citasSeleccionadas.clear();
   renderCitasTabla();
 }
@@ -1377,8 +1221,8 @@ async function eliminarCitasSeleccionadas() {
   }
 }
 
-function tablaObjetoNutricional(titulo, filas, snapshot) {
-  const campos = obtenerCamposNutrientesVisiblesCita(snapshot);
+function tablaObjetoNutricional(titulo, filas, datos) {
+  const campos = obtenerCamposNutrientesVisiblesCita(datos);
 
   return `
     <div class="table-responsive">
@@ -1431,9 +1275,9 @@ function renderTablaMacronutrientes(macros) {
   `;
 }
 
-function renderTablaAlimentos(alimentosPorTiempo, horasComida, snapshot) {
+function renderTablaAlimentos(alimentosPorTiempo, horasComida, datos) {
   const filas = [];
-  const campos = obtenerCamposNutrientesVisiblesCita(snapshot);
+  const campos = obtenerCamposNutrientesVisiblesCita(datos);
   const columnas = campos.length + 2;
   obtenerTiemposCita().forEach(tiempo => {
     filas.push(`<tr class="table-info"><td colspan="${columnas}"><strong>${citaEscape(obtenerEtiquetaTiempoCita(tiempo, horasComida))}</strong></td></tr>`);
@@ -1694,12 +1538,12 @@ function renderMedidasAntropometricasCita(medidas) {
   `;
 }
 
-function clonarSnapshotParaPdfCita(snapshot) {
+function clonarDatosParaPdfCita(datos) {
   try {
-    const copia = JSON.parse(JSON.stringify(snapshot || {}));
+    const copia = JSON.parse(JSON.stringify(datos || {}));
     return copia && typeof copia === "object" && !Array.isArray(copia) ? copia : {};
   } catch (error) {
-    return snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? { ...snapshot } : {};
+    return datos && typeof datos === "object" && !Array.isArray(datos) ? { ...datos } : {};
   }
 }
 
@@ -1710,16 +1554,16 @@ async function descargarPdfCitaGuardada(cita, boton) {
     return;
   }
 
-  const snapshot = clonarSnapshotParaPdfCita(cita.snapshot);
-  snapshot.paciente = snapshot.paciente || {};
-  snapshot.profesional = snapshot.profesional || {};
+  const datos = clonarDatosParaPdfCita(cita.datos);
+  datos.paciente = datos.paciente || {};
+  datos.profesional = datos.profesional || {};
 
-  if (!snapshot.paciente.nombre) snapshot.paciente.nombre = cita.paciente_nombre || "";
-  if (!snapshot.paciente.documento) snapshot.paciente.documento = cita.paciente_documento || "";
-  if (!snapshot.paciente.fecha_evaluacion) snapshot.paciente.fecha_evaluacion = cita.fecha_cita || "";
-  snapshot.imc = obtenerImcDesdeSnapshot(snapshot);
-  snapshot.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
-  snapshot.totales = hidratarTotalesCita(snapshot.totales, snapshot.alimentos_por_tiempo);
+  if (!datos.paciente.nombre) datos.paciente.nombre = cita.paciente_nombre || "";
+  if (!datos.paciente.documento) datos.paciente.documento = cita.paciente_documento || "";
+  if (!datos.paciente.fecha_evaluacion) datos.paciente.fecha_evaluacion = cita.fecha_cita || "";
+  datos.imc = obtenerImcDesdeDatosCita(datos);
+  datos.alimentos_por_tiempo = hidratarAlimentosPorTiempoCita(datos.alimentos_por_tiempo);
+  datos.totales = hidratarTotalesCita(datos.totales, datos.alimentos_por_tiempo);
 
   const textoOriginal = boton ? boton.textContent : "";
   if (boton) {
@@ -1728,7 +1572,7 @@ async function descargarPdfCitaGuardada(cita, boton) {
   }
 
   try {
-    await generarPDF(snapshot);
+    await generarPDF(datos);
   } finally {
     if (boton) {
       boton.disabled = false;
@@ -1741,13 +1585,13 @@ function renderDetalleCita(cita) {
   const detalle = document.getElementById("cita_detalle");
   if (!detalle) return;
 
-  const snapshot = cita.snapshot || {};
-  const paciente = snapshot.paciente || {};
-  const profesional = snapshot.profesional || {};
-  const imc = obtenerImcDesdeSnapshot(snapshot);
-  const horasComida = snapshot.horas_comida || {};
-  const alimentosPorTiempo = hidratarAlimentosPorTiempoCita(snapshot.alimentos_por_tiempo);
-  const totales = hidratarTotalesCita(snapshot.totales, alimentosPorTiempo);
+  const datos = cita.datos || {};
+  const paciente = datos.paciente || {};
+  const profesional = datos.profesional || {};
+  const imc = obtenerImcDesdeDatosCita(datos);
+  const horasComida = datos.horas_comida || {};
+  const alimentosPorTiempo = hidratarAlimentosPorTiempoCita(datos.alimentos_por_tiempo);
+  const totales = hidratarTotalesCita(datos.totales, alimentosPorTiempo);
   const filasTotales = [];
 
   obtenerTiemposCita().forEach(tiempo => {
@@ -1799,18 +1643,18 @@ function renderDetalleCita(cita) {
 
       <div class="card p-3 cita-detail-section cita-compact-card">
         <h5>Macronutrientes</h5>
-        ${renderTablaMacronutrientes(snapshot.macronutrientes)}
+        ${renderTablaMacronutrientes(datos.macronutrientes)}
       </div>
     </div>
 
     <div class="card p-3 cita-detail-section">
       <h5>Alimentos seleccionados</h5>
-      ${renderTablaAlimentos(alimentosPorTiempo, horasComida, snapshot)}
+      ${renderTablaAlimentos(alimentosPorTiempo, horasComida, datos)}
     </div>
 
     <div class="card p-3 cita-detail-section">
       <h5>Totales, requerimiento y adecuaci&oacute;n</h5>
-      ${tablaObjetoNutricional("Concepto", filasTotales, snapshot)}
+      ${tablaObjetoNutricional("Concepto", filasTotales, datos)}
     </div>
   `;
 
@@ -1873,6 +1717,11 @@ function configurarCitas() {
   }
 
   window.addEventListener("auth:session-changed", cargarCitas);
+  window.addEventListener("pacientes:loaded", () => {
+    if (!citas.length) return;
+    citas = citas.map(integrarDatosTablaUnicaCita);
+    renderCitasTabla();
+  });
   cargarCitas();
 }
 

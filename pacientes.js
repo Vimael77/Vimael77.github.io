@@ -401,6 +401,7 @@ async function cargarPacientes() {
     pacientes = [];
     renderPacientesTabla();
     renderPacientesSelector();
+    window.dispatchEvent(new CustomEvent("pacientes:loaded"));
     return;
   }
 
@@ -414,6 +415,7 @@ async function cargarPacientes() {
     pacientes = [];
     renderPacientesTabla();
     renderPacientesSelector();
+    window.dispatchEvent(new CustomEvent("pacientes:loaded"));
     setPacienteMensaje("No se pudieron cargar los pacientes. Ejecuta supabase-pacientes-sexo.sql si falta la columna sexo.", "error");
     return;
   }
@@ -424,6 +426,7 @@ async function cargarPacientes() {
   }
   renderPacientesTabla();
   renderPacientesSelector();
+  window.dispatchEvent(new CustomEvent("pacientes:loaded"));
   setPacienteMensaje("");
 }
 
