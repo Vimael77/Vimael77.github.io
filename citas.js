@@ -4,6 +4,7 @@ let filtroCitasFechaDesde = "";
 let filtroCitasFechaHasta = "";
 let paginaCitasActual = 1;
 let citasSeleccionadas = new Set();
+let citaEditandoId = "";
 const CITAS_POR_PAGINA = 15;
 
 const CAMPOS_NUTRIENTES = [
@@ -921,6 +922,17 @@ function confirmarGuardarCita() {
   const dialogo = obtenerDialogoGuardarCita();
   const aceptar = dialogo.querySelector(".cita-confirm-accept");
   const cancelar = dialogo.querySelector(".cita-confirm-cancel");
+  const titulo = dialogo.querySelector("#cita_guardar_titulo");
+  const descripcion = dialogo.querySelector(".cita-confirm-content p");
+  const editando = Boolean(citaEditandoId);
+
+  if (titulo) titulo.textContent = editando ? "Actualizar cita" : "Guardar cita";
+  if (descripcion) {
+    descripcion.textContent = editando
+      ? "Se reemplazaran los datos guardados de esta cita con la informacion actual de la calculadora."
+      : "Se guardara una copia de esta evaluacion para consultarla despues.";
+  }
+  if (aceptar) aceptar.textContent = editando ? "Actualizar cita" : "Guardar cita";
 
   return new Promise(resolve => {
     const cerrar = resultado => {
@@ -977,11 +989,20 @@ async function guardarCita() {
 
   try {
     const filaCita = obtenerFilaCitaTablaUnica(datos);
-    const { data: citaGuardada, error } = await client
-      .from("citas")
-      .insert(filaCita)
-      .select("id")
-      .single();
+    const respuestaGuardado = citaEditandoId
+      ? await client
+        .from("citas")
+        .update({ ...filaCita, updated_at: new Date().toISOString() })
+        .eq("id", citaEditandoId)
+        .select("id")
+        .single()
+      : await client
+        .from("citas")
+        .insert(filaCita)
+        .select("id")
+        .single();
+    const citaGuardada = respuestaGuardado.data;
+    const error = respuestaGuardado.error;
 
     if (error) {
       alert(`No se pudo guardar la cita: ${error.message}`);
@@ -993,6 +1014,18 @@ async function guardarCita() {
       return;
     }
 
+    if (citaEditandoId) {
+      const { error: eliminarAlimentosError } = await client
+        .from("cita_alimentos")
+        .delete()
+        .eq("cita_id", citaGuardada.id);
+
+      if (eliminarAlimentosError) {
+        alert(`La cita se actualizo, pero no se pudieron reemplazar sus alimentos: ${eliminarAlimentosError.message}`);
+        return;
+      }
+    }
+
     const filasAlimentos = obtenerFilasAlimentosRelacionalesCita(citaGuardada.id, datos.alimentos_por_tiempo);
     if (filasAlimentos.length) {
       const { error: alimentosError } = await client
@@ -1000,6 +1033,10 @@ async function guardarCita() {
         .insert(filasAlimentos);
 
       if (alimentosError) {
+        if (citaEditandoId) {
+          alert(`La cita se actualizo, pero no se pudieron guardar sus alimentos: ${alimentosError.message}`);
+          return;
+        }
         await client
           .from("citas")
           .delete()
@@ -1009,9 +1046,11 @@ async function guardarCita() {
       }
     }
 
+    const estabaEditando = Boolean(citaEditandoId);
+    cancelarEdicionCita(false);
     await cargarCitas();
     if (boton) {
-      boton.textContent = "Cita guardada";
+      boton.textContent = estabaEditando ? "Cita actualizada" : "Cita guardada";
       setTimeout(() => {
         boton.textContent = "Guardar como cita";
       }, 1800);
@@ -1021,6 +1060,114 @@ async function guardarCita() {
   } finally {
     if (boton) boton.disabled = false;
   }
+}
+
+function actualizarModoEdicionCita() {
+  const guardarBtn = document.getElementById("guardar_cita_btn");
+  const cancelarBtn = document.getElementById("cancelar_edicion_cita_btn");
+  if (guardarBtn) guardarBtn.textContent = citaEditandoId ? "Actualizar cita" : "Guardar como cita";
+  if (cancelarBtn) cancelarBtn.hidden = !citaEditandoId;
+}
+
+function cancelarEdicionCita(mostrarAviso = true) {
+  const estabaEditando = Boolean(citaEditandoId);
+  citaEditandoId = "";
+  actualizarModoEdicionCita();
+  if (mostrarAviso && estabaEditando) {
+    alert("Se cancelo la edicion. Los datos cargados permanecen en la calculadora.");
+  }
+}
+
+function asignarValorCita(id, valor) {
+  const elemento = document.getElementById(id);
+  if (elemento) elemento.value = valor === null || valor === undefined ? "" : valor;
+}
+
+function limpiarAlimentosCalculadoraCita() {
+  document.querySelectorAll('#valores tbody[id^="valores_"]').forEach(tbody => {
+    tbody.innerHTML = "";
+  });
+  alimentos_seleccionados = [];
+  alimentos_seleccionados_en_orden = [];
+  actualizarTotal(alimentos_seleccionados);
+  calcular();
+}
+
+function cargarAlimentosCalculadoraCita(alimentosPorTiempo) {
+  limpiarAlimentosCalculadoraCita();
+  const hidratados = hidratarAlimentosPorTiempoCita(alimentosPorTiempo);
+
+  obtenerTiemposCita().forEach(tiempo => {
+    (hidratados[tiempo] || []).forEach(item => {
+      const gramos = citaNumero(item.gramos);
+      const factor = gramos > 0 ? gramos / 100 : 1;
+      const alimentoBase = {
+        id: item.alimento_id || item.id || null,
+        nombre: item.nombre || "Alimento sin nombre"
+      };
+      CAMPOS_NUTRIENTES.forEach(([campo]) => {
+        alimentoBase[campo] = factor > 0 ? citaNumero(item[campo]) / factor : citaNumero(item[campo]);
+      });
+      agregar(gramos, alimentoBase, tiempo);
+    });
+  });
+}
+
+function cargarCitaEnCalculadora(cita) {
+  if (!cita || !cita.datos) return;
+  const datos = cita.datos;
+  const paciente = datos.paciente || {};
+  const requerimiento = datos.totales && datos.totales.requerimiento
+    ? datos.totales.requerimiento
+    : {};
+
+  asignarValorCita("calc_fecha", paciente.fecha_evaluacion || cita.fecha_cita || "");
+  aplicarPacienteEnCalculadora(paciente.paciente_id || cita.paciente_id);
+  asignarValorCita("calc_peso", paciente.peso);
+  asignarValorCita("calc_estatura", paciente.estatura);
+  asignarValorCita("calc_actividad", paciente.actividad);
+  aplicarMedidasAntropometricas(paciente.medidas_antropometricas || {});
+
+  asignarValorCita("macro_peso_ideal", paciente.peso_ideal);
+  const macroProteina = (datos.macronutrientes || []).find(item => citaNormalizar(item.nombre) === citaNormalizar("Proteinas"));
+  const macroGrasa = (datos.macronutrientes || []).find(item => citaNormalizar(item.nombre) === citaNormalizar("Grasas"));
+  asignarValorCita("macro_proteina_porcentaje", macroProteina ? macroProteina.porcentaje : 20);
+  asignarValorCita("macro_grasa_porcentaje", macroGrasa ? macroGrasa.porcentaje : 30);
+
+  CAMPOS_NUTRIENTES.forEach(([campo]) => {
+    asignarValorCita(`input_${campo}_requerimiento`, requerimiento[campo]);
+  });
+
+  const horas = datos.horas_comida || {};
+  obtenerTiemposCita().forEach(tiempo => {
+    asignarValorCita(`hora_${tiempo.replace(/\s+/g, "_")}`, horas[tiempo] || "");
+  });
+
+  cargarAlimentosCalculadoraCita(datos.alimentos_por_tiempo || {});
+  if (typeof actualizarIndiceMasaCorporal === "function") actualizarIndiceMasaCorporal();
+  if (typeof actualizarRequerimientoMacronutrientes === "function") actualizarRequerimientoMacronutrientes();
+  if (typeof calcular === "function") calcular();
+
+  citaEditandoId = String(cita.id);
+  actualizarModoEdicionCita();
+}
+
+function modificarCitaSeleccionada() {
+  if (citasSeleccionadas.size !== 1) return;
+  const id = Array.from(citasSeleccionadas)[0];
+  const cita = citas.find(item => String(item.id) === String(id));
+  if (!cita) return;
+
+  cargarCitaEnCalculadora(cita);
+  citasSeleccionadas.clear();
+  renderCitasTabla();
+
+  const enlaceInicio = document.getElementById("side-home-link");
+  if (enlaceInicio && window.jQuery) window.jQuery(enlaceInicio).tab("show");
+  window.location.hash = "#home";
+  const tabInicial = document.querySelector('[data-calculator-section="inicial"]');
+  if (tabInicial) tabInicial.click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function obtenerFechaIsoCita(cita) {
@@ -1093,6 +1240,7 @@ function actualizarControlesSeleccionCitas() {
 
   const seleccionarBtn = document.getElementById("citas_seleccionar_todo");
   const eliminarBtn = document.getElementById("citas_eliminar");
+  const modificarBtn = document.getElementById("citas_modificar");
   const totalSeleccionadas = citasSeleccionadas.size;
   const idsFiltradas = obtenerIdsCitasFiltradas();
   const todasFiltradasSeleccionadas = idsFiltradas.length > 0 && idsFiltradas.every(id => citasSeleccionadas.has(id));
@@ -1106,6 +1254,8 @@ function actualizarControlesSeleccionCitas() {
     eliminarBtn.disabled = totalSeleccionadas === 0;
     eliminarBtn.textContent = totalSeleccionadas > 0 ? `Eliminar (${totalSeleccionadas})` : "Eliminar";
   }
+
+  if (modificarBtn) modificarBtn.disabled = totalSeleccionadas !== 1;
 }
 
 function alternarSeleccionTodasCitas() {
@@ -1803,7 +1953,9 @@ function configurarCitas() {
   const fechaHasta = document.getElementById("citas_fecha_hasta");
   const limpiarBtn = document.getElementById("citas_limpiar");
   const seleccionarTodoBtn = document.getElementById("citas_seleccionar_todo");
+  const modificarBtn = document.getElementById("citas_modificar");
   const eliminarBtn = document.getElementById("citas_eliminar");
+  const cancelarEdicionBtn = document.getElementById("cancelar_edicion_cita_btn");
 
   const actualizarFiltrosCitas = () => {
     paginaCitasActual = 1;
@@ -1814,7 +1966,9 @@ function configurarCitas() {
   if (guardarBtn) guardarBtn.addEventListener("click", guardarCita);
   if (recargarBtn) recargarBtn.addEventListener("click", cargarCitas);
   if (seleccionarTodoBtn) seleccionarTodoBtn.addEventListener("click", alternarSeleccionTodasCitas);
+  if (modificarBtn) modificarBtn.addEventListener("click", modificarCitaSeleccionada);
   if (eliminarBtn) eliminarBtn.addEventListener("click", eliminarCitasSeleccionadas);
+  if (cancelarEdicionBtn) cancelarEdicionBtn.addEventListener("click", () => cancelarEdicionCita(true));
   if (filtro) {
     filtro.addEventListener("input", event => {
       filtroCitas = event.target.value;
@@ -1853,6 +2007,7 @@ function configurarCitas() {
     citas = citas.map(integrarDatosTablaUnicaCita);
     renderCitasTabla();
   });
+  actualizarModoEdicionCita();
   cargarCitas();
 }
 
