@@ -614,7 +614,11 @@ function aplicarMedidasAntropometricas(medidas) {
 
   MEDIDAS_ANTROPOMETRICAS_CAMPOS.forEach(function (campo) {
     const elemento = document.getElementById(campo.id);
-    if (elemento) elemento.value = formatearMedidaAntropometrica(datos[campo.key]);
+    if (!elemento) return;
+    const valor = campo.key === "cadera" && (datos[campo.key] === undefined || datos[campo.key] === null || datos[campo.key] === "")
+      ? 120
+      : datos[campo.key];
+    elemento.value = formatearMedidaAntropometrica(valor);
   });
 
   const observaciones = document.getElementById("medidas_observaciones");
@@ -4156,7 +4160,7 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       { campo: "brazo_izquierdo", label: "Brazo izquierdo" },
       { campo: "brazo_derecho", label: "Brazo derecho" }
     ]);
-    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "CINTURA", iconoAbdomen, [
+    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "TRONCO", iconoAbdomen, [
       { campo: "cintura", label: "Cintura" },
       { campo: "abdomen_bajo", label: "Abdomen bajo" },
       { campo: "cadera", label: "Cadera" }

@@ -1208,10 +1208,6 @@ table td {
     gap: 14px 24px;
 }
 
-.ideal-card-fields--three {
-    grid-template-columns: repeat(3, minmax(110px, 1fr));
-}
-
 .ideal-field label,
 .ideal-observations label {
     display: block;
@@ -1781,9 +1777,6 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .ideal-card-fields--three {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 767.98px) {
@@ -1953,10 +1946,6 @@ body {
     .ideal-card-fields {
         grid-template-columns: 1fr;
         gap: 12px;
-    }
-
-    .ideal-card-fields--three {
-        grid-template-columns: 1fr;
     }
 
     .macro-requerimiento-tabla {
