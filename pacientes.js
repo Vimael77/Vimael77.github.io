@@ -4,7 +4,7 @@ let paisesNacimiento = [];
 let pacienteEditandoId = "";
 const SEXOS_PACIENTE = ["Masculino", "Femenino"];
 
-const PAGINAS_APP = ["#perfil", "#pacientes", "#home", "#citas", "#generador", "#configuracion"];
+const PAGINAS_APP = ["#perfil", "#pacientes", "#home", "#citas", "#evolucion", "#generador"];
 
 const CODIGOS_PAIS_NACIMIENTO = [
   "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ",
@@ -339,6 +339,7 @@ function aplicarPacienteEnCalculadora(pacienteId) {
     if (pacienteIdInput) pacienteIdInput.value = "";
     if (selector) selector.value = "";
     limpiarDatosPacienteCalculadora();
+    if (typeof aplicarDatosBiaCita === "function") aplicarDatosBiaCita({});
     return;
   }
 
@@ -366,6 +367,7 @@ function aplicarPacienteEnCalculadora(pacienteId) {
   if (detalle) {
     detalle.textContent = `${paciente.sexo || "Sexo no registrado"} | ${paciente.pais_nacimiento} | Nacimiento: ${paciente.fecha_nacimiento}`;
   }
+  if (typeof aplicarDatosBiaCita === "function") aplicarDatosBiaCita({});
 }
 
 function configurarBuscadorPacienteCalculadora(input) {

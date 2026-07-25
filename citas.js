@@ -6,6 +6,17 @@ let paginaCitasActual = 1;
 let citasSeleccionadas = new Set();
 let citaEditandoId = "";
 const CITAS_POR_PAGINA = 15;
+const MEDIDAS_EVOLUCION = {
+  cintura: "Cintura",
+  abdomen_bajo: "Abdomen bajo",
+  cadera: "Cadera",
+  brazo_izquierdo: "Brazo izquierdo",
+  brazo_derecho: "Brazo derecho",
+  muslo_izquierdo: "Muslo izquierdo",
+  muslo_derecho: "Muslo derecho",
+  pantorrilla_izquierda: "Pantorrilla izquierda",
+  pantorrilla_derecha: "Pantorrilla derecha"
+};
 
 const CAMPOS_NUTRIENTES = [
   ["energia_calculada", "Energia calculada (Kcal)"],
@@ -39,6 +50,26 @@ const CAMPOS_MEDIDAS_CITA = [
   ["muslo_derecho", "Muslo derecho"],
   ["pantorrilla_izquierda", "Pantorrilla izquierda"],
   ["pantorrilla_derecha", "Pantorrilla derecha"]
+];
+
+const CAMPOS_BIA_CITA = [
+  ["bia_masa_muscular_kg", "Masa muscular total", "kg"],
+  ["bia_masa_muscular_brazo_izquierdo_kg", "Masa muscular - brazo izquierdo", "kg"],
+  ["bia_masa_muscular_brazo_derecho_kg", "Masa muscular - brazo derecho", "kg"],
+  ["bia_masa_muscular_tronco_kg", "Masa muscular - tronco", "kg"],
+  ["bia_masa_muscular_pierna_izquierda_kg", "Masa muscular - pierna izquierda", "kg"],
+  ["bia_masa_muscular_pierna_derecha_kg", "Masa muscular - pierna derecha", "kg"],
+  ["bia_masa_grasa_pct", "Masa grasa total", "%"],
+  ["bia_masa_grasa_brazo_izquierdo_pct", "Masa grasa - brazo izquierdo", "%"],
+  ["bia_masa_grasa_brazo_derecho_pct", "Masa grasa - brazo derecho", "%"],
+  ["bia_masa_grasa_tronco_pct", "Masa grasa - tronco", "%"],
+  ["bia_masa_grasa_pierna_izquierda_pct", "Masa grasa - pierna izquierda", "%"],
+  ["bia_masa_grasa_pierna_derecha_pct", "Masa grasa - pierna derecha", "%"],
+  ["bia_grasa_visceral_pct", "Masa grasa visceral", "%"],
+  ["bia_agua_corporal_pct", "Agua corporal", "%"],
+  ["bia_geb_kcal", "Gasto energético basal (GEB)", "kcal"],
+  ["bia_masa_osea_kg", "Masa ósea", "kg"],
+  ["bia_edad_anios", "Edad según BIA", "años"]
 ];
 
 const COLUMNAS_HORARIOS_CITA = [
@@ -579,7 +610,7 @@ function obtenerFilaCitaTablaUnica(datos) {
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-    cita_schema_version: 17,
+    cita_schema_version: 18,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -603,6 +634,10 @@ function obtenerFilaCitaTablaUnica(datos) {
     pantorrilla_derecha: citaNumeroOpcional(medidas.pantorrilla_derecha),
     observaciones: String(medidas.observaciones || "").trim()
   };
+
+  CAMPOS_BIA_CITA.forEach(([campo]) => {
+    fila[campo] = citaNumeroOpcional(datos.bia ? datos.bia[campo] : null);
+  });
 
   const macroProteina = macronutrientesPorNombre.get(citaNormalizar("Proteinas")) || {};
   const macroGrasa = macronutrientesPorNombre.get(citaNormalizar("Grasas")) || {};
@@ -711,6 +746,7 @@ function integrarDatosTablaUnicaCita(cita) {
       valor: valorImc,
       clasificacion: cita.clasificacion_imc || ""
     },
+    bia: Object.fromEntries(CAMPOS_BIA_CITA.map(([campo]) => [campo, cita[campo]])),
     configuracion: {},
     macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita),
     horas_comida: normalizarHorariosTablaUnicaCita(cita),
@@ -854,6 +890,18 @@ function obtenerTotalesCita() {
   };
 }
 
+function obtenerDatosBiaCita() {
+  return Object.fromEntries(CAMPOS_BIA_CITA.map(([campo]) => [
+    campo,
+    citaNumeroOpcional(citaValor(campo))
+  ]));
+}
+
+function aplicarDatosBiaCita(datos) {
+  const valores = datos && typeof datos === "object" ? datos : {};
+  CAMPOS_BIA_CITA.forEach(([campo]) => asignarValorCita(campo, valores[campo]));
+}
+
 function obtenerDatosCita() {
   const pacienteId = citaValor("calc_paciente_id") || null;
   const pacienteRegistrado = pacienteId && typeof pacientes !== "undefined" && Array.isArray(pacientes)
@@ -881,11 +929,12 @@ function obtenerDatosCita() {
   };
 
   return {
-    version: 17,
+    version: 18,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
     imc: obtenerImcCita(),
+    bia: obtenerDatosBiaCita(),
     configuracion: {},
     macronutrientes: obtenerMacronutrientesCita(),
     horas_comida: obtenerHorasComidaCita(),
@@ -1127,6 +1176,7 @@ function cargarCitaEnCalculadora(cita) {
   asignarValorCita("calc_estatura", paciente.estatura);
   asignarValorCita("calc_actividad", paciente.actividad);
   aplicarMedidasAntropometricas(paciente.medidas_antropometricas || {});
+  aplicarDatosBiaCita(datos.bia);
 
   asignarValorCita("macro_peso_ideal", paciente.peso_ideal);
   const macroProteina = (datos.macronutrientes || []).find(item => citaNormalizar(item.nombre) === citaNormalizar("Proteinas"));
@@ -1401,6 +1451,14 @@ async function cargarCitas() {
     "brazo_izquierdo", "brazo_derecho", "cintura", "abdomen_bajo", "cadera",
     "muslo_izquierdo", "muslo_derecho", "pantorrilla_izquierda", "pantorrilla_derecha",
     "observaciones", "req_energia_calculada", "req_proteina", "req_grasa_total",
+    "bia_masa_muscular_kg", "bia_masa_muscular_brazo_izquierdo_kg",
+    "bia_masa_muscular_brazo_derecho_kg", "bia_masa_muscular_tronco_kg",
+    "bia_masa_muscular_pierna_izquierda_kg", "bia_masa_muscular_pierna_derecha_kg",
+    "bia_masa_grasa_pct", "bia_masa_grasa_brazo_izquierdo_pct",
+    "bia_masa_grasa_brazo_derecho_pct", "bia_masa_grasa_tronco_pct",
+    "bia_masa_grasa_pierna_izquierda_pct", "bia_masa_grasa_pierna_derecha_pct",
+    "bia_grasa_visceral_pct", "bia_agua_corporal_pct", "bia_geb_kcal",
+    "bia_masa_osea_kg", "bia_edad_anios",
     "req_carbohidratos", "req_fibra", "req_ags", "req_agm", "req_agpi",
     "req_colesterol", "req_calcio", "req_fosforo", "req_hierro", "req_potasio",
     "req_sodio", "req_zinc", "req_vitamina_c", "req_vitamina_a", "req_folatos",
@@ -1453,6 +1511,7 @@ async function cargarCitas() {
   }));
   citasSeleccionadas.clear();
   renderCitasTabla();
+  window.dispatchEvent(new CustomEvent("citas:loaded"));
 }
 
 async function eliminarCitasSeleccionadas() {
@@ -1819,6 +1878,30 @@ function renderMedidasAntropometricasCita(medidas) {
   `;
 }
 
+function renderDatosBiaCita(bia) {
+  const datos = bia && typeof bia === "object" ? bia : {};
+  const tieneDatos = CAMPOS_BIA_CITA.some(([campo]) => datos[campo] !== null && datos[campo] !== undefined && datos[campo] !== "");
+  if (!tieneDatos) return '<p class="text-muted mb-0">Sin datos de bioimpedancia registrados.</p>';
+
+  return `
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered cita-medidas-table">
+        <thead class="table-primary"><tr><th>Indicador</th><th>Valor</th></tr></thead>
+        <tbody>
+          ${CAMPOS_BIA_CITA.map(([campo, label, unidad]) => `
+            <tr>
+              <td>${citaEscape(label)}</td>
+              <td>${datos[campo] !== null && datos[campo] !== undefined && datos[campo] !== ""
+                ? `${citaFormatearNumero(datos[campo])} ${citaEscape(unidad)}`
+                : ""}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function clonarDatosParaPdfCita(datos) {
   try {
     const copia = JSON.parse(JSON.stringify(datos || {}));
@@ -1916,6 +1999,11 @@ function renderDetalleCita(cita) {
       ${renderMedidasAntropometricasCita(paciente.medidas_antropometricas)}
     </div>
 
+    <div class="card p-3 cita-detail-section">
+      <h5>An&aacute;lisis de Bioimpedancia El&eacute;ctrica (BIA)</h5>
+      ${renderDatosBiaCita(datos.bia)}
+    </div>
+
     <div class="cita-detail-grid">
       <div class="card p-3 cita-detail-section cita-compact-card">
         <h5>Horarios de comida</h5>
@@ -1945,6 +2033,189 @@ function renderDetalleCita(cita) {
   }
 }
 
+function obtenerPacientesConCitasEvolucion() {
+  const mapa = new Map();
+  citas.forEach(cita => {
+    const id = String(cita.paciente_id || (cita.datos && cita.datos.paciente && cita.datos.paciente.paciente_id) || "");
+    if (!id || mapa.has(id)) return;
+    mapa.set(id, {
+      id,
+      nombre: cita.paciente_nombre || "Paciente",
+      documento: cita.paciente_documento || ""
+    });
+  });
+  return Array.from(mapa.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+function renderSelectorPacientesEvolucion() {
+  const selector = document.getElementById("evolucion_paciente");
+  if (!selector) return;
+  const valorActual = selector.value;
+  const opciones = obtenerPacientesConCitasEvolucion();
+  selector.innerHTML = '<option value="">Selecciona un paciente</option>' + opciones.map(paciente => (
+    `<option value="${citaEscape(paciente.id)}">${citaEscape(paciente.nombre)}${paciente.documento ? ` - ${citaEscape(paciente.documento)}` : ""}</option>`
+  )).join("");
+  if (opciones.some(paciente => paciente.id === valorActual)) selector.value = valorActual;
+}
+
+function obtenerSerieEvolucion(pacienteId, campo) {
+  return citas
+    .filter(cita => String(cita.paciente_id) === String(pacienteId))
+    .map(cita => {
+      const paciente = cita.datos && cita.datos.paciente ? cita.datos.paciente : {};
+      const medidas = normalizarMedidasCita(paciente.medidas_antropometricas);
+      const bia = cita.datos && cita.datos.bia ? cita.datos.bia : {};
+      const valor = campo === "peso"
+        ? citaNumeroOpcional(paciente.peso)
+        : campo.startsWith("bia_")
+          ? citaNumeroOpcional(bia[campo])
+          : citaNumeroOpcional(medidas[campo]);
+      return {
+        fecha: obtenerFechaIsoCita(cita),
+        etiqueta: citaFormatearFecha(cita.fecha_cita),
+        valor
+      };
+    })
+    .filter(punto => punto.fecha && punto.valor !== null)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+function renderGraficaEvolucion(serie, unidad, color) {
+  if (!serie.length) {
+    return '<div class="evolution-chart-empty">No existen datos registrados para esta variable.</div>';
+  }
+
+  const ancho = 760;
+  const alto = 320;
+  const margen = { izquierda: 62, derecha: 24, arriba: 25, abajo: 58 };
+  const anchoGrafica = ancho - margen.izquierda - margen.derecha;
+  const altoGrafica = alto - margen.arriba - margen.abajo;
+  const valores = serie.map(punto => punto.valor);
+  let minimo = Math.min(...valores);
+  let maximo = Math.max(...valores);
+  const amplitud = maximo - minimo;
+  const relleno = amplitud > 0 ? amplitud * 0.15 : Math.max(Math.abs(maximo) * 0.08, 1);
+  minimo = Math.max(0, minimo - relleno);
+  maximo += relleno;
+  const rango = maximo - minimo || 1;
+  const x = indice => margen.izquierda + (serie.length === 1 ? anchoGrafica / 2 : (indice / (serie.length - 1)) * anchoGrafica);
+  const y = valor => margen.arriba + altoGrafica - ((valor - minimo) / rango) * altoGrafica;
+  const puntos = serie.map((punto, indice) => `${x(indice).toFixed(1)},${y(punto.valor).toFixed(1)}`).join(" ");
+  const pasoEtiquetas = Math.max(1, Math.ceil(serie.length / 6));
+
+  const lineasY = Array.from({ length: 5 }, (_, indice) => {
+    const proporcion = indice / 4;
+    const valor = maximo - (rango * proporcion);
+    const posicionY = margen.arriba + (altoGrafica * proporcion);
+    return `
+      <line x1="${margen.izquierda}" y1="${posicionY}" x2="${ancho - margen.derecha}" y2="${posicionY}" stroke="#e3e9ec" />
+      <text x="${margen.izquierda - 10}" y="${posicionY + 4}" text-anchor="end" fill="#66737c" font-size="12">${citaFormatearNumero(valor)} ${unidad}</text>
+    `;
+  }).join("");
+
+  const etiquetasX = serie.map((punto, indice) => {
+    if (indice % pasoEtiquetas !== 0 && indice !== serie.length - 1) return "";
+    return `<text x="${x(indice)}" y="${alto - 24}" text-anchor="middle" fill="#66737c" font-size="12">${citaEscape(punto.etiqueta)}</text>`;
+  }).join("");
+
+  const circulos = serie.map((punto, indice) => `
+    <circle cx="${x(indice)}" cy="${y(punto.valor)}" r="5" fill="#fff" stroke="${color}" stroke-width="3">
+      <title>${citaEscape(punto.etiqueta)}: ${citaFormatearNumero(punto.valor)} ${unidad}</title>
+    </circle>
+  `).join("");
+
+  return `
+    <svg viewBox="0 0 ${ancho} ${alto}" role="img" aria-label="Gr&aacute;fica de evoluci&oacute;n">
+      ${lineasY}
+      <line x1="${margen.izquierda}" y1="${margen.arriba}" x2="${margen.izquierda}" y2="${alto - margen.abajo}" stroke="#9aa7af" />
+      <line x1="${margen.izquierda}" y1="${alto - margen.abajo}" x2="${ancho - margen.derecha}" y2="${alto - margen.abajo}" stroke="#9aa7af" />
+      <polyline points="${puntos}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      ${circulos}
+      ${etiquetasX}
+    </svg>
+  `;
+}
+
+function renderCambioEvolucion(elemento, serie, unidad) {
+  if (!elemento) return;
+  if (!serie.length) {
+    elemento.textContent = "Sin datos";
+    return;
+  }
+  if (serie.length === 1) {
+    elemento.textContent = `1 registro · ${citaFormatearNumero(serie[0].valor)} ${unidad}`;
+    return;
+  }
+  const primero = serie[0].valor;
+  const ultimo = serie[serie.length - 1].valor;
+  const cambio = ultimo - primero;
+  const signo = cambio > 0 ? "+" : "";
+  elemento.textContent = `${citaFormatearNumero(primero)} → ${citaFormatearNumero(ultimo)} ${unidad} (${signo}${citaFormatearNumero(cambio)})`;
+}
+
+function renderEvolucionPaciente() {
+  const selectorPaciente = document.getElementById("evolucion_paciente");
+  const selectorMedida = document.getElementById("evolucion_medida");
+  const selectorBia = document.getElementById("evolucion_bia");
+  const estado = document.getElementById("evolucion_estado");
+  const contenido = document.getElementById("evolucion_contenido");
+  if (!selectorPaciente || !selectorMedida || !selectorBia || !estado || !contenido) return;
+
+  const pacienteId = selectorPaciente.value;
+  if (!pacienteId) {
+    estado.hidden = false;
+    estado.textContent = citas.length
+      ? "Selecciona un paciente para consultar su evolucion."
+      : "Todavia no existen citas con datos para mostrar.";
+    contenido.hidden = true;
+    return;
+  }
+
+  const campoMedida = selectorMedida.value;
+  const nombreMedida = MEDIDAS_EVOLUCION[campoMedida] || "Medida corporal";
+  const campoBia = selectorBia.value;
+  const configuracionBia = CAMPOS_BIA_CITA.find(([campo]) => campo === campoBia) || [campoBia, "Indicador BIA", ""];
+  const nombreBia = configuracionBia[1];
+  const unidadBia = configuracionBia[2];
+  const seriePeso = obtenerSerieEvolucion(pacienteId, "peso");
+  const serieMedida = obtenerSerieEvolucion(pacienteId, campoMedida);
+  const serieBia = obtenerSerieEvolucion(pacienteId, campoBia);
+  estado.hidden = true;
+  contenido.hidden = false;
+
+  const titulo = document.getElementById("evolucion_medida_titulo");
+  if (titulo) titulo.textContent = `Evolución de ${nombreMedida.toLowerCase()}`;
+  const tituloBia = document.getElementById("evolucion_bia_titulo");
+  if (tituloBia) tituloBia.textContent = `Evolución de ${nombreBia.toLowerCase()}`;
+  document.getElementById("evolucion_peso_grafica").innerHTML = renderGraficaEvolucion(seriePeso, "kg", "#2563eb");
+  document.getElementById("evolucion_medida_grafica").innerHTML = renderGraficaEvolucion(serieMedida, "cm", "#4caf50");
+  document.getElementById("evolucion_bia_grafica").innerHTML = renderGraficaEvolucion(serieBia, unidadBia, "#7c3aed");
+  renderCambioEvolucion(document.getElementById("evolucion_peso_cambio"), seriePeso, "kg");
+  renderCambioEvolucion(document.getElementById("evolucion_medida_cambio"), serieMedida, "cm");
+  renderCambioEvolucion(document.getElementById("evolucion_bia_cambio"), serieBia, unidadBia);
+}
+
+function configurarEvolucionPacientes() {
+  const selectorPaciente = document.getElementById("evolucion_paciente");
+  const selectorMedida = document.getElementById("evolucion_medida");
+  const selectorBia = document.getElementById("evolucion_bia");
+  const enlaceEvolucion = document.getElementById("side-evolucion-link");
+  if (selectorPaciente) selectorPaciente.addEventListener("change", renderEvolucionPaciente);
+  if (selectorMedida) selectorMedida.addEventListener("change", renderEvolucionPaciente);
+  if (selectorBia) selectorBia.addEventListener("change", renderEvolucionPaciente);
+  if (enlaceEvolucion) {
+    enlaceEvolucion.addEventListener("click", () => {
+      renderSelectorPacientesEvolucion();
+      renderEvolucionPaciente();
+    });
+  }
+  window.addEventListener("citas:loaded", () => {
+    renderSelectorPacientesEvolucion();
+    renderEvolucionPaciente();
+  });
+  renderSelectorPacientesEvolucion();
+}
+
 function configurarCitas() {
   const guardarBtn = document.getElementById("guardar_cita_btn");
   const recargarBtn = document.getElementById("citas_recargar");
@@ -1956,6 +2227,7 @@ function configurarCitas() {
   const modificarBtn = document.getElementById("citas_modificar");
   const eliminarBtn = document.getElementById("citas_eliminar");
   const cancelarEdicionBtn = document.getElementById("cancelar_edicion_cita_btn");
+  const enlaceCitas = document.getElementById("side-citas-link");
 
   const actualizarFiltrosCitas = () => {
     paginaCitasActual = 1;
@@ -1969,6 +2241,14 @@ function configurarCitas() {
   if (modificarBtn) modificarBtn.addEventListener("click", modificarCitaSeleccionada);
   if (eliminarBtn) eliminarBtn.addEventListener("click", eliminarCitasSeleccionadas);
   if (cancelarEdicionBtn) cancelarEdicionBtn.addEventListener("click", () => cancelarEdicionCita(true));
+  if (enlaceCitas) {
+    enlaceCitas.addEventListener("click", () => {
+      citasSeleccionadas.clear();
+      const detalle = document.getElementById("cita_detalle");
+      if (detalle) detalle.innerHTML = "";
+      renderCitasTabla();
+    });
+  }
   if (filtro) {
     filtro.addEventListener("input", event => {
       filtroCitas = event.target.value;
@@ -2008,6 +2288,7 @@ function configurarCitas() {
     renderCitasTabla();
   });
   actualizarModoEdicionCita();
+  configurarEvolucionPacientes();
   cargarCitas();
 }
 

@@ -4004,6 +4004,7 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     const profesional = snapshot.profesional || {};
     const imc = snapshot.imc || {};
     const medidas = paciente.medidas_antropometricas || {};
+    const datosBia = snapshot.bia || {};
     const horasComida = snapshot.horas_comida || obtenerHorasComida();
     const totales = snapshot.totales || {};
 
@@ -4190,6 +4191,20 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     doc.text(lineasObservaciones, margin + 2, yObservaciones + 8);
     y = yObservaciones + altoObservaciones + 9;
 
+    const camposBiaPdf = typeof CAMPOS_BIA_CITA !== "undefined" && Array.isArray(CAMPOS_BIA_CITA)
+      ? CAMPOS_BIA_CITA
+      : [];
+    if (camposBiaPdf.some(([campo]) => datosBia[campo] !== null && datosBia[campo] !== undefined && datosBia[campo] !== "")) {
+      asegurar(58);
+      seccion("Analisis de Bioimpedancia Electrica (BIA)");
+      tablaInfo(camposBiaPdf.map(([campo, label, unidad]) => [
+        label,
+        datosBia[campo] !== null && datosBia[campo] !== undefined && datosBia[campo] !== ""
+          ? `${numero(datosBia[campo])} ${unidad}`
+          : ""
+      ]), 3);
+    }
+
     tablaHorariosMacronutrientesLadoALado(horasComida, snapshot.macronutrientes);
 
     seccion("Alimentos seleccionados");
@@ -4220,6 +4235,119 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     filasTotales.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
     filasTotales.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
     tablaNutricion("Concepto", filasTotales);
+
+    const pacienteIdEvolucion = paciente.paciente_id || "";
+    if (pacienteIdEvolucion && typeof obtenerSerieEvolucion === "function") {
+      const selectorMedida = document.getElementById("evolucion_medida");
+      const selectorBia = document.getElementById("evolucion_bia");
+      const campoMedida = selectorMedida ? selectorMedida.value : "cintura";
+      const campoBia = selectorBia ? selectorBia.value : "bia_masa_muscular_kg";
+      const nombreMedida = typeof MEDIDAS_EVOLUCION !== "undefined"
+        ? MEDIDAS_EVOLUCION[campoMedida] || "Medida corporal"
+        : "Medida corporal";
+      const configuracionBia = camposBiaPdf.find(([campo]) => campo === campoBia) || [campoBia, "Indicador BIA", ""];
+      const seriesEvolucion = [
+        {
+          titulo: "Evolucion del peso",
+          serie: obtenerSerieEvolucion(pacienteIdEvolucion, "peso"),
+          unidad: "kg",
+          color: [37, 99, 235]
+        },
+        {
+          titulo: `Evolucion de ${nombreMedida}`,
+          serie: obtenerSerieEvolucion(pacienteIdEvolucion, campoMedida),
+          unidad: "cm",
+          color: [76, 175, 80]
+        },
+        {
+          titulo: `Evolucion de ${configuracionBia[1]}`,
+          serie: obtenerSerieEvolucion(pacienteIdEvolucion, campoBia),
+          unidad: configuracionBia[2],
+          color: [124, 58, 237]
+        }
+      ];
+
+      const dibujarGraficaEvolucionPdf = (configuracion, indice) => {
+        const xGrafica = margin + 13;
+        const yGrafica = 25 + (indice * 58);
+        const anchoGrafica = usableWidth - 20;
+        const altoGrafica = 43;
+        const serie = configuracion.serie || [];
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(25, 35, 45);
+        doc.text(limpiar(configuracion.titulo), margin, yGrafica - 5);
+
+        if (!serie.length) {
+          doc.setDrawColor(220, 227, 231);
+          doc.setFillColor(250, 252, 252);
+          doc.rect(margin, yGrafica, usableWidth, altoGrafica, "FD");
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(105, 115, 125);
+          doc.text("Sin datos registrados para esta variable.", pageWidth / 2, yGrafica + 22, { align: "center" });
+          return;
+        }
+
+        const valores = serie.map(punto => punto.valor);
+        let minimo = Math.min(...valores);
+        let maximo = Math.max(...valores);
+        const amplitud = maximo - minimo;
+        const relleno = amplitud > 0 ? amplitud * 0.15 : Math.max(Math.abs(maximo) * 0.08, 1);
+        minimo = Math.max(0, minimo - relleno);
+        maximo += relleno;
+        const rango = maximo - minimo || 1;
+        const xPunto = posicion => xGrafica + (serie.length === 1
+          ? anchoGrafica / 2
+          : (posicion / (serie.length - 1)) * anchoGrafica);
+        const yPunto = valor => yGrafica + altoGrafica - (((valor - minimo) / rango) * altoGrafica);
+
+        doc.setDrawColor(226, 232, 236);
+        doc.setLineWidth(0.2);
+        for (let linea = 0; linea <= 4; linea += 1) {
+          const proporcion = linea / 4;
+          const lineaY = yGrafica + (altoGrafica * proporcion);
+          const valorLinea = maximo - (rango * proporcion);
+          doc.line(xGrafica, lineaY, xGrafica + anchoGrafica, lineaY);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(6);
+          doc.setTextColor(100, 110, 120);
+          doc.text(`${numero(valorLinea)} ${configuracion.unidad}`, xGrafica - 2, lineaY + 1.8, { align: "right" });
+        }
+
+        doc.setDrawColor(...configuracion.color);
+        doc.setLineWidth(0.8);
+        for (let punto = 1; punto < serie.length; punto += 1) {
+          doc.line(xPunto(punto - 1), yPunto(serie[punto - 1].valor), xPunto(punto), yPunto(serie[punto].valor));
+        }
+
+        const pasoEtiqueta = Math.max(1, Math.ceil(serie.length / 7));
+        serie.forEach((punto, posicion) => {
+          const puntoX = xPunto(posicion);
+          const puntoY = yPunto(punto.valor);
+          doc.setFillColor(...configuracion.color);
+          doc.circle(puntoX, puntoY, 1.4, "F");
+          if (posicion % pasoEtiqueta === 0 || posicion === serie.length - 1) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(5.8);
+            doc.setTextColor(80, 90, 100);
+            doc.text(limpiar(punto.etiqueta), puntoX, yGrafica + altoGrafica + 4, { align: "center" });
+          }
+        });
+      };
+
+      nuevaPagina();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(76, 175, 80);
+      doc.text("Evolucion del paciente", pageWidth / 2, 12, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 90, 100);
+      doc.text(limpiar(paciente.nombre || "Paciente"), pageWidth / 2, 17, { align: "center" });
+      seriesEvolucion.forEach(dibujarGraficaEvolucionPdf);
+    }
 
     doc.save(opciones.filename || (snapshotEntrada
       ? obtenerNombreArchivoDescargaSnapshot(snapshot, "pdf")

@@ -116,6 +116,11 @@
             <span class="side-menu-icon" data-lucide="clipboard-list" aria-hidden="true"></span>
             <span class="side-menu-label">Citas</span>
           </a>
+          <a class="side-menu-link" id="side-evolucion-link" data-toggle="tab" href="#evolucion" role="tab"
+            aria-controls="evolucion" aria-selected="false" aria-label="Evoluci&oacute;n" title="Evoluci&oacute;n">
+            <span class="side-menu-icon" data-lucide="chart-line" aria-hidden="true"></span>
+            <span class="side-menu-label">Evoluci&oacute;n</span>
+          </a>
           <a class="side-menu-link" id="side-generador-link" data-toggle="tab" href="#generador" role="tab"
             aria-controls="generador" aria-selected="false" aria-label="Men&uacute;" title="Men&uacute;">
             <span class="side-menu-icon" data-lucide="utensils" aria-hidden="true"></span>
@@ -576,6 +581,78 @@
                       </svg>
                       <p id="imc_rango_grafica" class="imc-chart-note" aria-live="polite"></p>
                     </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div class="row w-100 m-0 mb-4">
+              <div class="col-md-12">
+                <section class="bia-section" aria-labelledby="bia_title">
+                  <div class="bia-section-header">
+                    <div>
+                      <span>Composici&oacute;n corporal</span>
+                      <h3 id="bia_title">AN&Aacute;LISIS DE BIOIMPEDANCIA EL&Eacute;CTRICA (BIA)</h3>
+                      <p>Registra los resultados obtenidos mediante el equipo de bioimpedancia.</p>
+                    </div>
+                    <span class="bia-section-icon" data-lucide="activity" aria-hidden="true"></span>
+                  </div>
+
+                  <div class="bia-groups">
+                    <article class="bia-group-card">
+                      <div class="bia-group-heading">
+                        <h4>Masa muscular esquel&eacute;tica</h4>
+                        <span>kg</span>
+                      </div>
+                      <div class="bia-fields-grid">
+                        <div class="bia-field bia-field--total">
+                          <label for="bia_masa_muscular_kg">Masa muscular total</label>
+                          <div class="input-group">
+                            <input type="number" id="bia_masa_muscular_kg" class="form-control" min="0" step="0.1" inputmode="decimal">
+                            <span class="input-group-text">kg</span>
+                          </div>
+                        </div>
+                        <div class="bia-field"><label for="bia_masa_muscular_brazo_izquierdo_kg">Brazo izquierdo</label><div class="input-group"><input type="number" id="bia_masa_muscular_brazo_izquierdo_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_muscular_brazo_derecho_kg">Brazo derecho</label><div class="input-group"><input type="number" id="bia_masa_muscular_brazo_derecho_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_muscular_tronco_kg">Tronco</label><div class="input-group"><input type="number" id="bia_masa_muscular_tronco_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_muscular_pierna_izquierda_kg">Pierna izquierda</label><div class="input-group"><input type="number" id="bia_masa_muscular_pierna_izquierda_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_muscular_pierna_derecha_kg">Pierna derecha</label><div class="input-group"><input type="number" id="bia_masa_muscular_pierna_derecha_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                      </div>
+                    </article>
+
+                    <article class="bia-group-card">
+                      <div class="bia-group-heading">
+                        <h4>Masa grasa corporal</h4>
+                        <span>%</span>
+                      </div>
+                      <div class="bia-fields-grid">
+                        <div class="bia-field bia-field--total">
+                          <label for="bia_masa_grasa_pct">Masa grasa total</label>
+                          <div class="input-group">
+                            <input type="number" id="bia_masa_grasa_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal">
+                            <span class="input-group-text">%</span>
+                          </div>
+                        </div>
+                        <div class="bia-field"><label for="bia_masa_grasa_brazo_izquierdo_pct">Brazo izquierdo</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_izquierdo_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_brazo_derecho_pct">Brazo derecho</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_derecho_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_tronco_pct">Tronco</label><div class="input-group"><input type="number" id="bia_masa_grasa_tronco_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_pierna_izquierda_pct">Pierna izquierda</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_izquierda_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_pierna_derecha_pct">Pierna derecha</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_derecha_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                      </div>
+                    </article>
+
+                    <article class="bia-group-card bia-group-card--indicators">
+                      <div class="bia-group-heading">
+                        <h4>Otros indicadores</h4>
+                      </div>
+                      <div class="bia-indicators-grid">
+                        <div class="bia-field"><label for="bia_grasa_visceral_pct">Masa grasa visceral</label><div class="input-group"><input type="number" id="bia_grasa_visceral_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_agua_corporal_pct">Agua corporal</label><div class="input-group"><input type="number" id="bia_agua_corporal_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_geb_kcal">Gasto energ&eacute;tico basal (GEB)</label><div class="input-group"><input type="number" id="bia_geb_kcal" class="form-control" min="0" step="1" inputmode="numeric"><span class="input-group-text">kcal</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_osea_kg">Masa &oacute;sea</label><div class="input-group"><input type="number" id="bia_masa_osea_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_edad_anios">Edad seg&uacute;n BIA</label><div class="input-group"><input type="number" id="bia_edad_anios" class="form-control" min="0" step="1" inputmode="numeric"><span class="input-group-text">a&ntilde;os</span></div></div>
+                      </div>
+                    </article>
                   </div>
                 </section>
               </div>
@@ -1160,6 +1237,106 @@
               </div>
 
               <div id="cita_detalle" class="cita-detail"></div>
+            </div>
+          </div>
+
+          <!-- PESTANA EVOLUCION -->
+          <div class="tab-pane fade" id="evolucion" role="tabpanel" aria-labelledby="side-evolucion-link">
+            <div class="evolution-page">
+              <div class="centered-div evolution-page-heading">
+                <h3>EVOLUCI&Oacute;N DEL PACIENTE</h3>
+                <p>Compara el peso y las medidas corporales registradas en cada cita.</p>
+              </div>
+
+              <div class="card evolution-controls">
+                <div class="evolution-patient-field">
+                  <label for="evolucion_paciente">Paciente</label>
+                  <select id="evolucion_paciente" class="form-select">
+                    <option value="">Selecciona un paciente</option>
+                  </select>
+                </div>
+                <div class="evolution-measure-field">
+                  <label for="evolucion_medida">Medida corporal</label>
+                  <select id="evolucion_medida" class="form-select">
+                    <option value="cintura">Cintura</option>
+                    <option value="abdomen_bajo">Abdomen bajo</option>
+                    <option value="cadera">Cadera</option>
+                    <option value="brazo_izquierdo">Brazo izquierdo</option>
+                    <option value="brazo_derecho">Brazo derecho</option>
+                    <option value="muslo_izquierdo">Muslo izquierdo</option>
+                    <option value="muslo_derecho">Muslo derecho</option>
+                    <option value="pantorrilla_izquierda">Pantorrilla izquierda</option>
+                    <option value="pantorrilla_derecha">Pantorrilla derecha</option>
+                  </select>
+                </div>
+                <div class="evolution-bia-field">
+                  <label for="evolucion_bia">Indicador BIA</label>
+                  <select id="evolucion_bia" class="form-select">
+                    <optgroup label="Masa muscular esquelética">
+                      <option value="bia_masa_muscular_kg">Masa muscular total</option>
+                      <option value="bia_masa_muscular_brazo_izquierdo_kg">Brazo izquierdo</option>
+                      <option value="bia_masa_muscular_brazo_derecho_kg">Brazo derecho</option>
+                      <option value="bia_masa_muscular_tronco_kg">Tronco</option>
+                      <option value="bia_masa_muscular_pierna_izquierda_kg">Pierna izquierda</option>
+                      <option value="bia_masa_muscular_pierna_derecha_kg">Pierna derecha</option>
+                    </optgroup>
+                    <optgroup label="Masa grasa corporal">
+                      <option value="bia_masa_grasa_pct">Masa grasa total</option>
+                      <option value="bia_masa_grasa_brazo_izquierdo_pct">Brazo izquierdo</option>
+                      <option value="bia_masa_grasa_brazo_derecho_pct">Brazo derecho</option>
+                      <option value="bia_masa_grasa_tronco_pct">Tronco</option>
+                      <option value="bia_masa_grasa_pierna_izquierda_pct">Pierna izquierda</option>
+                      <option value="bia_masa_grasa_pierna_derecha_pct">Pierna derecha</option>
+                    </optgroup>
+                    <optgroup label="Otros indicadores">
+                      <option value="bia_grasa_visceral_pct">Masa grasa visceral</option>
+                      <option value="bia_agua_corporal_pct">Agua corporal</option>
+                      <option value="bia_geb_kcal">Gasto energético basal (GEB)</option>
+                      <option value="bia_masa_osea_kg">Masa ósea</option>
+                      <option value="bia_edad_anios">Edad según BIA</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              <div id="evolucion_estado" class="evolution-empty">
+                Selecciona un paciente para consultar su evoluci&oacute;n.
+              </div>
+
+              <div id="evolucion_contenido" class="evolution-content" hidden>
+                <article class="card evolution-chart-card">
+                  <div class="evolution-chart-heading">
+                    <div>
+                      <span>Peso corporal</span>
+                      <h4>Evoluci&oacute;n del peso</h4>
+                    </div>
+                    <div id="evolucion_peso_cambio" class="evolution-change"></div>
+                  </div>
+                  <div id="evolucion_peso_grafica" class="evolution-chart"></div>
+                </article>
+
+                <article class="card evolution-chart-card">
+                  <div class="evolution-chart-heading">
+                    <div>
+                      <span>Medidas corporales</span>
+                      <h4 id="evolucion_medida_titulo">Evoluci&oacute;n de cintura</h4>
+                    </div>
+                    <div id="evolucion_medida_cambio" class="evolution-change"></div>
+                  </div>
+                  <div id="evolucion_medida_grafica" class="evolution-chart"></div>
+                </article>
+
+                <article class="card evolution-chart-card evolution-chart-card--wide">
+                  <div class="evolution-chart-heading">
+                    <div>
+                      <span>Bioimpedancia el&eacute;ctrica</span>
+                      <h4 id="evolucion_bia_titulo">Evoluci&oacute;n de masa muscular total</h4>
+                    </div>
+                    <div id="evolucion_bia_cambio" class="evolution-change"></div>
+                  </div>
+                  <div id="evolucion_bia_grafica" class="evolution-chart"></div>
+                </article>
+              </div>
             </div>
           </div>
 
