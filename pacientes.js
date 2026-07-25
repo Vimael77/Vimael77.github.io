@@ -369,7 +369,18 @@ function aplicarPacienteEnCalculadora(pacienteId) {
 }
 
 function configurarBuscadorPacienteCalculadora(input) {
-  input.addEventListener("focus", mostrarResultadosPacientes);
+  const seleccionarTextoCompleto = function () {
+    window.requestAnimationFrame(function () {
+      input.select();
+    });
+  };
+
+  input.addEventListener("focus", function () {
+    mostrarResultadosPacientes();
+    seleccionarTextoCompleto();
+  });
+
+  input.addEventListener("click", seleccionarTextoCompleto);
 
   input.addEventListener("input", function () {
     aplicarPacienteEnCalculadora("");
