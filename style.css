@@ -915,6 +915,11 @@ table td {
     margin-top: 12px;
 }
 
+.config-scope-text {
+    color: #475569;
+    font-size: 0.95rem;
+}
+
 .config-column-option {
     min-height: 42px;
     display: flex;

@@ -31,8 +31,8 @@ const CAMPOS_NUTRIENTES = [
 const CAMPOS_MEDIDAS_CITA = [
   ["brazo_izquierdo", "Brazo izquierdo"],
   ["brazo_derecho", "Brazo derecho"],
-  ["abdomen", "Abdomen"],
-  ["abdomen_bajo", "Abdomen bajo"],
+  ["cintura", "Cintura"],
+  ["cintura_baja", "Cintura baja"],
   ["muslo_izquierdo", "Muslo izquierdo"],
   ["muslo_derecho", "Muslo derecho"],
   ["pantorrilla_izquierda", "Pantorrilla izquierda"],
@@ -169,19 +169,7 @@ function obtenerColumnasVisiblesCita() {
 }
 
 function obtenerCamposNutrientesVisiblesCita(datos) {
-  const camposFijos = new Set(["energia_calculada", "proteina", "grasa_total", "carbohidratos"]);
-  const columnasGuardadas = datos
-    && datos.configuracion
-    && Array.isArray(datos.configuracion.columnas_alimentos_visibles)
-    ? new Set(datos.configuracion.columnas_alimentos_visibles)
-    : null;
-
-  return CAMPOS_NUTRIENTES.filter(([campo]) => {
-    if (camposFijos.has(campo)) return true;
-    if (columnasGuardadas) return columnasGuardadas.has(campo);
-    if (typeof esColumnaAlimentosVisible === "function") return esColumnaAlimentosVisible(campo);
-    return true;
-  });
+  return CAMPOS_NUTRIENTES;
 }
 
 function obtenerImcCita() {
@@ -448,6 +436,17 @@ function citaJsonArray(value) {
   }
 }
 
+function normalizarMedidasCita(medidas) {
+  const datos = medidas && typeof medidas === "object" ? { ...medidas } : {};
+  if (datos.cintura === undefined && datos.abdomen !== undefined) {
+    datos.cintura = datos.abdomen;
+  }
+  if (datos.cintura_baja === undefined && datos.abdomen_bajo !== undefined) {
+    datos.cintura_baja = datos.abdomen_bajo;
+  }
+  return datos;
+}
+
 function obtenerPacienteLocalCita(pacienteId) {
   if (!pacienteId || typeof pacientes === "undefined" || !Array.isArray(pacientes)) return null;
   return pacientes.find(item => String(item.id) === String(pacienteId)) || null;
@@ -562,9 +561,7 @@ function obtenerRequerimientoTablaUnicaCita(cita) {
 function obtenerFilaCitaTablaUnica(datos) {
   const paciente = datos && datos.paciente ? datos.paciente : {};
   const profesional = datos && datos.profesional ? datos.profesional : {};
-  const medidas = paciente.medidas_antropometricas && typeof paciente.medidas_antropometricas === "object"
-    ? paciente.medidas_antropometricas
-    : {};
+  const medidas = normalizarMedidasCita(paciente.medidas_antropometricas);
   const imc = obtenerImcDesdeDatosCita(datos);
   const requerimiento = datos && datos.totales && datos.totales.requerimiento
     ? datos.totales.requerimiento
@@ -580,7 +577,7 @@ function obtenerFilaCitaTablaUnica(datos) {
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-    cita_schema_version: 14,
+    cita_schema_version: 16,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -595,16 +592,13 @@ function obtenerFilaCitaTablaUnica(datos) {
     clasificacion_imc: imc && imc.valido ? String(imc.clasificacion || "") : "",
     brazo_izquierdo: citaNumeroOpcional(medidas.brazo_izquierdo),
     brazo_derecho: citaNumeroOpcional(medidas.brazo_derecho),
-    abdomen: citaNumeroOpcional(medidas.abdomen),
-    abdomen_bajo: citaNumeroOpcional(medidas.abdomen_bajo),
+    cintura: citaNumeroOpcional(medidas.cintura),
+    cintura_baja: citaNumeroOpcional(medidas.cintura_baja),
     muslo_izquierdo: citaNumeroOpcional(medidas.muslo_izquierdo),
     muslo_derecho: citaNumeroOpcional(medidas.muslo_derecho),
     pantorrilla_izquierda: citaNumeroOpcional(medidas.pantorrilla_izquierda),
     pantorrilla_derecha: citaNumeroOpcional(medidas.pantorrilla_derecha),
-    observaciones: String(medidas.observaciones || "").trim(),
-    columnas_alimentos_visibles: datos.configuracion && Array.isArray(datos.configuracion.columnas_alimentos_visibles)
-      ? datos.configuracion.columnas_alimentos_visibles
-      : []
+    observaciones: String(medidas.observaciones || "").trim()
   };
 
   const macroProteina = macronutrientesPorNombre.get(citaNormalizar("Proteinas")) || {};
@@ -689,8 +683,8 @@ function integrarDatosTablaUnicaCita(cita) {
       medidas_antropometricas: {
         brazo_izquierdo: cita.brazo_izquierdo,
         brazo_derecho: cita.brazo_derecho,
-        abdomen: cita.abdomen,
-        abdomen_bajo: cita.abdomen_bajo,
+        cintura: cita.cintura ?? cita.abdomen,
+        cintura_baja: cita.cintura_baja ?? cita.abdomen_bajo,
         muslo_izquierdo: cita.muslo_izquierdo,
         muslo_derecho: cita.muslo_derecho,
         pantorrilla_izquierda: cita.pantorrilla_izquierda,
@@ -713,9 +707,7 @@ function integrarDatosTablaUnicaCita(cita) {
       valor: valorImc,
       clasificacion: cita.clasificacion_imc || ""
     },
-    configuracion: {
-      columnas_alimentos_visibles: normalizarColumnasTablaUnicaCita(cita.columnas_alimentos_visibles)
-    },
+    configuracion: {},
     macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita),
     horas_comida: normalizarHorariosTablaUnicaCita(cita),
     alimentos_por_tiempo: normalizarAlimentosRelacionalesCita(cita.cita_alimentos),
@@ -885,14 +877,12 @@ function obtenerDatosCita() {
   };
 
   return {
-    version: 14,
+    version: 16,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
     imc: obtenerImcCita(),
-    configuracion: {
-      columnas_alimentos_visibles: obtenerColumnasVisiblesCita()
-    },
+    configuracion: {},
     macronutrientes: obtenerMacronutrientesCita(),
     horas_comida: obtenerHorasComidaCita(),
     alimentos_por_tiempo: obtenerAlimentosPorTiempoCita(),
@@ -1255,7 +1245,7 @@ async function cargarCitas() {
     "actividad", "actividad_texto", "profesional_user_id", "profesional_email",
     "profesional_nombre", "profesional_usuario", "profesional_telefono",
     "peso", "peso_ideal", "estatura_cm", "imc", "clasificacion_imc",
-    "brazo_izquierdo", "brazo_derecho", "abdomen", "abdomen_bajo",
+    "brazo_izquierdo", "brazo_derecho", "cintura", "cintura_baja",
     "muslo_izquierdo", "muslo_derecho", "pantorrilla_izquierda", "pantorrilla_derecha",
     "observaciones", "req_energia_calculada", "req_proteina", "req_grasa_total",
     "req_carbohidratos", "req_fibra", "req_ags", "req_agm", "req_agpi",
@@ -1263,7 +1253,7 @@ async function cargarCitas() {
     "req_sodio", "req_zinc", "req_vitamina_c", "req_vitamina_a", "req_folatos",
     "req_vitamina_b12", "macro_proteina_porcentaje", "macro_grasa_porcentaje",
     "hora_desayuno", "hora_media_manana", "hora_almuerzo", "hora_media_tarde",
-    "hora_merienda", "hora_cena", "columnas_alimentos_visibles"
+    "hora_merienda", "hora_cena"
   ].join(",");
 
   let { data, error } = await client

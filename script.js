@@ -45,14 +45,15 @@ let pesoIdealGuardadoRemotoTimer = 0;
 let medidasAntropometricasGuardadoRemotoTimer = 0;
 let columnasAlimentosGuardadoRemotoTimer = 0;
 let columnasAlimentosCambiosPendientes = false;
+let columnasAlimentosPacienteIdActivo = "";
 const PESO_IDEAL_STORAGE_PREFIX = "muyAlimentado:pesoIdeal";
 const MEDIDAS_ANTROPOMETRICAS_STORAGE_PREFIX = "muyAlimentado:medidasAntropometricas";
 const COLUMNAS_ALIMENTOS_STORAGE_PREFIX = "muyAlimentado:columnasAlimentosVisibles";
 const MEDIDAS_ANTROPOMETRICAS_CAMPOS = [
   { id: "medida_brazo_izquierdo", key: "brazo_izquierdo" },
   { id: "medida_brazo_derecho", key: "brazo_derecho" },
-  { id: "medida_abdomen", key: "abdomen" },
-  { id: "medida_abdomen_bajo", key: "abdomen_bajo" },
+  { id: "medida_cintura", key: "cintura" },
+  { id: "medida_cintura_baja", key: "cintura_baja" },
   { id: "medida_muslo_izquierdo", key: "muslo_izquierdo" },
   { id: "medida_muslo_derecho", key: "muslo_derecho" },
   { id: "medida_pantorrilla_izquierda", key: "pantorrilla_izquierda" },
@@ -82,15 +83,9 @@ const COLUMNAS_NUTRIENTES_ALIMENTOS = [
 const COLUMNAS_ALIMENTOS_OPCIONALES = COLUMNAS_NUTRIENTES_ALIMENTOS.filter(function (columna) {
   return !columna.fija;
 });
-const COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES = [
-  "fibra",
-  "colesterol",
-  "calcio",
-  "fosforo",
-  "hierro",
-  "potasio",
-  "sodio"
-];
+const COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES = COLUMNAS_ALIMENTOS_OPCIONALES.map(function (columna) {
+  return columna.key;
+});
 let columnasAlimentosVisibles = new Set(COLUMNAS_ALIMENTOS_DEFAULT_VISIBLES);
 window.alimentos_subtotales = {};
 const tiemposComida = ["Desayuno", "Media Mañana", "Almuerzo", "Media Tarde", "Merienda", "Cena"];
@@ -577,6 +572,17 @@ function formatearMedidaAntropometrica(valor) {
   return Number.isInteger(numero) ? String(numero) : String(Number(numero.toFixed(1)));
 }
 
+function normalizarMedidasAntropometricasObjeto(medidas) {
+  const datos = medidas && typeof medidas === "object" ? { ...medidas } : {};
+  if (datos.cintura === undefined && datos.abdomen !== undefined) {
+    datos.cintura = datos.abdomen;
+  }
+  if (datos.cintura_baja === undefined && datos.abdomen_bajo !== undefined) {
+    datos.cintura_baja = datos.abdomen_bajo;
+  }
+  return datos;
+}
+
 function obtenerMedidasAntropometricas() {
   const medidas = {};
 
@@ -593,16 +599,17 @@ function obtenerMedidasAntropometricas() {
 
 function medidasAntropometricasTieneContenido(medidas) {
   if (!medidas || typeof medidas !== "object") return false;
+  const datos = normalizarMedidasAntropometricasObjeto(medidas);
 
   const tieneMedidas = MEDIDAS_ANTROPOMETRICAS_CAMPOS.some(function (campo) {
-    return normalizarNumeroMedidaAntropometrica(medidas[campo.key]) !== null;
+    return normalizarNumeroMedidaAntropometrica(datos[campo.key]) !== null;
   });
 
-  return tieneMedidas || Boolean(String(medidas.observaciones || "").trim());
+  return tieneMedidas || Boolean(String(datos.observaciones || "").trim());
 }
 
 function aplicarMedidasAntropometricas(medidas) {
-  const datos = medidas && typeof medidas === "object" ? medidas : {};
+  const datos = normalizarMedidasAntropometricasObjeto(medidas);
 
   MEDIDAS_ANTROPOMETRICAS_CAMPOS.forEach(function (campo) {
     const elemento = document.getElementById(campo.id);
@@ -753,7 +760,8 @@ function usarColumnasAlimentosPredeterminadas() {
 }
 
 function obtenerClaveColumnasAlimentosPersistidas() {
-  return `${COLUMNAS_ALIMENTOS_STORAGE_PREFIX}:${pesoIdealStorageScope}`;
+  const pacienteScope = columnasAlimentosPacienteIdActivo || "sin-paciente";
+  return `${COLUMNAS_ALIMENTOS_STORAGE_PREFIX}:${pesoIdealStorageScope}:${pacienteScope}`;
 }
 
 function guardarColumnasAlimentosPersistidas() {
@@ -788,6 +796,52 @@ function restaurarColumnasAlimentosOPredeterminadas() {
   usarColumnasAlimentosPredeterminadas();
   guardarColumnasAlimentosPersistidas();
   return false;
+}
+
+function obtenerPacienteColumnasAlimentosActivo() {
+  const pacienteIdInput = document.getElementById("calc_paciente_id");
+  const pacienteId = pacienteIdInput && pacienteIdInput.value
+    ? pacienteIdInput.value
+    : columnasAlimentosPacienteIdActivo;
+
+  if (!pacienteId || typeof pacientes === "undefined" || !Array.isArray(pacientes)) {
+    return null;
+  }
+
+  return pacientes.find(function (paciente) {
+    return String(paciente.id) === String(pacienteId);
+  }) || null;
+}
+
+function obtenerNombrePacienteColumnasAlimentos(paciente) {
+  if (!paciente) return "";
+  return `${paciente.nombres || ""} ${paciente.apellidos || ""}`.trim() || paciente.documento || "";
+}
+
+function actualizarContextoColumnasAlimentos() {
+  const elemento = document.getElementById("config_columnas_paciente_actual");
+  const paciente = obtenerPacienteColumnasAlimentosActivo();
+  if (!elemento) return;
+
+  elemento.textContent = paciente
+    ? `Paciente: ${obtenerNombrePacienteColumnasAlimentos(paciente)}`
+    : "Selecciona un paciente en la calculadora para editar sus columnas.";
+}
+
+function aplicarColumnasAlimentosPaciente(paciente) {
+  columnasAlimentosCambiosPendientes = false;
+  columnasAlimentosPacienteIdActivo = paciente && paciente.id ? String(paciente.id) : "";
+
+  if (paciente && Array.isArray(paciente.columnas_alimentos_visibles)) {
+    columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(paciente.columnas_alimentos_visibles);
+    guardarColumnasAlimentosPersistidas();
+  } else {
+    restaurarColumnasAlimentosOPredeterminadas();
+  }
+
+  aplicarVisibilidadColumnasAlimentos();
+  actualizarContextoColumnasAlimentos();
+  setConfigColumnasMensaje("");
 }
 
 function setConfigColumnasMensaje(mensaje, tipo) {
@@ -828,11 +882,20 @@ async function guardarConfiguracionColumnasAlimentos() {
   const boton = document.getElementById("config_columnas_guardar");
 
   try {
+    const paciente = obtenerPacienteColumnasAlimentosActivo();
+    if (!paciente) {
+      setConfigColumnasMensaje("Selecciona un paciente para guardar esta configuracion.", "error");
+      actualizarContextoColumnasAlimentos();
+      return;
+    }
+
     if (boton) boton.disabled = true;
     setConfigColumnasMensaje("Guardando...", "pending");
 
     columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(obtenerColumnasAlimentosSeleccionadasConfig());
     columnasAlimentosCambiosPendientes = false;
+    columnasAlimentosPacienteIdActivo = String(paciente.id);
+    paciente.columnas_alimentos_visibles = obtenerColumnasAlimentosVisiblesArray();
 
     guardarColumnasAlimentosPersistidas();
 
@@ -846,7 +909,7 @@ async function guardarConfiguracionColumnasAlimentos() {
     const guardadoRemoto = await guardarColumnasAlimentosSupabase();
     if (guardadoRemoto === false) return;
 
-    setConfigColumnasMensaje("Configuracion guardada.", "success");
+    setConfigColumnasMensaje("Configuracion guardada para el paciente.", "success");
   } catch (error) {
     console.warn("No se pudo guardar la configuracion de columnas.", error);
     setConfigColumnasMensaje("No se pudo guardar la configuracion.", "error");
@@ -856,14 +919,7 @@ async function guardarConfiguracionColumnasAlimentos() {
 }
 
 function esColumnaAlimentosVisible(key) {
-  if (key === "nombre" || key === "gramos" || key === "etiqueta") return true;
-
-  const columna = COLUMNAS_NUTRIENTES_ALIMENTOS.find(function (item) {
-    return item.key === key;
-  });
-
-  if (!columna) return true;
-  return columna.fija || columnasAlimentosVisibles.has(key);
+  return true;
 }
 
 function aplicarAtributosColumnasTabla(tabla, columnas) {
@@ -962,7 +1018,6 @@ function aplicarVisibilidadColumnasAlimentos() {
   });
 
   actualizarAnchosTablasAlimentos(columnasLista, columnasSeleccionados, columnasTotales);
-  sincronizarConfigColumnasUI();
 }
 
 function renderizarConfiguracionColumnasAlimentos() {
@@ -1002,6 +1057,7 @@ function sincronizarConfigColumnasUI(forzar = false) {
     const input = document.getElementById(`config_columna_${columna.key}`);
     if (input) input.checked = columnasAlimentosVisibles.has(columna.key);
   });
+  actualizarContextoColumnasAlimentos();
 }
 
 function programarGuardarColumnasAlimentosSupabase() {
@@ -1018,17 +1074,23 @@ async function guardarColumnasAlimentosSupabase() {
   columnasAlimentosGuardadoRemotoTimer = 0;
 
   const client = window.supabaseClient;
-  const userId = pesoIdealSesionActiva && pesoIdealSesionActiva.user
-    ? pesoIdealSesionActiva.user.id
-    : "";
-  if (!client || !userId) return true;
+  const paciente = obtenerPacienteColumnasAlimentosActivo();
+  if (!paciente) {
+    setConfigColumnasMensaje("Selecciona un paciente para guardar esta configuracion.", "error");
+    return false;
+  }
+  if (!client) return true;
 
-  const { error } = await client
-    .from("profiles")
-    .upsert({
-      user_id: userId,
-      columnas_alimentos_visibles: obtenerColumnasAlimentosVisiblesArray()
-    }, { onConflict: "user_id" });
+  const columnas = obtenerColumnasAlimentosVisiblesArray();
+  const { data, error } = await client
+    .from("pacientes")
+    .update({
+      columnas_alimentos_visibles: columnas,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", paciente.id)
+    .select("id,columnas_alimentos_visibles")
+    .single();
 
   if (error) {
     console.warn("No se pudo guardar la configuración de columnas en Supabase.", error.message);
@@ -1036,17 +1098,30 @@ async function guardarColumnasAlimentosSupabase() {
     return false;
   }
 
+  paciente.columnas_alimentos_visibles = data && Array.isArray(data.columnas_alimentos_visibles)
+    ? data.columnas_alimentos_visibles
+    : columnas;
+  window.dispatchEvent(new CustomEvent("pacientes:columns-updated", {
+    detail: { pacienteId: paciente.id }
+  }));
+
   return true;
 }
 
 async function cargarColumnasAlimentosSupabase(session) {
+  const paciente = obtenerPacienteColumnasAlimentosActivo();
+  if (paciente && Array.isArray(paciente.columnas_alimentos_visibles)) {
+    aplicarColumnasAlimentosPaciente(paciente);
+    return true;
+  }
+
   const client = window.supabaseClient;
-  if (!client || !session || !session.user) return false;
+  if (!client || !session || !session.user || !paciente) return false;
 
   const { data, error } = await client
-    .from("profiles")
+    .from("pacientes")
     .select("columnas_alimentos_visibles")
-    .eq("user_id", session.user.id)
+    .eq("id", paciente.id)
     .maybeSingle();
 
   if (error) {
@@ -1056,10 +1131,8 @@ async function cargarColumnasAlimentosSupabase(session) {
 
   if (!data || !Array.isArray(data.columnas_alimentos_visibles)) return false;
 
-  columnasAlimentosVisibles = normalizarColumnasAlimentosVisibles(data.columnas_alimentos_visibles);
-  guardarColumnasAlimentosPersistidas();
-  aplicarVisibilidadColumnasAlimentos();
-  setConfigColumnasMensaje("");
+  paciente.columnas_alimentos_visibles = data.columnas_alimentos_visibles;
+  aplicarColumnasAlimentosPaciente(paciente);
   return true;
 }
 
@@ -1202,14 +1275,7 @@ async function actualizarScopePesoIdealPersistido(session) {
     }
   }
 
-  const columnasCargadasSupabase = await cargarColumnasAlimentosSupabase(session);
-  if (!columnasCargadasSupabase) {
-    const columnasCargadasLocal = restaurarColumnasAlimentosOPredeterminadas();
-    aplicarVisibilidadColumnasAlimentos();
-    if (columnasCargadasLocal && session && session.user) {
-      programarGuardarColumnasAlimentosSupabase();
-    }
-  }
+  aplicarVisibilidadColumnasAlimentos();
 
   actualizarRequerimientoMacronutrientes();
 }
@@ -2774,8 +2840,8 @@ function calcularReqEnergia() {
 const REPORTE_PDF_CAMPOS_MEDIDAS = [
   ["brazo_izquierdo", "Brazo izquierdo"],
   ["brazo_derecho", "Brazo derecho"],
-  ["abdomen", "Abdomen"],
-  ["abdomen_bajo", "Abdomen bajo"],
+  ["cintura", "Cintura"],
+  ["cintura_baja", "Cintura baja"],
   ["muslo_izquierdo", "Muslo izquierdo"],
   ["muslo_derecho", "Muslo derecho"],
   ["pantorrilla_izquierda", "Pantorrilla izquierda"],
@@ -2802,27 +2868,11 @@ function reportePdfFecha(value) {
 }
 
 function reportePdfCamposNutrientes(snapshot) {
-  const camposFijos = new Set(["energia_calculada", "proteina", "grasa_total", "carbohidratos"]);
-  const columnasSnapshot = snapshot
-    && snapshot.configuracion
-    && Array.isArray(snapshot.configuracion.columnas_alimentos_visibles)
-    ? snapshot.configuracion.columnas_alimentos_visibles
-    : null;
-  const columnasVisiblesSnapshot = columnasSnapshot ? new Set(columnasSnapshot) : null;
   if (typeof CAMPOS_NUTRIENTES !== "undefined" && Array.isArray(CAMPOS_NUTRIENTES)) {
-    return CAMPOS_NUTRIENTES.filter(function ([campo]) {
-      if (camposFijos.has(campo)) return true;
-      if (columnasVisiblesSnapshot) return columnasVisiblesSnapshot.has(campo);
-      return typeof esColumnaAlimentosVisible === "function" ? esColumnaAlimentosVisible(campo) : true;
-    });
+    return CAMPOS_NUTRIENTES;
   }
 
   return COLUMNAS_NUTRIENTES_ALIMENTOS
-    .filter(function (columna) {
-      if (camposFijos.has(columna.key)) return true;
-      if (columnasVisiblesSnapshot) return columnasVisiblesSnapshot.has(columna.key);
-      return typeof esColumnaAlimentosVisible === "function" ? esColumnaAlimentosVisible(columna.key) : true;
-    })
     .map(function (columna) {
       return [columna.key, columna.label];
     });
@@ -4104,9 +4154,9 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       { campo: "brazo_izquierdo", label: "Brazo izquierdo" },
       { campo: "brazo_derecho", label: "Brazo derecho" }
     ]);
-    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "ABDOMEN", iconoAbdomen, [
-      { campo: "abdomen", label: "Abdomen" },
-      { campo: "abdomen_bajo", label: "Abdomen bajo" }
+    dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "CINTURA", iconoAbdomen, [
+      { campo: "cintura", label: "Cintura" },
+      { campo: "cintura_baja", label: "Cintura baja" }
     ]);
     dibujarTarjetaMedida(xTarjetas, yMedidas + altoTarjeta + espacioTarjetas, "MUSLOS", iconoMuslos, [
       { campo: "muslo_izquierdo", label: "Muslo izquierdo" },
@@ -4339,7 +4389,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Recalcular para blanquear porcentajes
   restaurarColumnasAlimentosOPredeterminadas();
-  renderizarConfiguracionColumnasAlimentos();
   aplicarVisibilidadColumnasAlimentos();
   configurarEventosIndiceMasaCorporal();
   configurarEventosMacronutrientes();

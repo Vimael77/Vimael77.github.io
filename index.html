@@ -121,12 +121,6 @@
             <span class="side-menu-icon" data-lucide="utensils" aria-hidden="true"></span>
             <span class="side-menu-label">Men&uacute;</span>
           </a>
-          <a class="side-menu-link" id="side-configuracion-link" data-toggle="tab" href="#configuracion" role="tab"
-            aria-controls="configuracion" aria-selected="false" aria-label="Configuraci&oacute;n"
-            title="Configuraci&oacute;n">
-            <span class="side-menu-icon" data-lucide="settings" aria-hidden="true"></span>
-            <span class="side-menu-label">Configuraci&oacute;n</span>
-          </a>
         </nav>
       </aside>
       <main class="app-content">
@@ -353,21 +347,21 @@
                           <span class="ideal-card-icon body-part-icon" aria-hidden="true">
                             <img src="media/cintura.png" alt="">
                           </span>
-                          <h4>ABDOMEN</h4>
+                          <h4>CINTURA</h4>
                         </div>
                         <div class="ideal-card-fields">
                           <div class="ideal-field">
-                            <label for="medida_abdomen">Abdomen</label>
+                            <label for="medida_cintura">Cintura</label>
                             <div class="input-group">
-                              <input type="number" id="medida_abdomen" class="form-control" min="0" step="0.1"
+                              <input type="number" id="medida_cintura" class="form-control" min="0" step="0.1"
                                 placeholder="0.0" inputmode="decimal">
                               <span class="input-group-text">cm</span>
                             </div>
                           </div>
                           <div class="ideal-field">
-                            <label for="medida_abdomen_bajo">Abdomen bajo</label>
+                            <label for="medida_cintura_baja">Cintura baja</label>
                             <div class="input-group">
-                              <input type="number" id="medida_abdomen_bajo" class="form-control" min="0" step="0.1"
+                              <input type="number" id="medida_cintura_baja" class="form-control" min="0" step="0.1"
                                 placeholder="0.0" inputmode="decimal">
                               <span class="input-group-text">cm</span>
                             </div>
@@ -1182,24 +1176,6 @@
                   <button class="btn btn-outline-danger" onclick="generarPDFSemanalHorizontal()">Formato
                     Horizontal</button>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- PESTANA CONFIGURACION -->
-          <div class="tab-pane fade" id="configuracion" role="tabpanel" aria-labelledby="side-configuracion-link">
-            <div style="padding: 30px;">
-              <div class="centered-div" style="padding-bottom: 20px;">
-                <h3>CONFIGURACI&Oacute;N</h3>
-              </div>
-
-              <div class="card p-3 config-card">
-                <h5>Columnas visibles</h5>
-                <div id="config_columnas_alimentos" class="config-columns-grid"></div>
-                <div class="config-actions">
-                  <button type="button" id="config_columnas_guardar" class="btn btn-success config-save-button">Guardar</button>
-                </div>
-                <p id="config_columnas_mensaje" class="config-message" aria-live="polite"></p>
               </div>
             </div>
           </div>
