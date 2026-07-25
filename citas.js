@@ -32,7 +32,8 @@ const CAMPOS_MEDIDAS_CITA = [
   ["brazo_izquierdo", "Brazo izquierdo"],
   ["brazo_derecho", "Brazo derecho"],
   ["cintura", "Cintura"],
-  ["cintura_baja", "Cintura baja"],
+  ["abdomen_bajo", "Abdomen bajo"],
+  ["cadera", "Cadera"],
   ["muslo_izquierdo", "Muslo izquierdo"],
   ["muslo_derecho", "Muslo derecho"],
   ["pantorrilla_izquierda", "Pantorrilla izquierda"],
@@ -441,8 +442,8 @@ function normalizarMedidasCita(medidas) {
   if (datos.cintura === undefined && datos.abdomen !== undefined) {
     datos.cintura = datos.abdomen;
   }
-  if (datos.cintura_baja === undefined && datos.abdomen_bajo !== undefined) {
-    datos.cintura_baja = datos.abdomen_bajo;
+  if (datos.abdomen_bajo === undefined && datos.cintura_baja !== undefined) {
+    datos.abdomen_bajo = datos.cintura_baja;
   }
   return datos;
 }
@@ -577,7 +578,7 @@ function obtenerFilaCitaTablaUnica(datos) {
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-    cita_schema_version: 16,
+    cita_schema_version: 17,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -593,7 +594,8 @@ function obtenerFilaCitaTablaUnica(datos) {
     brazo_izquierdo: citaNumeroOpcional(medidas.brazo_izquierdo),
     brazo_derecho: citaNumeroOpcional(medidas.brazo_derecho),
     cintura: citaNumeroOpcional(medidas.cintura),
-    cintura_baja: citaNumeroOpcional(medidas.cintura_baja),
+    abdomen_bajo: citaNumeroOpcional(medidas.abdomen_bajo),
+    cadera: citaNumeroOpcional(medidas.cadera),
     muslo_izquierdo: citaNumeroOpcional(medidas.muslo_izquierdo),
     muslo_derecho: citaNumeroOpcional(medidas.muslo_derecho),
     pantorrilla_izquierda: citaNumeroOpcional(medidas.pantorrilla_izquierda),
@@ -684,7 +686,8 @@ function integrarDatosTablaUnicaCita(cita) {
         brazo_izquierdo: cita.brazo_izquierdo,
         brazo_derecho: cita.brazo_derecho,
         cintura: cita.cintura ?? cita.abdomen,
-        cintura_baja: cita.cintura_baja ?? cita.abdomen_bajo,
+        abdomen_bajo: cita.abdomen_bajo ?? cita.cintura_baja,
+        cadera: cita.cadera,
         muslo_izquierdo: cita.muslo_izquierdo,
         muslo_derecho: cita.muslo_derecho,
         pantorrilla_izquierda: cita.pantorrilla_izquierda,
@@ -877,7 +880,7 @@ function obtenerDatosCita() {
   };
 
   return {
-    version: 16,
+    version: 17,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
@@ -1245,7 +1248,7 @@ async function cargarCitas() {
     "actividad", "actividad_texto", "profesional_user_id", "profesional_email",
     "profesional_nombre", "profesional_usuario", "profesional_telefono",
     "peso", "peso_ideal", "estatura_cm", "imc", "clasificacion_imc",
-    "brazo_izquierdo", "brazo_derecho", "cintura", "cintura_baja",
+    "brazo_izquierdo", "brazo_derecho", "cintura", "abdomen_bajo", "cadera",
     "muslo_izquierdo", "muslo_derecho", "pantorrilla_izquierda", "pantorrilla_derecha",
     "observaciones", "req_energia_calculada", "req_proteina", "req_grasa_total",
     "req_carbohidratos", "req_fibra", "req_ags", "req_agm", "req_agpi",

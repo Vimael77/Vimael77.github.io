@@ -486,6 +486,86 @@ async function guardarPaciente(event) {
   setPacienteMensaje(estaEditando ? "Paciente actualizado correctamente." : "Paciente guardado correctamente.", "success");
 }
 
+function setNuevoPacienteCalculadoraMensaje(message, type) {
+  const elemento = document.getElementById("calc_nuevo_paciente_mensaje");
+  if (!elemento) return;
+  elemento.textContent = message || "";
+  elemento.className = `paciente-message mb-0 ${type || ""}`.trim();
+}
+
+function mostrarFormularioNuevoPacienteCalculadora(mostrar) {
+  const panel = document.getElementById("calc_nuevo_paciente_panel");
+  const boton = document.getElementById("calc_nuevo_paciente_toggle");
+  if (!panel) return;
+
+  panel.hidden = !mostrar;
+  if (boton) boton.setAttribute("aria-expanded", mostrar ? "true" : "false");
+  setNuevoPacienteCalculadoraMensaje("");
+
+  if (mostrar) {
+    const nombres = document.getElementById("calc_nuevo_paciente_nombres");
+    if (nombres) nombres.focus();
+  }
+}
+
+function limpiarFormularioNuevoPacienteCalculadora() {
+  const form = document.getElementById("calc_nuevo_paciente_form");
+  if (form) form.reset();
+  setNuevoPacienteCalculadoraMensaje("");
+}
+
+async function guardarNuevoPacienteCalculadora(event) {
+  event.preventDefault();
+
+  const client = window.supabaseClient;
+  const boton = document.getElementById("calc_nuevo_paciente_guardar");
+  const paisNacimiento = obtenerPaisNacimientoCanonico(
+    document.getElementById("calc_nuevo_paciente_pais_nacimiento").value
+  );
+  const payload = {
+    nombres: document.getElementById("calc_nuevo_paciente_nombres").value.trim(),
+    apellidos: document.getElementById("calc_nuevo_paciente_apellidos").value.trim(),
+    documento: document.getElementById("calc_nuevo_paciente_documento").value.trim(),
+    fecha_nacimiento: document.getElementById("calc_nuevo_paciente_fecha_nacimiento").value,
+    pais_nacimiento: paisNacimiento,
+    sexo: normalizarSexoPaciente(document.getElementById("calc_nuevo_paciente_sexo").value)
+  };
+
+  if (!client) {
+    setNuevoPacienteCalculadoraMensaje("No hay conexión disponible con la base de datos.", "error");
+    return;
+  }
+  if (!payload.nombres || !payload.apellidos || !payload.documento || !payload.fecha_nacimiento || !payload.sexo) {
+    setNuevoPacienteCalculadoraMensaje("Completa todos los campos del paciente.", "error");
+    return;
+  }
+  if (!payload.pais_nacimiento) {
+    setNuevoPacienteCalculadoraMensaje("Selecciona un país de nacimiento de la lista.", "error");
+    return;
+  }
+
+  if (boton) boton.disabled = true;
+  setNuevoPacienteCalculadoraMensaje("Guardando paciente...", "");
+
+  const { data, error } = await client
+    .from("pacientes")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (boton) boton.disabled = false;
+
+  if (error) {
+    setNuevoPacienteCalculadoraMensaje(error.message, "error");
+    return;
+  }
+
+  await cargarPacientes();
+  if (data && data.id) aplicarPacienteEnCalculadora(data.id);
+  limpiarFormularioNuevoPacienteCalculadora();
+  mostrarFormularioNuevoPacienteCalculadora(false);
+}
+
 function configurarNavegacionLateral() {
   const appLayout = document.querySelector(".app-layout");
   const sideMenu = document.getElementById("side-menu");
@@ -609,8 +689,26 @@ function configurarPacientes() {
   const filtro = document.getElementById("paciente_filtro");
   const cancelarEdicion = document.getElementById("paciente_cancelar_edicion");
   const pacientesTablaBody = document.getElementById("pacientes_tabla_body");
+  const nuevoPacienteForm = document.getElementById("calc_nuevo_paciente_form");
+  const nuevoPacienteToggle = document.getElementById("calc_nuevo_paciente_toggle");
+  const nuevoPacienteCerrar = document.getElementById("calc_nuevo_paciente_cerrar");
+  const nuevoPacienteCancelar = document.getElementById("calc_nuevo_paciente_cancelar");
 
   if (form) form.addEventListener("submit", guardarPaciente);
+  if (nuevoPacienteForm) nuevoPacienteForm.addEventListener("submit", guardarNuevoPacienteCalculadora);
+  if (nuevoPacienteToggle) {
+    nuevoPacienteToggle.addEventListener("click", () => {
+      const panel = document.getElementById("calc_nuevo_paciente_panel");
+      mostrarFormularioNuevoPacienteCalculadora(Boolean(panel && panel.hidden));
+    });
+  }
+  [nuevoPacienteCerrar, nuevoPacienteCancelar].forEach(boton => {
+    if (!boton) return;
+    boton.addEventListener("click", () => {
+      limpiarFormularioNuevoPacienteCalculadora();
+      mostrarFormularioNuevoPacienteCalculadora(false);
+    });
+  });
   if (cancelarEdicion) cancelarEdicion.addEventListener("click", cancelarEdicionPaciente);
   if (recargar) recargar.addEventListener("click", cargarPacientes);
   if (pacientesTablaBody) {

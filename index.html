@@ -218,7 +218,14 @@
                   <div class="card p-3 mb-3">
                     <div class="row g-3">
                       <div class="col-md-12 patient-search-control" id="calc_paciente_control">
-                        <label class="form-label" for="calc_paciente_busqueda">Buscar paciente</label>
+                        <div class="calc-patient-heading">
+                          <label class="form-label mb-0" for="calc_paciente_busqueda">Buscar paciente</label>
+                          <button type="button" id="calc_nuevo_paciente_toggle" class="btn btn-outline-success btn-sm"
+                            aria-expanded="false" aria-controls="calc_nuevo_paciente_panel">
+                            <span data-lucide="user-plus" aria-hidden="true"></span>
+                            Nuevo paciente
+                          </button>
+                        </div>
                         <input type="search" id="calc_paciente_busqueda" class="form-control"
                           placeholder="Buscar por nombres, apellidos o cedula/pasaporte" autocomplete="off"
                           aria-controls="calc_paciente_selector" aria-expanded="false">
@@ -228,6 +235,61 @@
                         </select>
                         <input type="hidden" id="calc_paciente_id">
                         <div id="calc_paciente_detalle" class="form-text"></div>
+                      </div>
+                      <div class="col-md-12" id="calc_nuevo_paciente_panel" hidden>
+                        <div class="calc-quick-patient-panel">
+                          <div class="calc-quick-patient-title">
+                            <div>
+                              <h5 class="mb-1">Crear nuevo paciente</h5>
+                              <p class="text-muted mb-0">Podrás modificar sus datos posteriormente desde Pacientes.</p>
+                            </div>
+                            <button type="button" id="calc_nuevo_paciente_cerrar"
+                              class="btn btn-sm btn-outline-secondary" aria-label="Cerrar formulario">
+                              <span data-lucide="x" aria-hidden="true"></span>
+                            </button>
+                          </div>
+                          <form id="calc_nuevo_paciente_form">
+                            <div class="row g-3">
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_nombres">Nombres</label>
+                                <input type="text" id="calc_nuevo_paciente_nombres" class="form-control" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_apellidos">Apellidos</label>
+                                <input type="text" id="calc_nuevo_paciente_apellidos" class="form-control" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_documento">Cédula/Pasaporte</label>
+                                <input type="text" id="calc_nuevo_paciente_documento" class="form-control" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_fecha_nacimiento">Fecha de nacimiento</label>
+                                <input type="date" id="calc_nuevo_paciente_fecha_nacimiento" class="form-control" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_pais_nacimiento">País de nacimiento</label>
+                                <input type="text" id="calc_nuevo_paciente_pais_nacimiento" class="form-control"
+                                  list="paises_nacimiento_lista" autocomplete="off" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label" for="calc_nuevo_paciente_sexo">Sexo</label>
+                                <select id="calc_nuevo_paciente_sexo" class="form-select" required>
+                                  <option value="">Seleccionar</option>
+                                  <option value="Masculino">Masculino</option>
+                                  <option value="Femenino">Femenino</option>
+                                </select>
+                              </div>
+                              <div class="col-12 calc-quick-patient-actions">
+                                <button type="submit" id="calc_nuevo_paciente_guardar" class="btn btn-success">
+                                  Guardar y seleccionar
+                                </button>
+                                <button type="button" id="calc_nuevo_paciente_cancelar"
+                                  class="btn btn-outline-secondary">Cancelar</button>
+                              </div>
+                            </div>
+                            <p id="calc_nuevo_paciente_mensaje" class="paciente-message mb-0" aria-live="polite"></p>
+                          </form>
+                        </div>
                       </div>
                       <div class="col-md-5">
                         <label class="form-label" for="calc_nombre">Nombre</label>
@@ -349,7 +411,7 @@
                           </span>
                           <h4>CINTURA</h4>
                         </div>
-                        <div class="ideal-card-fields">
+                        <div class="ideal-card-fields ideal-card-fields--three">
                           <div class="ideal-field">
                             <label for="medida_cintura">Cintura</label>
                             <div class="input-group">
@@ -359,9 +421,17 @@
                             </div>
                           </div>
                           <div class="ideal-field">
-                            <label for="medida_cintura_baja">Cintura baja</label>
+                            <label for="medida_abdomen_bajo">Abdomen bajo</label>
                             <div class="input-group">
-                              <input type="number" id="medida_cintura_baja" class="form-control" min="0" step="0.1"
+                              <input type="number" id="medida_abdomen_bajo" class="form-control" min="0" step="0.1"
+                                placeholder="0.0" inputmode="decimal">
+                              <span class="input-group-text">cm</span>
+                            </div>
+                          </div>
+                          <div class="ideal-field">
+                            <label for="medida_cadera">Cadera</label>
+                            <div class="input-group">
+                              <input type="number" id="medida_cadera" class="form-control" min="0" step="0.1"
                                 placeholder="0.0" inputmode="decimal">
                               <span class="input-group-text">cm</span>
                             </div>

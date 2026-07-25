@@ -53,7 +53,8 @@ const MEDIDAS_ANTROPOMETRICAS_CAMPOS = [
   { id: "medida_brazo_izquierdo", key: "brazo_izquierdo" },
   { id: "medida_brazo_derecho", key: "brazo_derecho" },
   { id: "medida_cintura", key: "cintura" },
-  { id: "medida_cintura_baja", key: "cintura_baja" },
+  { id: "medida_abdomen_bajo", key: "abdomen_bajo" },
+  { id: "medida_cadera", key: "cadera" },
   { id: "medida_muslo_izquierdo", key: "muslo_izquierdo" },
   { id: "medida_muslo_derecho", key: "muslo_derecho" },
   { id: "medida_pantorrilla_izquierda", key: "pantorrilla_izquierda" },
@@ -577,8 +578,8 @@ function normalizarMedidasAntropometricasObjeto(medidas) {
   if (datos.cintura === undefined && datos.abdomen !== undefined) {
     datos.cintura = datos.abdomen;
   }
-  if (datos.cintura_baja === undefined && datos.abdomen_bajo !== undefined) {
-    datos.cintura_baja = datos.abdomen_bajo;
+  if (datos.abdomen_bajo === undefined && datos.cintura_baja !== undefined) {
+    datos.abdomen_bajo = datos.cintura_baja;
   }
   return datos;
 }
@@ -2841,7 +2842,8 @@ const REPORTE_PDF_CAMPOS_MEDIDAS = [
   ["brazo_izquierdo", "Brazo izquierdo"],
   ["brazo_derecho", "Brazo derecho"],
   ["cintura", "Cintura"],
-  ["cintura_baja", "Cintura baja"],
+  ["abdomen_bajo", "Abdomen bajo"],
+  ["cadera", "Cadera"],
   ["muslo_izquierdo", "Muslo izquierdo"],
   ["muslo_derecho", "Muslo derecho"],
   ["pantorrilla_izquierda", "Pantorrilla izquierda"],
@@ -4128,7 +4130,7 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       doc.line(xTarjeta + 4, yTarjeta + 17, xTarjeta + anchoTarjeta - 4, yTarjeta + 17);
 
       const separacionCampo = 5;
-      const anchoCampo = (anchoTarjeta - 13) / 2;
+      const anchoCampo = (anchoTarjeta - 8 - (separacionCampo * (campos.length - 1))) / campos.length;
       campos.forEach((campo, index) => {
         const xCampo = xTarjeta + 4 + (index * (anchoCampo + separacionCampo));
         doc.setFont("helvetica", "bold");
@@ -4156,7 +4158,8 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     ]);
     dibujarTarjetaMedida(xTarjetas + anchoTarjeta + espacioTarjetas, yMedidas, "CINTURA", iconoAbdomen, [
       { campo: "cintura", label: "Cintura" },
-      { campo: "cintura_baja", label: "Cintura baja" }
+      { campo: "abdomen_bajo", label: "Abdomen bajo" },
+      { campo: "cadera", label: "Cadera" }
     ]);
     dibujarTarjetaMedida(xTarjetas, yMedidas + altoTarjeta + espacioTarjetas, "MUSLOS", iconoMuslos, [
       { campo: "muslo_izquierdo", label: "Muslo izquierdo" },

@@ -1208,6 +1208,10 @@ table td {
     gap: 14px 24px;
 }
 
+.ideal-card-fields--three {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+}
+
 .ideal-field label,
 .ideal-observations label {
     display: block;
@@ -1566,6 +1570,47 @@ table td {
     position: relative;
 }
 
+.calc-patient-heading,
+.calc-quick-patient-title,
+.calc-quick-patient-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.calc-patient-heading {
+    margin-bottom: 8px;
+}
+
+.calc-patient-heading .btn,
+.calc-quick-patient-title .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.calc-patient-heading svg,
+.calc-quick-patient-title svg {
+    width: 17px;
+    height: 17px;
+}
+
+.calc-quick-patient-panel {
+    padding: 18px;
+    border: 1px solid #cfe6d5;
+    border-radius: 10px;
+    background: #f8fcf9;
+}
+
+.calc-quick-patient-title {
+    margin-bottom: 16px;
+}
+
+.calc-quick-patient-actions {
+    justify-content: flex-end;
+}
+
 .patient-results-select {
     position: absolute;
     z-index: 20;
@@ -1733,6 +1778,10 @@ body {
     }
 
     .ideal-card-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .ideal-card-fields--three {
         grid-template-columns: 1fr;
     }
 }
@@ -1904,6 +1953,10 @@ body {
     .ideal-card-fields {
         grid-template-columns: 1fr;
         gap: 12px;
+    }
+
+    .ideal-card-fields--three {
+        grid-template-columns: 1fr;
     }
 
     .macro-requerimiento-tabla {
