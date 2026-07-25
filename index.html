@@ -1101,11 +1101,19 @@
               </div>
 
               <div class="card p-3 mb-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                  <h5 class="mb-0">Historial de citas</h5>
-                  <div class="citas-table-actions">
+                <div class="citas-card-header">
+                  <div>
+                    <h5 class="mb-1">Historial de citas</h5>
+                    <p class="mb-0">Consulta, modifica o elimina las citas guardadas.</p>
+                  </div>
+                </div>
+                <div class="citas-toolbar">
+                  <div class="citas-filters">
+                    <div class="citas-search-filter">
+                      <label for="citas_filtro">Buscar cita</label>
                     <input type="search" id="citas_filtro" class="form-control form-control-sm citas-filter"
                       placeholder="Buscar por paciente, c&eacute;dula o fecha" aria-label="Buscar citas">
+                    </div>
                     <div class="citas-date-filter">
                       <label for="citas_fecha_desde">Fecha desde</label>
                       <input type="date" id="citas_fecha_desde" class="form-control form-control-sm">
@@ -1114,11 +1122,20 @@
                       <label for="citas_fecha_hasta">Fecha hasta</label>
                       <input type="date" id="citas_fecha_hasta" class="form-control form-control-sm">
                     </div>
-                    <button type="button" id="citas_seleccionar_todo" class="btn btn-outline-secondary btn-sm">Seleccionar todo</button>
-                    <button type="button" id="citas_modificar" class="btn btn-outline-primary btn-sm" disabled>Modificar</button>
-                    <button type="button" id="citas_eliminar" class="btn btn-outline-danger btn-sm" disabled>Eliminar</button>
-                    <button type="button" id="citas_limpiar" class="btn btn-outline-secondary btn-sm">Limpiar</button>
-                    <button type="button" id="citas_recargar" class="btn btn-outline-secondary btn-sm">Recargar</button>
+                  </div>
+                  <div class="citas-action-bar">
+                    <div class="citas-selection-actions">
+                      <button type="button" id="citas_seleccionar_todo"
+                        class="btn btn-outline-secondary btn-sm">Seleccionar todo</button>
+                    </div>
+                    <div class="citas-record-actions">
+                      <button type="button" id="citas_modificar" class="btn btn-primary btn-sm" disabled>Modificar cita</button>
+                      <button type="button" id="citas_eliminar" class="btn btn-outline-danger btn-sm" disabled>Eliminar</button>
+                    </div>
+                    <div class="citas-utility-actions">
+                      <button type="button" id="citas_limpiar" class="btn btn-light btn-sm">Limpiar filtros</button>
+                      <button type="button" id="citas_recargar" class="btn btn-light btn-sm">Recargar</button>
+                    </div>
                   </div>
                 </div>
                 <div class="table-responsive">
