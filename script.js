@@ -4357,6 +4357,51 @@ window.addEventListener("auth:session-changed", function (event) {
 });
 
 // Limpiar el formulario cuando la página se recarga o se abre
+function configurarSeccionesCalculadora() {
+  const tabs = Array.from(document.querySelectorAll("[data-calculator-section]"));
+  const botonesNavegacion = Array.from(document.querySelectorAll("[data-calculator-go]"));
+  if (!tabs.length) return;
+
+  const mostrarSeccion = function (seccion, desplazar = false) {
+    tabs.forEach(function (tab) {
+      const activa = tab.dataset.calculatorSection === seccion;
+      tab.classList.toggle("active", activa);
+      tab.setAttribute("aria-selected", activa ? "true" : "false");
+      tab.tabIndex = activa ? 0 : -1;
+
+      const panel = document.getElementById(`calculator-section-${tab.dataset.calculatorSection}`);
+      if (panel) panel.hidden = !activa;
+    });
+
+    if (desplazar) {
+      const navegacion = document.querySelector(".calculator-section-tabs");
+      if (navegacion) navegacion.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () {
+      mostrarSeccion(tab.dataset.calculatorSection);
+    });
+    tab.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const direccion = event.key === "ArrowRight" ? 1 : -1;
+      const siguiente = tabs[(index + direccion + tabs.length) % tabs.length];
+      mostrarSeccion(siguiente.dataset.calculatorSection);
+      siguiente.focus();
+    });
+  });
+
+  botonesNavegacion.forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      mostrarSeccion(boton.dataset.calculatorGo, true);
+    });
+  });
+
+  mostrarSeccion("inicial");
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   inicializarOrdenamientoSeleccionados();
   configurarResaltadoCruceAlimentos();
@@ -4400,6 +4445,7 @@ document.addEventListener('DOMContentLoaded', function() {
   configurarEventosIndiceMasaCorporal();
   configurarEventosMacronutrientes();
   configurarEventosMedidasAntropometricas();
+  configurarSeccionesCalculadora();
   inicializarIconosLucide();
   actualizarRequerimientoMacronutrientes();
   buscar();

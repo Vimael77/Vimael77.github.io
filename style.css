@@ -1607,6 +1607,123 @@ table td {
     justify-content: flex-end;
 }
 
+.calculator-section-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 0 30px 24px;
+    padding: 6px;
+    border: 1px solid #dbe3e6;
+    border-radius: 12px;
+    background: #f7f9fa;
+}
+
+.calculator-section-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #53616b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.calculator-section-tab:hover {
+    color: #218838;
+    background: #eef8f0;
+}
+
+.calculator-section-tab.active {
+    color: #fff;
+    background: #4caf50;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.22);
+}
+
+.calculator-section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: rgba(76, 175, 80, 0.13);
+}
+
+.calculator-section-tab.active .calculator-section-number {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.calculator-section-navigation {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 30px 28px;
+}
+
+.calculator-section-navigation--start {
+    justify-content: flex-start;
+}
+
+.calculator-section-navigation .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.calculator-section-navigation svg {
+    width: 18px;
+    height: 18px;
+}
+
+.calculator-content-heading {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #dbe3e6;
+}
+
+.calculator-content-heading > span {
+    display: block;
+    margin-bottom: 4px;
+    color: #4caf50;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.calculator-content-heading h3 {
+    margin: 0;
+    color: #17202a;
+    font-size: 1.35rem;
+}
+
+.calculator-content-heading p {
+    margin: 6px 0 0;
+    color: #66737c;
+}
+
+@media (max-width: 767.98px) {
+    .calculator-section-tabs {
+        margin-right: 15px;
+        margin-left: 15px;
+    }
+
+    .calculator-section-tab {
+        padding: 9px 8px;
+        font-size: 0.9rem;
+    }
+
+    .calculator-section-navigation {
+        margin-right: 15px;
+        margin-left: 15px;
+    }
+}
+
 .patient-results-select {
     position: absolute;
     z-index: 20;

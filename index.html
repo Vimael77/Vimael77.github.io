@@ -208,6 +208,23 @@
                 </div>
               </div>
             </div>
+            <nav class="calculator-section-tabs" role="tablist" aria-label="Secciones de la calculadora">
+              <button type="button" id="calculator-tab-inicial" class="calculator-section-tab active"
+                role="tab" aria-selected="true" aria-controls="calculator-section-inicial"
+                data-calculator-section="inicial">
+                <span class="calculator-section-number">1</span>
+                Evaluaci&oacute;n inicial
+              </button>
+              <button type="button" id="calculator-tab-plan" class="calculator-section-tab"
+                role="tab" aria-selected="false" aria-controls="calculator-section-plan"
+                data-calculator-section="plan">
+                <span class="calculator-section-number">2</span>
+                Plan nutricional
+              </button>
+            </nav>
+
+            <div id="calculator-section-inicial" class="calculator-section-panel" role="tabpanel"
+              aria-labelledby="calculator-tab-inicial">
             <!-- SECCIÓN 0: CALCULADORA DE REQUERIMIENTOS -->
             <div class="row w-100 m-0 mb-4">
               <div class="col-md-12">
@@ -505,7 +522,6 @@
                 </section>
               </div>
             </div>
-
             <div class="row w-100 m-0 mb-4">
               <div class="col-md-12">
                 <section class="imc-section" aria-labelledby="imc_title">
@@ -563,9 +579,24 @@
               </div>
             </div>
 
+            <div class="calculator-section-navigation">
+              <button type="button" class="btn btn-success" data-calculator-go="plan">
+                Continuar al plan nutricional
+                <span data-lucide="arrow-right" aria-hidden="true"></span>
+              </button>
+            </div>
+            </div>
+
+            <div id="calculator-section-plan" class="calculator-section-panel" role="tabpanel"
+              aria-labelledby="calculator-tab-plan" hidden>
             <div class="row w-100 m-0 mb-4">
               <div class="col-md-12">
                 <div class="macro-requerimiento-panel">
+                  <div class="calculator-content-heading">
+                    <span>Plan nutricional</span>
+                    <h3>DISTRIBUCI&Oacute;N DE MACRONUTRIENTES</h3>
+                    <p>Define el peso ideal y la proporci&oacute;n de prote&iacute;nas, grasas y carbohidratos.</p>
+                  </div>
                   <div class="macro-peso-ideal-row">
                     <div class="macro-peso-ideal-field">
                       <label class="form-label" for="macro_peso_ideal">Peso ideal</label>
@@ -1050,6 +1081,13 @@
                   </div>
                 </div>
               </div>
+            </div>
+            <div class="calculator-section-navigation calculator-section-navigation--start">
+              <button type="button" class="btn btn-outline-secondary" data-calculator-go="inicial">
+                <span data-lucide="arrow-left" aria-hidden="true"></span>
+                Volver a evaluaci&oacute;n inicial
+              </button>
+            </div>
             </div>
           </div>
 
