@@ -74,7 +74,16 @@
           <input type="password" id="auth-password" class="form-control" autocomplete="current-password" minlength="8"
             required>
 
+          <div id="auth-password-confirm-group" class="auth-field-group auth-hidden">
+            <label for="auth-password-confirm">Confirmar contrase&ntilde;a</label>
+            <input type="password" id="auth-password-confirm" class="form-control" autocomplete="new-password"
+              minlength="8">
+          </div>
+
+          <button type="button" id="auth-forgot-password" class="auth-text-button">¿Olvidaste tu contrase&ntilde;a?</button>
+
           <button type="submit" id="auth-submit" class="btn btn-success w-100">Entrar</button>
+          <button type="button" id="auth-back-login" class="auth-text-button auth-hidden">Volver a iniciar sesi&oacute;n</button>
           <p id="auth-message" class="auth-message" aria-live="polite"></p>
         </form>
       </div>

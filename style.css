@@ -244,6 +244,33 @@ body {
     gap: 10px;
 }
 
+.auth-field-group {
+    display: grid;
+    gap: 10px;
+}
+
+.auth-text-button {
+    width: fit-content;
+    margin: -2px 0 2px auto;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: #25743a;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.auth-text-button:hover,
+.auth-text-button:focus-visible {
+    color: #175a2a;
+}
+
+.auth-text-button:disabled {
+    color: #87928b;
+}
+
 .auth-mode {
     display: grid;
     grid-template-columns: 1fr 1fr;

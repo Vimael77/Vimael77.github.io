@@ -9,6 +9,7 @@ const supabaseClient = window.supabase.createClient(
 window.supabaseClient = supabaseClient;
 
 let authMode = "login";
+let authRecoverySession = false;
 const AUTH_USUARIO_PENDIENTE_PREFIX = "muyAlimentado:usuarioPendiente";
 
 function setAuthMessage(message, type) {
@@ -26,9 +27,14 @@ function setAuthLoading(isLoading) {
   submitButton.disabled = isLoading;
   submitButton.textContent = isLoading
     ? "Procesando..."
-    : authMode === "login"
-      ? "Entrar"
-      : "Crear cuenta";
+    : obtenerTextoSubmitAuth();
+}
+
+function obtenerTextoSubmitAuth() {
+  if (authMode === "register") return "Crear cuenta";
+  if (authMode === "forgot") return "Enviar enlace";
+  if (authMode === "recovery") return "Guardar nueva contraseña";
+  return "Entrar";
 }
 
 function obtenerUsuarioAuth() {
@@ -104,15 +110,45 @@ function setAuthMode(nextMode) {
   const loginTab = document.getElementById("auth-login-tab");
   const registerTab = document.getElementById("auth-register-tab");
   const submitButton = document.getElementById("auth-submit");
+  const emailInput = document.getElementById("auth-email");
   const passwordInput = document.getElementById("auth-password");
+  const passwordConfirmInput = document.getElementById("auth-password-confirm");
+  const passwordConfirmGroup = document.getElementById("auth-password-confirm-group");
   const usuarioInput = document.getElementById("auth-usuario");
+  const forgotButton = document.getElementById("auth-forgot-password");
+  const backButton = document.getElementById("auth-back-login");
+  const modeSelector = document.querySelector(".auth-mode");
+  const title = document.querySelector(".auth-title");
+  const copy = document.querySelector(".auth-copy");
+  const isForgot = authMode === "forgot";
+  const isRecovery = authMode === "recovery";
+  const isLoginOrRegister = authMode === "login" || authMode === "register";
 
   if (loginTab) loginTab.classList.toggle("active", authMode === "login");
   if (registerTab) registerTab.classList.toggle("active", authMode === "register");
-  if (submitButton) submitButton.textContent = authMode === "login" ? "Entrar" : "Crear cuenta";
-  if (passwordInput) {
-    passwordInput.autocomplete = authMode === "login" ? "current-password" : "new-password";
+  if (modeSelector) modeSelector.classList.toggle("auth-hidden", !isLoginOrRegister);
+  if (submitButton) submitButton.textContent = obtenerTextoSubmitAuth();
+  if (emailInput) {
+    emailInput.required = !isRecovery;
+    emailInput.classList.toggle("auth-hidden", isRecovery);
+    const emailLabel = document.querySelector('label[for="auth-email"]');
+    if (emailLabel) emailLabel.classList.toggle("auth-hidden", isRecovery);
   }
+  if (passwordInput) {
+    passwordInput.required = !isForgot;
+    passwordInput.classList.toggle("auth-hidden", isForgot);
+    passwordInput.autocomplete = authMode === "login" ? "current-password" : "new-password";
+    const passwordLabel = document.querySelector('label[for="auth-password"]');
+    if (passwordLabel) {
+      passwordLabel.classList.toggle("auth-hidden", isForgot);
+      passwordLabel.textContent = isRecovery ? "Nueva contraseña" : "Contraseña";
+    }
+  }
+  if (passwordConfirmInput) {
+    passwordConfirmInput.required = isRecovery;
+    if (!isRecovery) passwordConfirmInput.value = "";
+  }
+  if (passwordConfirmGroup) passwordConfirmGroup.classList.toggle("auth-hidden", !isRecovery);
   if (usuarioInput) {
     usuarioInput.required = authMode === "register";
     usuarioInput.disabled = authMode !== "register";
@@ -120,6 +156,22 @@ function setAuthMode(nextMode) {
   document.querySelectorAll(".auth-register-only").forEach((elemento) => {
     elemento.classList.toggle("auth-hidden", authMode !== "register");
   });
+  if (forgotButton) forgotButton.classList.toggle("auth-hidden", authMode !== "login");
+  if (backButton) backButton.classList.toggle("auth-hidden", isLoginOrRegister || isRecovery);
+  if (title) {
+    title.textContent = isRecovery
+      ? "Crea una nueva contraseña"
+      : isForgot
+        ? "Recupera tu contraseña"
+        : "Acceso de usuarios";
+  }
+  if (copy) {
+    copy.textContent = isRecovery
+      ? "Escribe y confirma la contraseña que usarás a partir de ahora."
+      : isForgot
+        ? "Te enviaremos un enlace seguro al correo asociado con tu cuenta."
+        : "Inicia sesión para usar la calculadora y guardar tu trabajo de forma segura.";
+  }
 
   setAuthMessage("");
 }
@@ -157,10 +209,65 @@ async function handleAuthSubmit(event) {
 
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
+  const passwordConfirm = document.getElementById("auth-password-confirm").value;
   const usuario = obtenerUsuarioAuth();
 
+  if (authMode === "forgot") {
+    if (!email) {
+      setAuthMessage("Escribe el correo de tu cuenta.", "error");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage("");
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: getAuthRedirectUrl()
+    });
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessage("No pudimos enviar el enlace. Inténtalo de nuevo en unos minutos.", "error");
+      return;
+    }
+
+    setAuthMessage("Si existe una cuenta con ese correo, recibirás un enlace para cambiar tu contraseña. Revisa también la carpeta de spam.", "success");
+    return;
+  }
+
+  if (authMode === "recovery") {
+    if (!password || !passwordConfirm) {
+      setAuthMessage("Escribe y confirma tu nueva contraseña.", "error");
+      return;
+    }
+    if (password.length < 8) {
+      setAuthMessage("La contraseña debe tener al menos 8 caracteres.", "error");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setAuthMessage("Las contraseñas no coinciden.", "error");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage("");
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessage(error.message, "error");
+      return;
+    }
+
+    authRecoverySession = false;
+    history.replaceState({}, document.title, getAuthRedirectUrl());
+    const { data } = await supabaseClient.auth.getSession();
+    setSessionUI(data.session);
+    setAuthMessage("");
+    return;
+  }
+
   if (!email || !password) {
-    setAuthMessage("Escribe tu correo y contrasena.", "error");
+    setAuthMessage("Escribe tu correo y contraseña.", "error");
     return;
   }
 
@@ -220,14 +327,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   const authForm = document.getElementById("auth-form");
   const loginTab = document.getElementById("auth-login-tab");
   const registerTab = document.getElementById("auth-register-tab");
+  const forgotButton = document.getElementById("auth-forgot-password");
+  const backButton = document.getElementById("auth-back-login");
   const signOutButton = document.getElementById("auth-signout");
 
   if (authForm) authForm.addEventListener("submit", handleAuthSubmit);
   if (loginTab) loginTab.addEventListener("click", () => setAuthMode("login"));
   if (registerTab) registerTab.addEventListener("click", () => setAuthMode("register"));
+  if (forgotButton) forgotButton.addEventListener("click", () => setAuthMode("forgot"));
+  if (backButton) backButton.addEventListener("click", () => setAuthMode("login"));
   if (signOutButton) signOutButton.addEventListener("click", signOut);
 
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      authRecoverySession = true;
+      setSessionUI(null);
+      setAuthMode("recovery");
+      return;
+    }
+    if (authRecoverySession) return;
     setSessionUI(session);
     sincronizarUsuarioPendiente(session);
   });
@@ -239,6 +357,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return;
   }
 
+  if (authRecoverySession) return;
   setSessionUI(data.session);
   await sincronizarUsuarioPendiente(data.session);
 });
