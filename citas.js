@@ -59,18 +59,24 @@ const CAMPOS_BIA_CITA = [
   ["bia_masa_muscular_tronco_kg", "Masa muscular - tronco", "kg"],
   ["bia_masa_muscular_pierna_izquierda_kg", "Masa muscular - pierna izquierda", "kg"],
   ["bia_masa_muscular_pierna_derecha_kg", "Masa muscular - pierna derecha", "kg"],
-  ["bia_masa_grasa_pct", "Masa grasa total", "%"],
-  ["bia_masa_grasa_brazo_izquierdo_pct", "Masa grasa - brazo izquierdo", "%"],
-  ["bia_masa_grasa_brazo_derecho_pct", "Masa grasa - brazo derecho", "%"],
-  ["bia_masa_grasa_tronco_pct", "Masa grasa - tronco", "%"],
-  ["bia_masa_grasa_pierna_izquierda_pct", "Masa grasa - pierna izquierda", "%"],
-  ["bia_masa_grasa_pierna_derecha_pct", "Masa grasa - pierna derecha", "%"],
+  ["bia_masa_grasa_kg", "Masa grasa total", "kg"],
+  ["bia_masa_grasa_brazo_izquierdo_kg", "Masa grasa - brazo izquierdo", "kg"],
+  ["bia_masa_grasa_brazo_derecho_kg", "Masa grasa - brazo derecho", "kg"],
+  ["bia_masa_grasa_tronco_kg", "Masa grasa - tronco", "kg"],
+  ["bia_masa_grasa_pierna_izquierda_kg", "Masa grasa - pierna izquierda", "kg"],
+  ["bia_masa_grasa_pierna_derecha_kg", "Masa grasa - pierna derecha", "kg"],
   ["bia_grasa_visceral_pct", "Masa grasa visceral", "%"],
   ["bia_agua_corporal_pct", "Agua corporal", "%"],
   ["bia_geb_kcal", "Gasto energético basal (GEB)", "kcal"],
   ["bia_masa_osea_kg", "Masa ósea", "kg"],
   ["bia_edad_anios", "Edad según BIA", "años"]
 ];
+
+const CAMPOS_COMPOSICION_BIA_KG = new Set(CAMPOS_BIA_CITA
+  .map(([campo]) => campo)
+  .filter(campo => campo.startsWith("bia_masa_muscular_") || campo.startsWith("bia_masa_grasa_")));
+let unidadComposicionBia = "kg";
+
 
 const COLUMNAS_HORARIOS_CITA = [
   ["Desayuno", "hora_desayuno"],
@@ -610,7 +616,7 @@ function obtenerFilaCitaTablaUnica(datos) {
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
-    cita_schema_version: 18,
+    cita_schema_version: 19,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -890,16 +896,128 @@ function obtenerTotalesCita() {
   };
 }
 
+function obtenerValorKgComposicionBia(elemento) {
+  if (!elemento) return null;
+  const valor = unidadComposicionBia === "%" ? elemento.dataset.valorKg : elemento.value;
+  return citaNumeroOpcional(valor, 4);
+}
+
+function actualizarVistaComposicionBia(unidad) {
+  const siguienteUnidad = unidad === "%" ? "%" : "kg";
+  const peso = citaNumeroOpcional(citaValor("calc_peso"), 4);
+
+  CAMPOS_COMPOSICION_BIA_KG.forEach(campo => {
+    const elemento = document.getElementById(campo);
+    if (!elemento) return;
+
+    if (unidadComposicionBia === "kg") elemento.dataset.valorKg = elemento.value;
+    const valorKg = citaNumeroOpcional(elemento.dataset.valorKg, 4);
+
+    if (siguienteUnidad === "%") {
+      elemento.value = valorKg !== null && peso !== null && peso > 0
+        ? ((valorKg / peso) * 100).toFixed(2)
+        : "";
+      elemento.readOnly = true;
+    } else {
+      elemento.value = elemento.dataset.valorKg || "";
+      elemento.readOnly = false;
+    }
+
+    const sufijo = elemento.closest(".input-group")?.querySelector(".input-group-text");
+    if (sufijo) sufijo.textContent = siguienteUnidad;
+  });
+
+  unidadComposicionBia = siguienteUnidad;
+  document.querySelectorAll("[data-bia-unit]").forEach(boton => {
+    const activo = boton.dataset.biaUnit === siguienteUnidad;
+    boton.classList.toggle("is-active", activo);
+    boton.setAttribute("aria-pressed", String(activo));
+  });
+  document.querySelectorAll(".bia-group-card:not(.bia-group-card--indicators) .bia-group-heading > span")
+    .forEach(etiqueta => { etiqueta.textContent = siguienteUnidad; });
+
+  const ayuda = document.getElementById("bia_unit_help");
+  if (ayuda) {
+    ayuda.textContent = siguienteUnidad === "%"
+      ? (peso !== null && peso > 0
+        ? `Porcentajes calculados sobre ${peso} kg de peso corporal.`
+        : "Ingresa el peso corporal para calcular los porcentajes.")
+      : "Los valores se guardan en kilogramos.";
+  }
+}
+
+function configurarSelectorUnidadComposicionBia() {
+  document.querySelectorAll("[data-bia-unit]").forEach(boton => {
+    boton.addEventListener("click", () => actualizarVistaComposicionBia(boton.dataset.biaUnit));
+  });
+
+  CAMPOS_COMPOSICION_BIA_KG.forEach(campo => {
+    const elemento = document.getElementById(campo);
+    if (!elemento) return;
+    elemento.dataset.valorKg = elemento.value;
+    elemento.addEventListener("input", () => {
+      if (unidadComposicionBia === "kg") elemento.dataset.valorKg = elemento.value;
+    });
+  });
+
+  const peso = document.getElementById("calc_peso");
+  if (peso) {
+    peso.addEventListener("input", () => {
+      if (unidadComposicionBia === "%") actualizarVistaComposicionBia("%");
+    });
+  }
+  actualizarVistaComposicionBia("kg");
+}
 function obtenerDatosBiaCita() {
   return Object.fromEntries(CAMPOS_BIA_CITA.map(([campo]) => [
     campo,
-    citaNumeroOpcional(citaValor(campo))
+    CAMPOS_COMPOSICION_BIA_KG.has(campo)
+      ? obtenerValorKgComposicionBia(document.getElementById(campo))
+      : citaNumeroOpcional(citaValor(campo))
   ]));
+}
+
+function validarDatosBiaCita() {
+  for (const [campo, etiqueta, unidad] of CAMPOS_BIA_CITA) {
+    const elemento = document.getElementById(campo);
+    if (!elemento) continue;
+    const valorCrudo = CAMPOS_COMPOSICION_BIA_KG.has(campo)
+      ? (unidadComposicionBia === "%" ? elemento.dataset.valorKg : elemento.value)
+      : elemento.value;
+    if (String(valorCrudo ?? "").trim() === "") continue;
+
+    const valor = citaNumeroOpcional(valorCrudo, 4);
+    const minimo = citaNumeroOpcional(elemento.min, 4);
+    const maximo = citaNumeroOpcional(elemento.max, 4);
+    const fueraDeRango = valor === null
+      || (minimo !== null && valor < minimo)
+      || (maximo !== null && valor > maximo);
+
+    if (!fueraDeRango) continue;
+
+    const rango = minimo !== null && maximo !== null
+      ? `entre ${minimo} y ${maximo}`
+      : minimo !== null
+        ? `mayor o igual a ${minimo}`
+        : `menor o igual a ${maximo}`;
+    alert(`${etiqueta} debe ser un valor ${rango}${unidad ? ` ${unidad}` : ""}.`);
+    elemento.focus();
+    return false;
+  }
+
+  return true;
 }
 
 function aplicarDatosBiaCita(datos) {
   const valores = datos && typeof datos === "object" ? datos : {};
-  CAMPOS_BIA_CITA.forEach(([campo]) => asignarValorCita(campo, valores[campo]));
+  CAMPOS_BIA_CITA.forEach(([campo]) => {
+    asignarValorCita(campo, valores[campo]);
+    if (CAMPOS_COMPOSICION_BIA_KG.has(campo)) {
+      const elemento = document.getElementById(campo);
+      if (elemento) elemento.dataset.valorKg = valores[campo] ?? "";
+    }
+  });
+  actualizarVistaComposicionBia(unidadComposicionBia);
 }
 
 function obtenerDatosCita() {
@@ -923,13 +1041,13 @@ function obtenerDatosCita() {
     edad: citaValor("calc_edad"),
     genero: citaValor("calc_genero"),
     genero_texto: citaSelectTexto("calc_genero"),
-    actividad: citaValor("calc_actividad"),
+    actividad: citaValor("calc_actividad_valor"),
     actividad_texto: citaSelectTexto("calc_actividad"),
     medidas_antropometricas: typeof obtenerMedidasAntropometricas === "function" ? obtenerMedidasAntropometricas() : {}
   };
 
   return {
-    version: 18,
+    version: 19,
     guardado_en: new Date().toISOString(),
     paciente,
     profesional: {},
@@ -1018,6 +1136,8 @@ async function guardarCita() {
     alert("Debes iniciar sesion para guardar la cita.");
     return;
   }
+
+  if (!validarDatosBiaCita()) return;
 
   const datos = obtenerDatosCita();
   datos.profesional = await obtenerProfesionalCita(sessionData.session);
@@ -1174,7 +1294,14 @@ function cargarCitaEnCalculadora(cita) {
   aplicarPacienteEnCalculadora(paciente.paciente_id || cita.paciente_id);
   asignarValorCita("calc_peso", paciente.peso);
   asignarValorCita("calc_estatura", paciente.estatura);
-  asignarValorCita("calc_actividad", paciente.actividad);
+  const selectorActividad = document.getElementById("calc_actividad");
+  if (selectorActividad) {
+    const opcionActividad = Array.from(selectorActividad.options).find(opcion =>
+      opcion.textContent === paciente.actividad_texto || String(opcion.value) === String(paciente.actividad)
+    );
+    if (opcionActividad) selectorActividad.value = opcionActividad.value;
+  }
+  asignarValorCita("calc_actividad_valor", paciente.actividad);
   aplicarMedidasAntropometricas(paciente.medidas_antropometricas || {});
   aplicarDatosBiaCita(datos.bia);
 
@@ -1454,9 +1581,9 @@ async function cargarCitas() {
     "bia_masa_muscular_kg", "bia_masa_muscular_brazo_izquierdo_kg",
     "bia_masa_muscular_brazo_derecho_kg", "bia_masa_muscular_tronco_kg",
     "bia_masa_muscular_pierna_izquierda_kg", "bia_masa_muscular_pierna_derecha_kg",
-    "bia_masa_grasa_pct", "bia_masa_grasa_brazo_izquierdo_pct",
-    "bia_masa_grasa_brazo_derecho_pct", "bia_masa_grasa_tronco_pct",
-    "bia_masa_grasa_pierna_izquierda_pct", "bia_masa_grasa_pierna_derecha_pct",
+    "bia_masa_grasa_kg", "bia_masa_grasa_brazo_izquierdo_kg",
+    "bia_masa_grasa_brazo_derecho_kg", "bia_masa_grasa_tronco_kg",
+    "bia_masa_grasa_pierna_izquierda_kg", "bia_masa_grasa_pierna_derecha_kg",
     "bia_grasa_visceral_pct", "bia_agua_corporal_pct", "bia_geb_kcal",
     "bia_masa_osea_kg", "bia_edad_anios",
     "req_carbohidratos", "req_fibra", "req_ags", "req_agm", "req_agpi",
@@ -2228,6 +2355,8 @@ function configurarCitas() {
   const eliminarBtn = document.getElementById("citas_eliminar");
   const cancelarEdicionBtn = document.getElementById("cancelar_edicion_cita_btn");
   const enlaceCitas = document.getElementById("side-citas-link");
+
+  configurarSelectorUnidadComposicionBia();
 
   const actualizarFiltrosCitas = () => {
     paginaCitasActual = 1;

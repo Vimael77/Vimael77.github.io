@@ -361,15 +361,22 @@
                         </select>
                       </div>
                       <div class="col-md-6 mt-3">
-                        <label class="form-label">Nivel de Actividad Física</label>
-                        <select id="calc_actividad" class="form-select" style="height: 38px;">
-                          <option value="1.2">Sedentario (Poco o ningún ejercicio) (1.2)</option>
-                          <option value="1.375">Ligero (Ejercicio ligero 1-3 días/sem) (1.375)</option>
-                          <option value="1.55" selected>Moderado (Ejercicio moderado 3-5 días/sem) (1.55)</option>
-                          <option value="1.725">Activo (Ejercicio intenso 6-7 días/sem) (1.725)</option>
-                          <option value="1.9">Muy Activo (Atletas profesionales / Entrenamiento físico duro diario)
-                            (1.9)</option>
-                        </select>
+                        <div class="row g-2">
+                          <div class="col-sm-9">
+                            <label class="form-label" for="calc_actividad">Nivel de Actividad F&iacute;sica</label>
+                            <select id="calc_actividad" class="form-select" style="height: 38px;">
+                              <option value="1.2">Sedentario (Poco o ning&uacute;n ejercicio) (1.2)</option>
+                              <option value="1.375">Ligero (Ejercicio ligero 1-3 d&iacute;as/sem) (1.375)</option>
+                              <option value="1.55" selected>Moderado (Ejercicio moderado 3-5 d&iacute;as/sem) (1.55)</option>
+                              <option value="1.725">Activo (Ejercicio intenso 6-7 d&iacute;as/sem) (1.725)</option>
+                              <option value="1.9">Muy Activo (Atletas profesionales / Entrenamiento f&iacute;sico duro diario) (1.9)</option>
+                            </select>
+                          </div>
+                          <div class="col-sm-3">
+                            <label class="form-label" for="calc_actividad_valor">Factor</label>
+                            <input type="number" id="calc_actividad_valor" class="form-control" min="0.1" step="0.001" value="1.55" inputmode="decimal">
+                          </div>
+                        </div>
                       </div>
                       <div class="col-md-6 mt-3 d-flex align-items-end">
                         <button class="btn btn-primary w-100"
@@ -604,6 +611,14 @@
                       <h3 id="bia_title">AN&Aacute;LISIS DE BIOIMPEDANCIA EL&Eacute;CTRICA (BIA)</h3>
                       <p>Registra los resultados obtenidos mediante el equipo de bioimpedancia.</p>
                     </div>
+                    <div class="bia-unit-panel">
+                      <div class="bia-unit-toggle" role="group" aria-label="Unidad de composici&oacute;n corporal">
+                        <button type="button" class="bia-unit-button is-active" data-bia-unit="kg" aria-pressed="true">kg</button>
+                        <button type="button" class="bia-unit-button" data-bia-unit="%" aria-pressed="false">%</button>
+                      </div>
+                      <small id="bia_unit_help">Los valores se guardan en kilogramos.</small>
+                    </div>
+
                     <span class="bia-section-icon" data-lucide="activity" aria-hidden="true"></span>
                   </div>
 
@@ -632,21 +647,21 @@
                     <article class="bia-group-card">
                       <div class="bia-group-heading">
                         <h4>Masa grasa corporal</h4>
-                        <span>%</span>
+                        <span>kg</span>
                       </div>
                       <div class="bia-fields-grid">
                         <div class="bia-field bia-field--total">
-                          <label for="bia_masa_grasa_pct">Masa grasa total</label>
+                          <label for="bia_masa_grasa_kg">Masa grasa total</label>
                           <div class="input-group">
-                            <input type="number" id="bia_masa_grasa_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal">
-                            <span class="input-group-text">%</span>
+                            <input type="number" id="bia_masa_grasa_kg" class="form-control" min="0" step="0.1" inputmode="decimal">
+                            <span class="input-group-text">kg</span>
                           </div>
                         </div>
-                        <div class="bia-field"><label for="bia_masa_grasa_brazo_izquierdo_pct">Brazo izquierdo</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_izquierdo_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
-                        <div class="bia-field"><label for="bia_masa_grasa_brazo_derecho_pct">Brazo derecho</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_derecho_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
-                        <div class="bia-field"><label for="bia_masa_grasa_tronco_pct">Tronco</label><div class="input-group"><input type="number" id="bia_masa_grasa_tronco_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
-                        <div class="bia-field"><label for="bia_masa_grasa_pierna_izquierda_pct">Pierna izquierda</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_izquierda_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
-                        <div class="bia-field"><label for="bia_masa_grasa_pierna_derecha_pct">Pierna derecha</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_derecha_pct" class="form-control" min="0" max="100" step="0.1" inputmode="decimal"><span class="input-group-text">%</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_brazo_izquierdo_kg">Brazo izquierdo</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_izquierdo_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_brazo_derecho_kg">Brazo derecho</label><div class="input-group"><input type="number" id="bia_masa_grasa_brazo_derecho_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_tronco_kg">Tronco</label><div class="input-group"><input type="number" id="bia_masa_grasa_tronco_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_pierna_izquierda_kg">Pierna izquierda</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_izquierda_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
+                        <div class="bia-field"><label for="bia_masa_grasa_pierna_derecha_kg">Pierna derecha</label><div class="input-group"><input type="number" id="bia_masa_grasa_pierna_derecha_kg" class="form-control" min="0" step="0.1" inputmode="decimal"><span class="input-group-text">kg</span></div></div>
                       </div>
                     </article>
 
@@ -1290,12 +1305,12 @@
                       <option value="bia_masa_muscular_pierna_derecha_kg">Pierna derecha</option>
                     </optgroup>
                     <optgroup label="Masa grasa corporal">
-                      <option value="bia_masa_grasa_pct">Masa grasa total</option>
-                      <option value="bia_masa_grasa_brazo_izquierdo_pct">Brazo izquierdo</option>
-                      <option value="bia_masa_grasa_brazo_derecho_pct">Brazo derecho</option>
-                      <option value="bia_masa_grasa_tronco_pct">Tronco</option>
-                      <option value="bia_masa_grasa_pierna_izquierda_pct">Pierna izquierda</option>
-                      <option value="bia_masa_grasa_pierna_derecha_pct">Pierna derecha</option>
+                      <option value="bia_masa_grasa_kg">Masa grasa total</option>
+                      <option value="bia_masa_grasa_brazo_izquierdo_kg">Brazo izquierdo</option>
+                      <option value="bia_masa_grasa_brazo_derecho_kg">Brazo derecho</option>
+                      <option value="bia_masa_grasa_tronco_kg">Tronco</option>
+                      <option value="bia_masa_grasa_pierna_izquierda_kg">Pierna izquierda</option>
+                      <option value="bia_masa_grasa_pierna_derecha_kg">Pierna derecha</option>
                     </optgroup>
                     <optgroup label="Otros indicadores">
                       <option value="bia_grasa_visceral_pct">Masa grasa visceral</option>

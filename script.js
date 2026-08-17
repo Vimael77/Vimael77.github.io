@@ -1560,93 +1560,215 @@ function total_kilocalorias() {
 
 const ordenDeseado = ["nombre", "gramos"].concat(obtenerColumnasNutrientesKeys());
 
-function descargar() {
+const SECCIONES_DESCARGA = {
+  pdf: [
+    ["datos", "Datos de la cita y paciente"],
+    ["imc", "Índice de masa corporal"],
+    ["medidas", "Medidas corporales"],
+    ["bia", "Bioimpedancia eléctrica (BIA)"],
+    ["horarios_macros", "Horarios y macronutrientes"],
+    ["alimentos", "Alimentos seleccionados"],
+    ["totales", "Totales, requerimiento y adecuación"],
+    ["evolucion", "Gráficas de evolución"]
+  ],
+  excel: [
+    ["datos", "Datos de la cita y paciente"],
+    ["macros", "Macronutrientes"],
+    ["horarios", "Horarios de comida"],
+    ["alimentos", "Alimentos seleccionados"],
+    ["totales", "Totales, requerimiento y adecuación"]
+  ]
+};
+
+const COLUMNAS_DESCARGA_OBLIGATORIAS = ["energia_calculada", "proteina", "grasa_total", "carbohidratos"];
+
+function seleccionarSeccionesDescarga(formato) {
+  const opciones = SECCIONES_DESCARGA[formato] || [];
+  const nutrientesOpcionales = COLUMNAS_ALIMENTOS_OPCIONALES || [];
+  let dialogo = document.getElementById("descarga_secciones_dialogo");
+  if (!dialogo) {
+    dialogo = document.createElement("dialog");
+    dialogo.id = "descarga_secciones_dialogo";
+    dialogo.className = "download-sections-dialog";
+    document.body.appendChild(dialogo);
+  }
+
+  dialogo.innerHTML = `
+    <form method="dialog">
+      <div class="download-sections-header">
+        <h4>Selecciona las secciones</h4>
+        <p>Desmarca lo que no deseas incluir en la descarga.</p>
+      </div>
+      <div class="download-sections-list">
+        ${opciones.map(([id, etiqueta]) => `
+          <label>
+            <input type="checkbox" value="${id}" data-download-section checked>
+            <span>${etiqueta}</span>
+          </label>
+        `).join("")}
+      </div>
+      <div class="download-nutrients-panel">
+        <div class="download-nutrients-heading">
+          <div>
+            <strong>Columnas de alimentos</strong>
+            <small>Nombre, gramos, energía, proteína, grasa y carbohidratos siempre se incluyen.</small>
+          </div>
+          <div class="download-nutrients-actions">
+            <button type="button" data-nutrients-all>Seleccionar todo</button>
+            <button type="button" data-nutrients-none>Quitar todo</button>
+          </div>
+        </div>
+        <div class="download-nutrients-list">
+          ${nutrientesOpcionales.map(({ key, label }) => `
+            <label>
+              <input type="checkbox" value="${key}" data-download-nutrient checked>
+              <span>${label}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <p class="download-sections-error" hidden>Selecciona al menos una sección.</p>
+      <div class="download-sections-actions">
+        <button type="button" class="btn btn-outline-secondary" data-download-cancel>Cancelar</button>
+        <button type="button" class="btn btn-success" data-download-accept>Descargar</button>
+      </div>
+    </form>
+  `;
+
+  return new Promise(resolve => {
+    let resuelto = false;
+    const finalizar = resultado => {
+      if (resuelto) return;
+      resuelto = true;
+      dialogo.removeEventListener("cancel", cancelar);
+      if (dialogo.open) dialogo.close();
+      resolve(resultado);
+    };
+    const cancelar = event => {
+      event.preventDefault();
+      finalizar(null);
+    };
+    const actualizarEstadoNutrientes = () => {
+      const alimentos = dialogo.querySelector('[data-download-section][value="alimentos"]');
+      const panel = dialogo.querySelector(".download-nutrients-panel");
+      const activo = Boolean(alimentos && alimentos.checked);
+      panel.classList.toggle("is-disabled", !activo);
+      panel.querySelectorAll("input, button").forEach(control => { control.disabled = !activo; });
+    };
+    const marcarNutrientes = marcado => {
+      dialogo.querySelectorAll("[data-download-nutrient]").forEach(check => { check.checked = marcado; });
+    };
+
+    dialogo.addEventListener("cancel", cancelar);
+    dialogo.querySelector('[data-download-section][value="alimentos"]')?.addEventListener("change", actualizarEstadoNutrientes);
+    dialogo.querySelector("[data-nutrients-all]").onclick = () => marcarNutrientes(true);
+    dialogo.querySelector("[data-nutrients-none]").onclick = () => marcarNutrientes(false);
+    dialogo.querySelector("[data-download-cancel]").onclick = () => finalizar(null);
+    dialogo.querySelector("[data-download-accept]").onclick = () => {
+      const secciones = Array.from(dialogo.querySelectorAll("[data-download-section]:checked"))
+        .map(check => check.value);
+      const error = dialogo.querySelector(".download-sections-error");
+      if (!secciones.length) {
+        error.hidden = false;
+        return;
+      }
+      const nutrientes = Array.from(dialogo.querySelectorAll("[data-download-nutrient]:checked"))
+        .map(check => check.value);
+      finalizar({ secciones: new Set(secciones), nutrientes: new Set(nutrientes) });
+    };
+    actualizarEstadoNutrientes();
+    dialogo.showModal();
+  });
+}
+async function descargar() {
+  const seleccion = await seleccionarSeccionesDescarga("excel");
+  if (!seleccion) return;
+  const { secciones, nutrientes } = seleccion;
+  const columnasNutricion = COLUMNAS_DESCARGA_OBLIGATORIAS.concat(Array.from(nutrientes));
+  const copiarNutricion = (destino, origen) => {
+    ["nombre"].concat(columnasNutricion).forEach(campo => {
+      if (origen && Object.prototype.hasOwnProperty.call(origen, campo)) destino[campo] = origen[campo];
+    });
+  };
+
   nuevoOrden();
   total_kilocalorias();
-  let info = [];
-  
-  info.push({ "Tiempo de Comida": "Paciente Info", "nombre": "" });
-  info.push({ "Tiempo de Comida": "Identificacion", "nombre": document.getElementById('calc_id') ? document.getElementById('calc_id').value : "" });
-  info.push({ "Tiempo de Comida": "Fecha", "nombre": document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "" });
-  info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
-  info.push({ "Tiempo de Comida": "Peso", "nombre": document.getElementById('calc_peso') ? document.getElementById('calc_peso').value : "" });
-  info.push({ "Tiempo de Comida": "PesoIdeal", "nombre": document.getElementById('macro_peso_ideal') ? document.getElementById('macro_peso_ideal').value : "" });
-  info.push({ "Tiempo de Comida": "Estatura", "nombre": document.getElementById('calc_estatura') ? document.getElementById('calc_estatura').value : "" });
-  info.push({ "Tiempo de Comida": "Edad", "nombre": document.getElementById('calc_edad') ? document.getElementById('calc_edad').value : "" });
-  info.push({ "Tiempo de Comida": "Genero", "nombre": document.getElementById('calc_genero') ? document.getElementById('calc_genero').value : "" });
-  info.push({ "Tiempo de Comida": "Actividad", "nombre": document.getElementById('calc_actividad') ? document.getElementById('calc_actividad').value : "" });
-  info.push({
-    "Tiempo de Comida": "Macronutrientes",
-    "nombre": "Porcentajes",
-    "macro_proteina_porcentaje": obtenerValorNumerico('macro_proteina_porcentaje'),
-    "macro_grasa_porcentaje": obtenerValorNumerico('macro_grasa_porcentaje'),
-    "macro_carbohidratos_porcentaje": 100 - obtenerValorNumerico('macro_proteina_porcentaje') - obtenerValorNumerico('macro_grasa_porcentaje')
-  });
+  const info = [];
   const horasComida = obtenerHorasComida();
-  if (tieneHorasComida(horasComida)) {
+
+  if (secciones.has("datos")) {
+    info.push({ "Tiempo de Comida": "Paciente Info", "nombre": "" });
+    info.push({ "Tiempo de Comida": "Identificacion", "nombre": document.getElementById('calc_id') ? document.getElementById('calc_id').value : "" });
+    info.push({ "Tiempo de Comida": "Fecha", "nombre": document.getElementById('calc_fecha') ? document.getElementById('calc_fecha').value : "" });
+    info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
+    info.push({ "Tiempo de Comida": "Peso", "nombre": document.getElementById('calc_peso') ? document.getElementById('calc_peso').value : "" });
+    info.push({ "Tiempo de Comida": "PesoIdeal", "nombre": document.getElementById('macro_peso_ideal') ? document.getElementById('macro_peso_ideal').value : "" });
+    info.push({ "Tiempo de Comida": "Estatura", "nombre": document.getElementById('calc_estatura') ? document.getElementById('calc_estatura').value : "" });
+    info.push({ "Tiempo de Comida": "Edad", "nombre": document.getElementById('calc_edad') ? document.getElementById('calc_edad').value : "" });
+    info.push({ "Tiempo de Comida": "Genero", "nombre": document.getElementById('calc_genero') ? document.getElementById('calc_genero').value : "" });
+    info.push({ "Tiempo de Comida": "Actividad", "nombre": document.getElementById('calc_actividad_valor') ? document.getElementById('calc_actividad_valor').value : "" });
+    info.push({});
+  }
+
+  if (secciones.has("macros")) {
+    info.push({
+      "Tiempo de Comida": "Macronutrientes",
+      "nombre": "Porcentajes",
+      "macro_proteina_porcentaje": obtenerValorNumerico('macro_proteina_porcentaje'),
+      "macro_grasa_porcentaje": obtenerValorNumerico('macro_grasa_porcentaje'),
+      "macro_carbohidratos_porcentaje": 100 - obtenerValorNumerico('macro_proteina_porcentaje') - obtenerValorNumerico('macro_grasa_porcentaje')
+    });
+    info.push({});
+  }
+
+  if (secciones.has("horarios") && tieneHorasComida(horasComida)) {
     info.push({ "Tiempo de Comida": "Horarios de comida", "nombre": "" });
     tiemposComida.forEach(function (tiempo) {
-      if (horasComida[tiempo]) {
-        info.push({ "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo], "nombre": "" });
+      if (horasComida[tiempo]) info.push({ "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo], "nombre": "" });
+    });
+    info.push({});
+  }
+
+  if (secciones.has("alimentos")) {
+    const itemsPorTiempo = crearItemsPorTiempo();
+    for (const clave in alimentos_seleccionados_en_orden) {
+      const item = alimentos_seleccionados_en_orden[clave];
+      const tiempo = itemsPorTiempo[item.tiempo] ? item.tiempo : "Desayuno";
+      const fila = { "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo] || "" };
+      ["nombre", "gramos"].concat(columnasNutricion).forEach(propiedad => { fila[propiedad] = item[propiedad]; });
+      itemsPorTiempo[tiempo].push(fila);
+    }
+
+    tiemposComida.forEach(tiempo => {
+      itemsPorTiempo[tiempo].forEach(item => info.push(item));
+      if (itemsPorTiempo[tiempo].length && window.alimentos_subtotales && window.alimentos_subtotales[tiempo]) {
+        const subtotal = { "Tiempo de Comida": `Subtotal ${tiempo}`, "Hora": horasComida[tiempo] || "", "nombre": "" };
+        copiarNutricion(subtotal, window.alimentos_subtotales[tiempo]);
+        info.push(subtotal, {});
       }
     });
   }
-  info.push({}); // spacing
-  
-  let itemsPorTiempo = crearItemsPorTiempo();
-  
-  for (const clave in alimentos_seleccionados_en_orden) {
-    let item = alimentos_seleccionados_en_orden[clave];
-    let tiempo = itemsPorTiempo[item.tiempo] ? item.tiempo : "Desayuno";
-    let aux_info = {
-      "Tiempo de Comida": tiempo,
-      "Hora": horasComida[tiempo] || ""
-    };
-    for (let i = 0; i < ordenDeseado.length; i++) {
-        aux_info[ordenDeseado[i]] = item[ordenDeseado[i]];
-    }
-    itemsPorTiempo[tiempo].push(aux_info);
+
+  if (secciones.has("totales")) {
+    const total = { "Tiempo de Comida": "TOTAL" };
+    copiarNutricion(total, alimentos_total);
+    info.push(total);
+    const kilocalorias = { "Tiempo de Comida": "" };
+    copiarNutricion(kilocalorias, alimentos_total_kc);
+    info.push(kilocalorias);
+    const requerimiento = { "Tiempo de Comida": "" };
+    copiarNutricion(requerimiento, alimentos_requerimiento);
+    info.push(requerimiento);
+    const adecuacion = { "Tiempo de Comida": "" };
+    copiarNutricion(adecuacion, alimentos_adecuacion);
+    info.push(adecuacion);
   }
 
-  for (let t of tiemposComida) {
-    if (itemsPorTiempo[t].length > 0) {
-      for (let item of itemsPorTiempo[t]) {
-        info.push(item);
-      }
-      if (window.alimentos_subtotales && window.alimentos_subtotales[t]) {
-        let sub_row = { "Tiempo de Comida": "Subtotal " + t, "Hora": horasComida[t] || "", "nombre": "" };
-        Object.assign(sub_row, window.alimentos_subtotales[t]);
-        info.push(sub_row);
-        info.push({}); // Empty spacing row
-      }
-    }
-  }
-
-  let total_row = { "Tiempo de Comida": "TOTAL" };
-  Object.assign(total_row, alimentos_total);
-  info.push(total_row);
-
-  let kc_row = { "Tiempo de Comida": "" };
-  Object.assign(kc_row, alimentos_total_kc);
-  info.push(kc_row);
-
-  let req_row = { "Tiempo de Comida": "" };
-  Object.assign(req_row, alimentos_requerimiento);
-  info.push(req_row);
-
-  let adec_row = { "Tiempo de Comida": "" };
-  Object.assign(adec_row, alimentos_adecuacion);
-  info.push(adec_row);
-
-  (async () => {
-    const worksheet = XLSX.utils.json_to_sheet(info);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
-    let filename = obtenerNombreArchivoDescarga("xlsx");
-    XLSX.writeFile(workbook, filename, { compression: true });
-  })();
+  const worksheet = XLSX.utils.json_to_sheet(info);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
+  XLSX.writeFile(workbook, obtenerNombreArchivoDescarga("xlsx"), { compression: true });
 }
-
 function nuevoOrden() {
   actualizarTiemposDesdeTabla();
   // Mantenemos el destino como arreglo para asegurar orden correcto y permitir repetidos
@@ -2770,11 +2892,11 @@ function calcularReqEnergia() {
   const estatura = parseFloat(document.getElementById('calc_estatura').value) || 0;
   const edad = parseFloat(document.getElementById('calc_edad').value) || 0;
   const genero = document.getElementById('calc_genero').value;
-  const actividad = parseFloat(document.getElementById('calc_actividad').value) || 1.2;
+  const actividad = parseFloat(document.getElementById('calc_actividad_valor').value) || 0;
   actualizarIndiceMasaCorporal();
 
-  if (peso <= 0 || estatura <= 0 || edad <= 0) {
-    alert("Por favor, ingrese valores válidos para peso, estatura y edad.");
+  if (peso <= 0 || estatura <= 0 || edad <= 0 || actividad <= 0) {
+    alert("Por favor, ingrese valores válidos para peso, estatura, edad y factor de actividad.");
     return;
   }
 
@@ -3457,6 +3579,13 @@ function obtenerDatosActualesParaPdf() {
 }
 
 async function generarPDF(snapshotEntrada = null, opciones = {}) {
+  if (!opciones.secciones) {
+    const seleccion = await seleccionarSeccionesDescarga("pdf");
+    if (!seleccion) return;
+    opciones = { ...opciones, ...seleccion };
+  }
+  const secciones = opciones.secciones;
+  const nutrientesDescarga = opciones.nutrientes || new Set(COLUMNAS_ALIMENTOS_OPCIONALES.map(columna => columna.key));
   try {
     if (!snapshotEntrada && typeof obtenerDatosActualesParaPdf !== "function") {
       alert("No se pudo preparar la informacion de la cita para el PDF.");
@@ -3539,10 +3668,12 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     let camposResumen = obtenerCamposResumen(snapshot);
 
     function obtenerCamposResumen(snapshotActual) {
-      return reportePdfCamposNutrientes(snapshotActual).map(([campo, label]) => [
-        campo,
-        etiquetasCortasNutrientes[campo] || label
-      ]);
+      return reportePdfCamposNutrientes(snapshotActual)
+        .filter(([campo]) => COLUMNAS_DESCARGA_OBLIGATORIAS.includes(campo) || nutrientesDescarga.has(campo))
+        .map(([campo, label]) => [
+          campo,
+          etiquetasCortasNutrientes[campo] || label
+        ]);
     }
 
     function nuevaPagina() {
@@ -4022,6 +4153,7 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     doc.line(margin, y, pageWidth - margin, y);
     y += 7;
 
+    if (secciones.has("datos")) {
     seccion("Datos de la cita y paciente");
     tablaInfo([
       ["Nombre", paciente.nombre],
@@ -4039,7 +4171,9 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       ["Usuario", profesional.usuario],
       ["Correo", profesional.email]
     ], 2);
+    }
 
+    if (secciones.has("imc")) {
     asegurar(106);
     seccion("Indice de masa corporal");
     const graficoImc = await svgAImagenPng(obtenerSvgImcPdf(snapshot));
@@ -4090,7 +4224,9 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       doc.text("Grafico de IMC no disponible.", graficoImcX + (graficoImcAncho / 2), yImc + (graficoImcAlto / 2), { align: "center" });
     }
     y = yImc + Math.max(graficoImcAlto, 67) + 6;
+    }
 
+    if (secciones.has("medidas")) {
     const [siluetaMedidas, iconoBrazos, iconoAbdomen, iconoMuslos, iconoPantorrillas] = await Promise.all([
       cargarImagen("media/cuerpo%20entero.png"),
       cargarImagen("media/brazo.png"),
@@ -4190,11 +4326,12 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     doc.setTextColor(17, 24, 39);
     doc.text(lineasObservaciones, margin + 2, yObservaciones + 8);
     y = yObservaciones + altoObservaciones + 9;
+    }
 
     const camposBiaPdf = typeof CAMPOS_BIA_CITA !== "undefined" && Array.isArray(CAMPOS_BIA_CITA)
       ? CAMPOS_BIA_CITA
       : [];
-    if (camposBiaPdf.some(([campo]) => datosBia[campo] !== null && datosBia[campo] !== undefined && datosBia[campo] !== "")) {
+    if (secciones.has("bia")) {
       asegurar(58);
       seccion("Analisis de Bioimpedancia Electrica (BIA)");
       tablaInfo(camposBiaPdf.map(([campo, label, unidad]) => [
@@ -4205,8 +4342,11 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       ]), 3);
     }
 
-    tablaHorariosMacronutrientesLadoALado(horasComida, snapshot.macronutrientes);
+    if (secciones.has("horarios_macros")) {
+      tablaHorariosMacronutrientesLadoALado(horasComida, snapshot.macronutrientes);
+    }
 
+    if (secciones.has("alimentos")) {
     seccion("Alimentos seleccionados");
     tiemposComida.forEach(tiempo => {
       const items = snapshot.alimentos_por_tiempo && snapshot.alimentos_por_tiempo[tiempo] ? snapshot.alimentos_por_tiempo[tiempo] : [];
@@ -4225,7 +4365,9 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       }
       tablaAlimentosPdf(items);
     });
+    }
 
+    if (secciones.has("totales")) {
     seccion("Totales, requerimiento y adecuacion");
     const filasTotales = [];
     tiemposComida.forEach(tiempo => {
@@ -4235,9 +4377,10 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
     filasTotales.push({ nombre: "Requerimiento", ...(totales.requerimiento || {}) });
     filasTotales.push({ nombre: "% Adecuacion", ...(totales.adecuacion || {}) });
     tablaNutricion("Concepto", filasTotales);
+    }
 
     const pacienteIdEvolucion = paciente.paciente_id || "";
-    if (pacienteIdEvolucion && typeof obtenerSerieEvolucion === "function") {
+    if (secciones.has("evolucion") && pacienteIdEvolucion && typeof obtenerSerieEvolucion === "function") {
       const selectorMedida = document.getElementById("evolucion_medida");
       const selectorBia = document.getElementById("evolucion_bia");
       const campoMedida = selectorMedida ? selectorMedida.value : "cintura";
@@ -4542,6 +4685,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const edad = document.getElementById('calc_edad');
   const genero = document.getElementById('calc_genero');
   const actividad = document.getElementById('calc_actividad');
+  const actividadValor = document.getElementById('calc_actividad_valor');
   
   if (nombre) nombre.value = '';
   if (id) id.value = '';
@@ -4551,6 +4695,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (edad) edad.value = '';
   if (genero) genero.value = '';
   if (actividad) actividad.value = '1.55';
+  if (actividadValor) actividadValor.value = actividad ? actividad.value : '1.55';
+  if (actividad && actividadValor) {
+    actividad.addEventListener('change', () => { actividadValor.value = actividad.value; });
+  }
 
   const macroProteina = document.getElementById('macro_proteina_porcentaje');
   const macroGrasa = document.getElementById('macro_grasa_porcentaje');

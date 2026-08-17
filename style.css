@@ -831,6 +831,51 @@ body {
     color: #66737c;
 }
 
+.bia-unit-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.bia-unit-toggle {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid #cfdadd;
+    border-radius: 999px;
+    background: #eef3f1;
+}
+
+.bia-unit-button {
+    min-width: 44px;
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #52616a;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.bia-unit-button.is-active {
+    background: #27883c;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(39, 136, 60, 0.25);
+}
+
+.bia-unit-panel small {
+    max-width: 260px;
+    color: #66737c;
+    font-size: 0.75rem;
+    text-align: right;
+}
+
+.bia-field input[readonly] {
+    background: #f1f6f3;
+    color: #245f31;
+    font-weight: 600;
+}
 .bia-section-icon {
     width: 42px;
     height: 42px;
@@ -2636,5 +2681,157 @@ body {
 
     #citas_filtro.citas-filter {
         width: 100%;
+    }
+}
+.download-sections-dialog {
+    width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.download-sections-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.download-sections-dialog form {
+    padding: 22px;
+}
+
+.download-sections-header h4 {
+    margin: 0;
+    color: #17212b;
+}
+
+.download-sections-header p {
+    margin: 6px 0 16px;
+    color: #64717b;
+}
+
+.download-sections-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.download-sections-list label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    margin: 0;
+    padding: 9px 11px;
+    border: 1px solid #dce4e7;
+    border-radius: 7px;
+    background: #f9fbfa;
+    cursor: pointer;
+}
+
+.download-sections-list input {
+    width: 18px;
+    height: 18px;
+    accent-color: #4caf50;
+}
+
+.download-sections-error {
+    margin: 10px 0 0;
+    color: #b42318;
+}
+
+.download-sections-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 18px;
+}
+
+@media (max-width: 575.98px) {
+    .download-sections-list {
+        grid-template-columns: 1fr;
+    }
+}
+.download-sections-dialog {
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+}
+
+.download-nutrients-panel {
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid #cfe0d3;
+    border-radius: 9px;
+    background: #f6fbf7;
+}
+
+.download-nutrients-panel.is-disabled {
+    opacity: 0.55;
+}
+
+.download-nutrients-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 11px;
+}
+
+.download-nutrients-heading strong,
+.download-nutrients-heading small {
+    display: block;
+}
+
+.download-nutrients-heading small {
+    margin-top: 3px;
+    color: #66737c;
+}
+
+.download-nutrients-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
+.download-nutrients-actions button {
+    padding: 4px 7px;
+    border: 1px solid #8dbb97;
+    border-radius: 5px;
+    background: #fff;
+    color: #246b35;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.download-nutrients-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px 12px;
+}
+
+.download-nutrients-list label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #36454f;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.download-nutrients-list input {
+    width: 16px;
+    height: 16px;
+    accent-color: #4caf50;
+}
+
+@media (max-width: 575.98px) {
+    .download-nutrients-heading {
+        flex-direction: column;
+    }
+
+    .download-nutrients-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
