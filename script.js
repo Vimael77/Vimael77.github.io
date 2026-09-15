@@ -147,7 +147,7 @@ function cargarAlimentosInvitado() {
   if (alimentosInvitadoCarga) return alimentosInvitadoCarga;
   alimentosInvitadoCarga = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "alimentos.js";
+    script.src = "alimentos.js?v=20260915-guest-2";
     script.onload = () => {
       reemplazarBaseAlimentos(alimentos.map(normalizarAlimentoSupabase), "local");
       resolve();
