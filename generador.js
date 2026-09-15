@@ -309,6 +309,7 @@ function quitarIngredienteTemp(index) {
 }
 
 function guardarNuevaReceta() {
+  if (window.authGuestMode) return;
     let nombre = document.getElementById('nueva_receta_nombre').value.trim();
     let tipo = document.getElementById('nueva_receta_tipo').value;
     let elaboracion = document.getElementById('nueva_receta_elaboracion').value.trim();

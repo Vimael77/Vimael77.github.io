@@ -83,6 +83,7 @@
           <button type="button" id="auth-forgot-password" class="auth-text-button">¿Olvidaste tu contrase&ntilde;a?</button>
 
           <button type="submit" id="auth-submit" class="btn btn-success w-100">Entrar</button>
+          <button type="button" id="auth-guest" class="btn btn-outline-success w-100">Continuar sin registrarse</button>
           <button type="button" id="auth-back-login" class="auth-text-button auth-hidden">Volver a iniciar sesi&oacute;n</button>
           <p id="auth-message" class="auth-message" aria-live="polite"></p>
         </form>
@@ -97,7 +98,7 @@
         <img id="auth-user-avatar" class="auth-user-avatar" alt="Foto de perfil">
         <div class="auth-user-text">
           <span id="auth-user-name" class="auth-user-name">Perfil</span>
-          <span>Sesion iniciada como <strong id="auth-user-email"></strong></span>
+          <span id="auth-user-status">Sesion iniciada como <strong id="auth-user-email"></strong></span>
         </div>
       </div>
       <button type="button" id="auth-signout" class="btn btn-outline-secondary btn-sm">Cerrar sesion</button>
@@ -206,6 +207,7 @@
           </div>
 
           <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="side-home-link">
+            <p class="guest-notice" hidden>Modo invitado: escribe los datos de la evaluaci&oacute;n y descarga tus PDF. Los datos no se guardan; se perder&aacute;n al salir o recargar.</p>
             <div style="padding-left: 30px; padding-right: 30px; padding-bottom: 10px;">
               <div class="encabezado-fijo">
                 <div class="centered-div">
@@ -1480,7 +1482,7 @@
                     <button class="btn btn-success w-100" onclick="ejecutarGenerador()">Generar Automático</button>
                   </div>
                   <div class="col-md-3">
-                    <button class="btn btn-outline-primary w-100" onclick="$('#modalCrearReceta').modal('show')">Crear
+                    <button class="btn btn-outline-primary w-100" data-requires-account onclick="$('#modalCrearReceta').modal('show')">Crear
                       Receta Personalizada</button>
                   </div>
                 </div>

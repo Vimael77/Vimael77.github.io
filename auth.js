@@ -7,8 +7,10 @@ const supabaseClient = window.supabase.createClient(
 );
 
 window.supabaseClient = supabaseClient;
+window.authGuestMode = false;
 
 let authMode = "login";
+let authSubmitting = false;
 let authRecoverySession = false;
 const AUTH_USUARIO_PENDIENTE_PREFIX = "muyAlimentado:usuarioPendiente";
 
@@ -21,6 +23,13 @@ function setAuthMessage(message, type) {
 }
 
 function setAuthLoading(isLoading) {
+  const authForm = document.getElementById("auth-form");
+  if (authForm) {
+    authForm.setAttribute("aria-busy", String(isLoading));
+    authForm.querySelectorAll("button").forEach((button) => {
+      button.disabled = isLoading;
+    });
+  }
   const submitButton = document.getElementById("auth-submit");
   if (!submitButton) return;
 
@@ -127,7 +136,7 @@ function setAuthMode(nextMode) {
   if (loginTab) loginTab.classList.toggle("active", authMode === "login");
   if (registerTab) registerTab.classList.toggle("active", authMode === "register");
   if (modeSelector) modeSelector.classList.toggle("auth-hidden", !isLoginOrRegister);
-  if (submitButton) submitButton.textContent = obtenerTextoSubmitAuth();
+  if (submitButton) setAuthLoading(authSubmitting);
   if (emailInput) {
     emailInput.required = !isRecovery;
     emailInput.classList.toggle("auth-hidden", isRecovery);
@@ -183,11 +192,33 @@ function setSessionUI(session) {
   const userName = document.getElementById("auth-user-name");
   const userAvatar = document.getElementById("auth-user-avatar");
   const isLoggedIn = Boolean(session && session.user);
+  if (isLoggedIn) window.authGuestMode = false;
+  const isGuest = window.authGuestMode;
+  document.body.classList.toggle("auth-guest", isGuest);
+  document.querySelectorAll(".guest-notice").forEach(element => { element.hidden = !isGuest; });
+  const signOutButton = document.getElementById("auth-signout");
+  if (signOutButton) signOutButton.textContent = isGuest ? "Salir del modo invitado" : "Cerrar sesion";
+  const status = document.getElementById("auth-user-status");
+  if (status) {
+    status.firstChild.textContent = isGuest ? "Sin cuenta · Solo descarga de PDF" : "Sesion iniciada como ";
+  }
+  ["calc_nombre", "calc_id", "calc_edad"].forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.readOnly = !isGuest;
+    input.setAttribute("aria-readonly", String(!isGuest));
+  });
+  const gender = document.getElementById("calc_genero");
+  if (gender) {
+    gender.disabled = !isGuest;
+    gender.setAttribute("aria-disabled", String(!isGuest));
+    gender.options[0].textContent = isGuest ? "Seleccione un género" : "Seleccione un paciente";
+  }
 
-  if (authScreen) authScreen.classList.toggle("auth-hidden", isLoggedIn);
-  if (appShell) appShell.classList.toggle("auth-hidden", !isLoggedIn);
+  if (authScreen) authScreen.classList.toggle("auth-hidden", isLoggedIn || isGuest);
+  if (appShell) appShell.classList.toggle("auth-hidden", !isLoggedIn && !isGuest);
   if (userEmail) userEmail.textContent = isLoggedIn ? session.user.email : "";
-  if (userName) userName.textContent = isLoggedIn ? "Perfil" : "";
+  if (userName) userName.textContent = isLoggedIn ? "Perfil" : isGuest ? "Invitado" : "";
   if (userAvatar) {
     const email = isLoggedIn ? session.user.email || "U" : "U";
     const inicial = email.trim().charAt(0).toUpperCase() || "U";
@@ -206,7 +237,38 @@ function getAuthRedirectUrl() {
 
 async function handleAuthSubmit(event) {
   event.preventDefault();
+  if (authSubmitting) return;
 
+  authSubmitting = true;
+  setAuthLoading(true);
+  try {
+    await procesarAuthSubmit();
+  } catch (_error) {
+    setAuthMessage("No pudimos completar la solicitud. Inténtalo de nuevo.", "error");
+  } finally {
+    authSubmitting = false;
+    setAuthLoading(false);
+  }
+}
+
+function continuarSinRegistro() {
+  if (authSubmitting) return;
+  window.authGuestMode = true;
+  if (typeof limpiarDatosPacienteCalculadora === "function") limpiarDatosPacienteCalculadora();
+  if (typeof aplicarMedidasAntropometricas === "function") aplicarMedidasAntropometricas({});
+  if (typeof aplicarDatosBiaCita === "function") aplicarDatosBiaCita({});
+  const pacienteId = document.getElementById("calc_paciente_id");
+  if (pacienteId) pacienteId.value = "";
+  if (typeof mostrarFormularioNuevoPacienteCalculadora === "function") mostrarFormularioNuevoPacienteCalculadora(false);
+  setSessionUI(null);
+  if (window.jQuery) window.jQuery('#side-home-link').tab('show');
+  history.replaceState(null, "", "#home");
+  if (typeof cargarAlimentosInvitado === "function") {
+    cargarAlimentosInvitado().catch(() => alert("No se pudo cargar el catálogo de alimentos. Recarga la página para intentarlo de nuevo."));
+  }
+}
+
+async function procesarAuthSubmit() {
   const email = document.getElementById("auth-email").value.trim();
   const password = document.getElementById("auth-password").value;
   const passwordConfirm = document.getElementById("auth-password-confirm").value;
@@ -218,12 +280,10 @@ async function handleAuthSubmit(event) {
       return;
     }
 
-    setAuthLoading(true);
     setAuthMessage("");
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: getAuthRedirectUrl()
     });
-    setAuthLoading(false);
 
     if (error) {
       setAuthMessage("No pudimos enviar el enlace. Inténtalo de nuevo en unos minutos.", "error");
@@ -248,10 +308,8 @@ async function handleAuthSubmit(event) {
       return;
     }
 
-    setAuthLoading(true);
     setAuthMessage("");
     const { error } = await supabaseClient.auth.updateUser({ password });
-    setAuthLoading(false);
 
     if (error) {
       setAuthMessage(error.message, "error");
@@ -276,7 +334,6 @@ async function handleAuthSubmit(event) {
     return;
   }
 
-  setAuthLoading(true);
   setAuthMessage("");
 
   const result = authMode === "login"
@@ -289,8 +346,6 @@ async function handleAuthSubmit(event) {
           emailRedirectTo: getAuthRedirectUrl()
         }
       });
-
-  setAuthLoading(false);
 
   if (result.error) {
     setAuthMessage(result.error.message, "error");
@@ -316,6 +371,10 @@ async function handleAuthSubmit(event) {
 }
 
 async function signOut() {
+  if (window.authGuestMode) {
+    window.location.reload();
+    return;
+  }
   const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
@@ -330,7 +389,22 @@ document.addEventListener("DOMContentLoaded", async function () {
   const forgotButton = document.getElementById("auth-forgot-password");
   const backButton = document.getElementById("auth-back-login");
   const signOutButton = document.getElementById("auth-signout");
+  const guestButton = document.getElementById("auth-guest");
 
+  document.querySelectorAll('#side-perfil-link, #side-pacientes-link, #side-citas-link, #side-evolucion-link, #perfil, #pacientes, #citas, #evolucion, #guardar_cita_btn, #cancelar_edicion_cita_btn, #calc_nuevo_paciente_toggle, [onclick="descargar()"], [onclick="guardarNuevaReceta()"], #config_columnas_guardar').forEach(element => {
+    element.setAttribute("data-requires-account", "");
+  });
+  if (window.jQuery) {
+    window.jQuery('.side-menu-link').on('show.bs.tab', function (event) {
+      if (window.authGuestMode && this.hasAttribute('data-requires-account')) {
+        event.preventDefault();
+        window.jQuery('#side-home-link').tab('show');
+        history.replaceState(null, "", "#home");
+      }
+    });
+  }
+
+  if (guestButton) guestButton.addEventListener("click", continuarSinRegistro);
   if (authForm) authForm.addEventListener("submit", handleAuthSubmit);
   if (loginTab) loginTab.addEventListener("click", () => setAuthMode("login"));
   if (registerTab) registerTab.addEventListener("click", () => setAuthMode("register"));

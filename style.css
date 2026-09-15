@@ -244,6 +244,21 @@ body {
     gap: 10px;
 }
 
+body.auth-guest [data-requires-account],
+body.auth-guest #calc_paciente_control,
+body.auth-guest #calc_nuevo_paciente_panel {
+    display: none !important;
+}
+
+.guest-notice {
+    margin: 12px 30px;
+    padding: 12px 16px;
+    border: 1px solid #cfd8d3;
+    border-radius: 6px;
+    background: #f0f8f2;
+    color: #175a2a;
+}
+
 .auth-field-group {
     display: grid;
     gap: 10px;

@@ -328,6 +328,7 @@ function limpiarDatosPacienteCalculadora() {
 }
 
 function aplicarPacienteEnCalculadora(pacienteId) {
+  if (window.authGuestMode) return;
   const paciente = pacientes.find(item => item.id === pacienteId);
   const detalle = document.getElementById("calc_paciente_detalle");
   const pacienteIdInput = document.getElementById("calc_paciente_id");
@@ -445,6 +446,7 @@ async function cargarPacientes() {
 
 async function guardarPaciente(event) {
   event.preventDefault();
+  if (window.authGuestMode) return;
 
   const client = window.supabaseClient;
   const boton = document.getElementById("paciente_submit");
@@ -507,6 +509,7 @@ function setNuevoPacienteCalculadoraMensaje(message, type) {
 }
 
 function mostrarFormularioNuevoPacienteCalculadora(mostrar) {
+  if (window.authGuestMode) mostrar = false;
   const panel = document.getElementById("calc_nuevo_paciente_panel");
   const boton = document.getElementById("calc_nuevo_paciente_toggle");
   if (!panel) return;
@@ -529,6 +532,7 @@ function limpiarFormularioNuevoPacienteCalculadora() {
 
 async function guardarNuevoPacienteCalculadora(event) {
   event.preventDefault();
+  if (window.authGuestMode) return;
 
   const client = window.supabaseClient;
   const boton = document.getElementById("calc_nuevo_paciente_guardar");

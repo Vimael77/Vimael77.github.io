@@ -1128,6 +1128,7 @@ function confirmarGuardarCita() {
 }
 
 async function guardarCita() {
+  if (window.authGuestMode) return;
   const client = window.supabaseClient;
   if (!client) return;
 

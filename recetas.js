@@ -636,6 +636,7 @@ function cargarRecetasPersonalizadas() {
 
 // Guardar nueva receta en localStorage
 function guardarRecetaPersonalizada(receta) {
+  if (window.authGuestMode) return null;
   let recetas = cargarRecetasPersonalizadas();
   receta.id = Date.now(); // generar un ID único
   receta.esPersonalizada = true;

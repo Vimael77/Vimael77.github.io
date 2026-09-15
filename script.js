@@ -34,6 +34,7 @@ const TAMANO_PAGINA_ALIMENTOS_SUPABASE = 1000;
 let alimentosOrigen = "supabase";
 window.alimentosOrigen = alimentosOrigen;
 let alimentosRemotosCargados = false;
+let alimentosInvitadoCarga = null;
 let contadorFila = 0;
 let contadorAlimento = 0;
 let alimentoPendiente = null;
@@ -141,6 +142,25 @@ function reemplazarBaseAlimentos(nuevosAlimentos, origen) {
   return true;
 }
 
+function cargarAlimentosInvitado() {
+  if (alimentos.length) return Promise.resolve();
+  if (alimentosInvitadoCarga) return alimentosInvitadoCarga;
+  alimentosInvitadoCarga = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "alimentos.js";
+    script.onload = () => {
+      reemplazarBaseAlimentos(alimentos.map(normalizarAlimentoSupabase), "local");
+      resolve();
+    };
+    script.onerror = () => {
+      alimentosInvitadoCarga = null;
+      reject(new Error("No se pudo cargar el catálogo de alimentos."));
+    };
+    document.head.appendChild(script);
+  });
+  return alimentosInvitadoCarga;
+}
+
 async function cargarAlimentosSupabase() {
   const client = window.supabaseClient;
   if (alimentosRemotosCargados) return false;
@@ -173,6 +193,7 @@ async function cargarAlimentosSupabase() {
     }
 
     if (!remotos.length) {
+      if (alimentos.length) return false;
       alimentosOrigen = "error";
       window.alimentosOrigen = alimentosOrigen;
       if (typeof buscar === "function") buscar();
@@ -182,6 +203,7 @@ async function cargarAlimentosSupabase() {
     alimentosRemotosCargados = reemplazarBaseAlimentos(remotos, "supabase");
     return alimentosRemotosCargados;
   } catch (error) {
+    if (alimentos.length) return false;
     alimentosOrigen = "error";
     window.alimentosOrigen = alimentosOrigen;
     if (typeof buscar === "function") buscar();
@@ -626,6 +648,7 @@ function aplicarMedidasAntropometricas(medidas) {
 }
 
 function guardarMedidasAntropometricasPersistidas() {
+  if (window.authGuestMode) return;
   try {
     if (!window.localStorage) return;
 
@@ -770,6 +793,7 @@ function obtenerClaveColumnasAlimentosPersistidas() {
 }
 
 function guardarColumnasAlimentosPersistidas() {
+  if (window.authGuestMode) return;
   try {
     if (!window.localStorage) return;
     window.localStorage.setItem(
@@ -1161,6 +1185,7 @@ function leerPesoIdealPersistido() {
 }
 
 function guardarPesoIdealPersistido() {
+  if (window.authGuestMode) return;
   try {
     if (!window.localStorage) return;
 
@@ -1257,6 +1282,11 @@ function restaurarPesoIdealOSincronizar() {
 }
 
 async function actualizarScopePesoIdealPersistido(session) {
+  if (window.authGuestMode) {
+    pesoIdealSesionActiva = null;
+    pesoIdealStorageScope = "invitado";
+    return;
+  }
   const siguienteScope = session && session.user && session.user.id
     ? session.user.id
     : "anonimo";
@@ -1681,6 +1711,7 @@ function seleccionarSeccionesDescarga(formato) {
   });
 }
 async function descargar() {
+  if (window.authGuestMode) return;
   const seleccion = await seleccionarSeccionesDescarga("excel");
   if (!seleccion) return;
   const { secciones, nutrientes } = seleccion;
