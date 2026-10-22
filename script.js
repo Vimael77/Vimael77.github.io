@@ -2537,7 +2537,7 @@ function crearMenuAlimentoSeleccionado() {
 
     const id = alimentoSeleccionadoMenuId;
     cerrarMenuAlimentoSeleccionado();
-    if (!id) return;
+    if (id === null || id === undefined) return;
 
     if (boton.dataset.action === "duplicate") {
       duplicarAlimentoSeleccionadoPorId(id);
