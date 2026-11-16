@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Alimentos</title>
-  <link rel="stylesheet" href="style.css?v=20260915-guest-2" type="text/css">
+  <link rel="stylesheet" href="style.css?v=20261114-equivalentes-1" type="text/css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -120,6 +120,11 @@
             aria-controls="home" aria-selected="true" aria-label="Calculadora" title="Calculadora">
             <span class="side-menu-icon" data-lucide="calculator" aria-hidden="true"></span>
             <span class="side-menu-label">Calculadora</span>
+          </a>
+          <a class="side-menu-link" id="side-equivalentes-link" data-toggle="tab" href="#equivalentes" role="tab"
+            aria-controls="equivalentes" aria-selected="false" aria-label="Equivalentes" title="Equivalentes">
+            <span class="side-menu-icon" data-lucide="scale" aria-hidden="true"></span>
+            <span class="side-menu-label">Equivalentes</span>
           </a>
           <a class="side-menu-link" id="side-citas-link" data-toggle="tab" href="#citas" role="tab"
             aria-controls="citas" aria-selected="false" aria-label="Citas" title="Citas">
@@ -1196,6 +1201,158 @@
             </div>
           </div>
 
+          <!-- SISTEMA DE EQUIVALENTES -->
+          <div class="tab-pane fade" id="equivalentes" role="tabpanel" aria-labelledby="side-equivalentes-link">
+            <section class="equivalentes-page" aria-labelledby="equivalentes-titulo">
+              <header class="equivalentes-hero">
+                <div>
+                  <span class="equivalentes-eyebrow">PLANIFICACI&Oacute;N NUTRICIONAL</span>
+                  <h3 id="equivalentes-titulo">Sistema de equivalentes</h3>
+                  <p>Convierte los requerimientos diarios en raciones por grupo y distrib&uacute;yelas entre los tiempos de comida.</p>
+                </div>
+                <div class="equivalentes-hero-actions">
+                  <button type="button" id="equiv_cargar_calculadora" class="btn btn-success">
+                    <span data-lucide="calculator" aria-hidden="true"></span>
+                    Usar datos de la calculadora
+                  </button>
+                  <button type="button" id="equiv_exportar" class="btn btn-outline-success">
+                    <span data-lucide="download" aria-hidden="true"></span>
+                    Descargar Excel
+                  </button>
+                  <button type="button" id="equiv_reiniciar" class="btn btn-outline-secondary">
+                    <span data-lucide="rotate-ccw" aria-hidden="true"></span>
+                    Reiniciar
+                  </button>
+                </div>
+              </header>
+
+              <p id="equiv_mensaje" class="equivalentes-message" role="status" aria-live="polite"></p>
+
+              <article class="equivalentes-card">
+                <div class="equivalentes-card-heading">
+                  <span class="equivalentes-step-number">1</span>
+                  <div>
+                    <h4>Objetivo dietosint&eacute;tico</h4>
+                    <p>Define energ&iacute;a, peso ideal y distribuci&oacute;n de macronutrientes.</p>
+                  </div>
+                </div>
+                <div class="equivalentes-objective-grid">
+                  <label class="equivalentes-field" for="equiv_energia">
+                    <span>Energ&iacute;a diaria</span>
+                    <span class="input-group">
+                      <input type="number" id="equiv_energia" class="form-control" min="1" step="1" value="1900" inputmode="decimal">
+                      <span class="input-group-text">kcal</span>
+                    </span>
+                  </label>
+                  <label class="equivalentes-field" for="equiv_peso_ideal">
+                    <span>Peso ideal</span>
+                    <span class="input-group">
+                      <input type="number" id="equiv_peso_ideal" class="form-control" min="1" step="0.1" value="64" inputmode="decimal">
+                      <span class="input-group-text">kg</span>
+                    </span>
+                  </label>
+                  <label class="equivalentes-field" for="equiv_proteina_pct">
+                    <span>Prote&iacute;nas</span>
+                    <span class="input-group">
+                      <input type="number" id="equiv_proteina_pct" class="form-control" min="0" max="100" step="0.1" value="21" inputmode="decimal">
+                      <span class="input-group-text">%</span>
+                    </span>
+                  </label>
+                  <label class="equivalentes-field" for="equiv_grasa_pct">
+                    <span>Grasas</span>
+                    <span class="input-group">
+                      <input type="number" id="equiv_grasa_pct" class="form-control" min="0" max="100" step="0.1" value="28" inputmode="decimal">
+                      <span class="input-group-text">%</span>
+                    </span>
+                  </label>
+                  <label class="equivalentes-field" for="equiv_carbohidrato_pct">
+                    <span>Carbohidratos</span>
+                    <span class="input-group">
+                      <input type="text" id="equiv_carbohidrato_pct" class="form-control" value="51.0" readonly aria-readonly="true">
+                      <span class="input-group-text">%</span>
+                    </span>
+                  </label>
+                </div>
+                <p id="equiv_objetivo_error" class="equivalentes-inline-error" aria-live="polite"></p>
+                <div id="equiv_objetivos_resumen" class="equivalentes-macro-grid" aria-label="Resumen de objetivos"></div>
+              </article>
+
+              <article class="equivalentes-card">
+                <div class="equivalentes-card-heading equivalentes-card-heading--actions">
+                  <div class="equivalentes-heading-copy">
+                    <span class="equivalentes-step-number">2</span>
+                    <div>
+                      <h4>Equivalentes por grupo</h4>
+                      <p>Ajusta las raciones; los aportes y la adecuaci&oacute;n se actualizan al instante.</p>
+                    </div>
+                  </div>
+                  <button type="button" id="equiv_sugerir" class="btn btn-outline-success btn-sm">
+                    <span data-lucide="wand-sparkles" aria-hidden="true"></span>
+                    Sugerir equivalentes
+                  </button>
+                </div>
+                <div class="table-responsive equivalentes-table-wrap">
+                  <table class="table table-sm align-middle equivalentes-table" id="equiv_tabla_grupos">
+                    <caption class="sr-only">Equivalentes por grupo de alimentos y su aporte de macronutrientes.</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Grupo</th>
+                        <th scope="col">Subgrupo</th>
+                        <th scope="col" class="text-center">Equivalentes</th>
+                        <th scope="col" class="text-end">Prote&iacute;nas</th>
+                        <th scope="col" class="text-end">Grasas</th>
+                        <th scope="col" class="text-end">Carbohidratos</th>
+                        <th scope="col" class="text-end">Energ&iacute;a</th>
+                      </tr>
+                    </thead>
+                    <tbody id="equiv_grupos_body"></tbody>
+                    <tfoot id="equiv_grupos_foot"></tfoot>
+                  </table>
+                </div>
+                <div id="equiv_adecuacion_resumen" class="equivalentes-adequacy-grid" aria-label="Adecuaci&oacute;n del plan"></div>
+                <p class="equivalentes-source-note">Valores por equivalente basados en la matriz principal de los documentos compartidos.</p>
+              </article>
+
+              <article class="equivalentes-card">
+                <div class="equivalentes-card-heading equivalentes-card-heading--actions">
+                  <div class="equivalentes-heading-copy">
+                    <span class="equivalentes-step-number">3</span>
+                    <div>
+                      <h4>Distribuci&oacute;n por tiempos de comida</h4>
+                      <p>Reparte cada grupo y comprueba que la suma coincida con el plan diario.</p>
+                    </div>
+                  </div>
+                  <div class="equivalentes-meal-actions">
+                    <label for="equiv_num_comidas">Tiempos</label>
+                    <select id="equiv_num_comidas" class="form-select form-select-sm">
+                      <option value="4" selected>4 comidas</option>
+                      <option value="5">5 comidas</option>
+                      <option value="6">6 comidas</option>
+                    </select>
+                    <button type="button" id="equiv_distribuir" class="btn btn-success btn-sm">
+                      <span data-lucide="layout-grid" aria-hidden="true"></span>
+                      Distribuir autom&aacute;ticamente
+                    </button>
+                  </div>
+                </div>
+                <div id="equiv_comidas_config" class="equivalentes-meal-config" aria-label="Horarios y nombres de comidas"></div>
+                <div class="table-responsive equivalentes-table-wrap">
+                  <table class="table table-sm align-middle equivalentes-table equivalentes-distribution-table" id="equiv_tabla_distribucion">
+                    <caption class="sr-only">Distribuci&oacute;n de equivalentes por tiempo de comida y resumen nutricional.</caption>
+                    <thead id="equiv_distribucion_head"></thead>
+                    <tbody id="equiv_distribucion_body"></tbody>
+                    <tfoot id="equiv_distribucion_foot"></tfoot>
+                  </table>
+                </div>
+                <div class="equivalentes-legend" aria-label="Leyenda de cumplimiento">
+                  <span><i class="equiv-status-dot equiv-status-ok"></i> Completo</span>
+                  <span><i class="equiv-status-dot equiv-status-warning"></i> Pendiente</span>
+                  <span><i class="equiv-status-dot equiv-status-over"></i> Excedido</span>
+                </div>
+              </article>
+            </section>
+          </div>
+
           <!-- PESTANA CITAS -->
           <div class="tab-pane fade" id="citas" role="tabpanel" aria-labelledby="side-citas-link">
             <div style="padding: 30px;">
@@ -1607,10 +1764,11 @@
 
   <script src="auth.js?v=20260915-guest-2"></script>
   <script src="perfil.js?v=20260915-guest-2"></script>
-  <script src="pacientes.js?v=20260915-guest-2"></script>
+  <script src="pacientes.js?v=20261114-equivalentes-1"></script>
   <script src="citas.js?v=20260915-guest-2"></script>
   <script src="pdf-assets.js?v=20260915-guest-2"></script>
   <script src="script.js?v=20261021-food-actions-1"></script>
+  <script src="equivalentes.js?v=20261114-equivalentes-1"></script>
   <script src="recetas.js?v=20260915-guest-2"></script>
   <script src="generador.js?v=20260915-guest-2"></script>
 
