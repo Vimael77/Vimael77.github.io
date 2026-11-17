@@ -4,7 +4,7 @@ let paisesNacimiento = [];
 let pacienteEditandoId = "";
 const SEXOS_PACIENTE = ["Masculino", "Femenino"];
 
-const PAGINAS_APP = ["#perfil", "#pacientes", "#home", "#citas", "#evolucion", "#generador"];
+const PAGINAS_APP = ["#perfil", "#pacientes", "#home", "#equivalentes", "#citas", "#evolucion", "#generador"];
 
 const CODIGOS_PAIS_NACIMIENTO = [
   "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ",

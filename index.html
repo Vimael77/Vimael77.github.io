@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Alimentos</title>
   <link rel="stylesheet" href="style.css?v=20261114-equivalentes-1" type="text/css">
+  <link rel="stylesheet" href="usfq.css?v=20261117-usfq-1" type="text/css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -1313,10 +1314,73 @@
                 <p class="equivalentes-source-note">Valores por equivalente basados en la matriz principal de los documentos compartidos.</p>
               </article>
 
+              <article class="equivalentes-card" id="usfq_catalogo">
+                <div class="equivalentes-card-heading">
+                  <span class="equivalentes-step-number">3</span>
+                  <div>
+                    <span class="usfq-eyebrow">SISTEMA ECUATORIANO</span>
+                    <h4>Gu&iacute;a de intercambios USFQ</h4>
+                    <p>Consulta el peso y la medida casera que representan un intercambio en cada subgrupo.</p>
+                  </div>
+                </div>
+
+                <div class="usfq-notice" role="note">
+                  <span class="usfq-notice-icon" data-lucide="info" aria-hidden="true"></span>
+                  <div>
+                    <strong>Sistema independiente de la tabla anterior</strong>
+                    <p>Los alimentos se intercambian solamente dentro del mismo subgrupo USFQ. Sus valores de
+                      carbohidratos, prote&iacute;nas y grasas no equivalen uno a uno a la matriz usada para calcular el plan.</p>
+                  </div>
+                </div>
+
+                <div class="usfq-controls" aria-label="Filtros de la gu&iacute;a USFQ">
+                  <label class="usfq-field usfq-field--search" for="usfq_busqueda">
+                    <span>Buscar alimento</span>
+                    <span class="usfq-search-wrap">
+                      <span data-lucide="search" aria-hidden="true"></span>
+                      <input type="search" id="usfq_busqueda" class="form-control"
+                        placeholder="Ej.: arroz, chocho, aguacate&hellip;" autocomplete="off">
+                    </span>
+                  </label>
+                  <label class="usfq-field" for="usfq_grupo">
+                    <span>Grupo</span>
+                    <select id="usfq_grupo" class="form-select">
+                      <option value="">Todos los grupos</option>
+                    </select>
+                  </label>
+                  <label class="usfq-field" for="usfq_subgrupo">
+                    <span>Subgrupo</span>
+                    <select id="usfq_subgrupo" class="form-select">
+                      <option value="">Todos los subgrupos</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="usfq-results-heading">
+                  <div id="usfq_resumen" class="usfq-summary" aria-live="polite"></div>
+                  <p id="usfq_contador" class="usfq-counter" aria-live="polite"></p>
+                </div>
+                <div id="usfq_resultados" class="usfq-results" aria-label="Porciones de intercambio USFQ"></div>
+                <div id="usfq_vacio" class="usfq-empty" hidden>
+                  <span data-lucide="search-x" aria-hidden="true"></span>
+                  <strong>No encontramos alimentos</strong>
+                  <p>Prueba otro t&eacute;rmino o cambia los filtros.</p>
+                </div>
+                <div class="usfq-more-row">
+                  <button type="button" id="usfq_mostrar_mas" class="btn btn-outline-success btn-sm" hidden>
+                    Mostrar m&aacute;s alimentos
+                  </button>
+                </div>
+                <p class="equivalentes-source-note usfq-source-note">Fuente: <a
+                    href="https://libros.usfq.edu.ec/index.php/usfqpress/catalog/book/72" target="_blank"
+                    rel="noopener noreferrer">Lista de intercambios de alimentos ecuatorianos, 2.&ordf; edici&oacute;n,
+                    USFQ Press</a>. Se incorporan datos de porciones y referencia de p&aacute;gina; no se reproducen las fotograf&iacute;as.</p>
+              </article>
+
               <article class="equivalentes-card">
                 <div class="equivalentes-card-heading equivalentes-card-heading--actions">
                   <div class="equivalentes-heading-copy">
-                    <span class="equivalentes-step-number">3</span>
+                    <span class="equivalentes-step-number">4</span>
                     <div>
                       <h4>Distribuci&oacute;n por tiempos de comida</h4>
                       <p>Reparte cada grupo y comprueba que la suma coincida con el plan diario.</p>
@@ -1768,7 +1832,8 @@
   <script src="citas.js?v=20260915-guest-2"></script>
   <script src="pdf-assets.js?v=20260915-guest-2"></script>
   <script src="script.js?v=20261021-food-actions-1"></script>
-  <script src="equivalentes.js?v=20261114-equivalentes-1"></script>
+  <script src="intercambios-usfq.js?v=20261117-usfq-1"></script>
+  <script src="equivalentes.js?v=20261117-usfq-1"></script>
   <script src="recetas.js?v=20260915-guest-2"></script>
   <script src="generador.js?v=20260915-guest-2"></script>
 
