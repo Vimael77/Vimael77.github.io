@@ -1342,6 +1342,13 @@ function inferirPorcentajesMacronutrientesDesdeRequerimiento() {
 
 function actualizarRequerimientoMacronutrientes() {
   sincronizarPesoIdealConPesoActual(false);
+  const reqInput = document.getElementById('input_energia_calculada_requerimiento');
+  const macroEnergiaInput = document.getElementById('macro_energia_calculada');
+
+  if (reqInput && macroEnergiaInput && document.activeElement !== macroEnergiaInput) {
+    macroEnergiaInput.value = reqInput.value;
+  }
+
   const energia = obtenerValorNumerico('input_energia_calculada_requerimiento');
   const pesoIdeal = obtenerPesoIdealMacronutrientes();
   const porcentajeProteina = obtenerValorNumerico('macro_proteina_porcentaje');
@@ -1374,15 +1381,15 @@ function actualizarRequerimientoMacronutrientes() {
   const error = document.getElementById('macro_porcentaje_error');
   if (error) error.style.display = porcentajeInvalido ? 'block' : 'none';
 
-  if (porcentajeInvalido || energia <= 0) return;
+  if (porcentajeInvalido) return;
 
   const reqProtInput = document.getElementById('input_proteina_requerimiento');
   const reqGrasaInput = document.getElementById('input_grasa_requerimiento');
   const reqCarbInput = document.getElementById('input_carbohidratos_requerimiento');
 
-  if (reqProtInput) reqProtInput.value = gramosProteina.toFixed(2);
-  if (reqGrasaInput) reqGrasaInput.value = gramosGrasa.toFixed(2);
-  if (reqCarbInput) reqCarbInput.value = gramosCarbohidratos.toFixed(2);
+  if (reqProtInput) reqProtInput.value = energia > 0 ? gramosProteina.toFixed(2) : "0";
+  if (reqGrasaInput) reqGrasaInput.value = energia > 0 ? gramosGrasa.toFixed(2) : "0";
+  if (reqCarbInput) reqCarbInput.value = energia > 0 ? gramosCarbohidratos.toFixed(2) : "0";
 
   calcular();
 }
@@ -1390,12 +1397,39 @@ function actualizarRequerimientoMacronutrientes() {
 function configurarEventosMacronutrientes() {
   [
     'macro_proteina_porcentaje',
-    'macro_grasa_porcentaje',
-    'input_energia_calculada_requerimiento'
+    'macro_grasa_porcentaje'
   ].forEach(id => {
     const elemento = document.getElementById(id);
-    if (elemento) elemento.addEventListener('input', actualizarRequerimientoMacronutrientes);
+    if (elemento) {
+      elemento.addEventListener('input', actualizarRequerimientoMacronutrientes);
+      elemento.addEventListener('change', actualizarRequerimientoMacronutrientes);
+    }
   });
+
+  const macroEnergiaInput = document.getElementById('macro_energia_calculada');
+  const reqEnergiaInput = document.getElementById('input_energia_calculada_requerimiento');
+
+  if (macroEnergiaInput) {
+    const sincronizarHaciaTotales = function () {
+      if (reqEnergiaInput && document.activeElement !== reqEnergiaInput) {
+        reqEnergiaInput.value = macroEnergiaInput.value;
+      }
+      actualizarRequerimientoMacronutrientes();
+    };
+    macroEnergiaInput.addEventListener('input', sincronizarHaciaTotales);
+    macroEnergiaInput.addEventListener('change', sincronizarHaciaTotales);
+  }
+
+  if (reqEnergiaInput) {
+    const sincronizarHaciaMacro = function () {
+      if (macroEnergiaInput && document.activeElement !== macroEnergiaInput) {
+        macroEnergiaInput.value = reqEnergiaInput.value;
+      }
+      actualizarRequerimientoMacronutrientes();
+    };
+    reqEnergiaInput.addEventListener('input', sincronizarHaciaMacro);
+    reqEnergiaInput.addEventListener('change', sincronizarHaciaMacro);
+  }
 
   const pesoInput = document.getElementById('calc_peso');
   const pesoIdealInput = document.getElementById('macro_peso_ideal');
@@ -1734,6 +1768,7 @@ async function descargar() {
     info.push({ "Tiempo de Comida": "NombrePaciente", "nombre": document.getElementById('calc_nombre') ? document.getElementById('calc_nombre').value : "" });
     info.push({ "Tiempo de Comida": "Peso", "nombre": document.getElementById('calc_peso') ? document.getElementById('calc_peso').value : "" });
     info.push({ "Tiempo de Comida": "PesoIdeal", "nombre": document.getElementById('macro_peso_ideal') ? document.getElementById('macro_peso_ideal').value : "" });
+    info.push({ "Tiempo de Comida": "EnergiaCalculada", "nombre": document.getElementById('macro_energia_calculada') ? document.getElementById('macro_energia_calculada').value : "" });
     info.push({ "Tiempo de Comida": "Estatura", "nombre": document.getElementById('calc_estatura') ? document.getElementById('calc_estatura').value : "" });
     info.push({ "Tiempo de Comida": "Edad", "nombre": document.getElementById('calc_edad') ? document.getElementById('calc_edad').value : "" });
     info.push({ "Tiempo de Comida": "Genero", "nombre": document.getElementById('calc_genero') ? document.getElementById('calc_genero').value : "" });
@@ -2983,16 +3018,20 @@ function calcularReqEnergia() {
 
   document.getElementById('resultados_calc').style.display = 'block';
 
-  // Calcular el promedio e inyectarlo en la celda de Requerimientos Totales
+  // Calcular el promedio e inyectarlo en la celda de Requerimientos Totales y en el campo de energía
   let promedio = (harris + mifflin + oms) / 3;
-  document.getElementById('res_promedio').textContent = promedio.toFixed(2);
+  const promedioTexto = promedio.toFixed(2);
+  document.getElementById('res_promedio').textContent = promedioTexto;
   
   const reqInput = document.getElementById('input_energia_calculada_requerimiento');
+  const macroEnergiaInput = document.getElementById('macro_energia_calculada');
   if (reqInput) {
-    reqInput.value = promedio.toFixed(2);
-    
-    actualizarRequerimientoMacronutrientes();
+    reqInput.value = promedioTexto;
   }
+  if (macroEnergiaInput) {
+    macroEnergiaInput.value = promedioTexto;
+  }
+  actualizarRequerimientoMacronutrientes();
 }
 
 const REPORTE_PDF_CAMPOS_MEDIDAS = [
@@ -4741,6 +4780,10 @@ document.addEventListener('DOMContentLoaded', function() {
   reqInputs.forEach(input => {
     input.value = '1';
   });
+  const macroEnergiaInit = document.getElementById('macro_energia_calculada');
+  if (macroEnergiaInit) {
+    macroEnergiaInit.value = '1';
+  }
   
   // Ocultar resultados de la calculadora anterior
   const resDiv = document.getElementById('resultados_calc');

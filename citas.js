@@ -1315,6 +1315,7 @@ function cargarCitaEnCalculadora(cita) {
   CAMPOS_NUTRIENTES.forEach(([campo]) => {
     asignarValorCita(`input_${campo}_requerimiento`, requerimiento[campo]);
   });
+  asignarValorCita("macro_energia_calculada", requerimiento.energia_calculada);
 
   const horas = datos.horas_comida || {};
   obtenerTiemposCita().forEach(tiempo => {

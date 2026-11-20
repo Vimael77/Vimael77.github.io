@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Alimentos</title>
-  <link rel="stylesheet" href="style.css?v=20261114-equivalentes-1" type="text/css">
-  <link rel="stylesheet" href="usfq.css?v=20261117-usfq-1" type="text/css">
+  <link rel="stylesheet" href="style.css?v=equivalentes-consulta-2" type="text/css">
+  <link rel="stylesheet" href="usfq.css?v=porciones-2" type="text/css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -403,7 +403,7 @@
                     </ul>
                     <p class="mb-0 mt-2 text-success" id="res_msg_success" style="font-weight: 500;">✓ Se ha
                       autocompletado un promedio (<span id="res_promedio"></span> kcal) en el requerimiento de energía
-                      total abajo.</p>
+                      total abajo y en la distribución de macronutrientes.</p>
                   </div>
                 </div>
               </div>
@@ -715,6 +715,16 @@
                         <input type="number" id="macro_peso_ideal" class="form-control" min="1" step="1" value="70"
                           inputmode="numeric">
                         <span class="input-group-text">kg</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="macro-peso-ideal-row">
+                    <div class="macro-peso-ideal-field">
+                      <label class="form-label" for="macro_energia_calculada">Energ&iacute;a calculada</label>
+                      <div class="input-group">
+                        <input type="number" id="macro_energia_calculada" class="form-control" min="0" step="any" value="1"
+                          placeholder="0.00" inputmode="decimal">
+                        <span class="input-group-text">kcal</span>
                       </div>
                     </div>
                   </div>
@@ -1127,7 +1137,7 @@
                         <tr>
                           <td style="width: 300px;">Requerimiento</td>
                           <td><input onkeyup="calcular()" type="number" id="input_energia_calculada_requerimiento"
-                              min="1" value="1" style="width: 100px;"></td>
+                              min="0" step="any" value="1" style="width: 100px;"></td>
                           <td><input onkeyup="calcular()" type="number" id="input_proteina_requerimiento" min="1"
                               value="1" style="width: 100px;"></td>
                           <td><input onkeyup="calcular()" type="number" id="input_grasa_requerimiento" min="1" value="1"
@@ -1287,7 +1297,7 @@
                       <p>Ajusta las raciones; los aportes y la adecuaci&oacute;n se actualizan al instante.</p>
                     </div>
                   </div>
-                  <button type="button" id="equiv_sugerir" class="btn btn-outline-success btn-sm">
+                  <button type="button" id="equiv_sugerir" class="btn btn-success equivalentes-plan-action">
                     <span data-lucide="wand-sparkles" aria-hidden="true"></span>
                     Sugerir equivalentes
                   </button>
@@ -1316,20 +1326,18 @@
 
               <article class="equivalentes-card" id="usfq_catalogo">
                 <div class="equivalentes-card-heading">
-                  <span class="equivalentes-step-number">3</span>
                   <div>
-                    <span class="usfq-eyebrow">SISTEMA ECUATORIANO</span>
-                    <h4>Gu&iacute;a de intercambios USFQ</h4>
-                    <p>Consulta el peso y la medida casera que representan un intercambio en cada subgrupo.</p>
+                    <span class="usfq-eyebrow">Gu&iacute;a de consulta</span>
+                    <h4>Intercambios de alimentos ecuatorianos (USFQ)</h4>
+                    <p>Busca un alimento para ver su porci&oacute;n. Esta consulta no modifica el plan.</p>
                   </div>
                 </div>
 
                 <div class="usfq-notice" role="note">
                   <span class="usfq-notice-icon" data-lucide="info" aria-hidden="true"></span>
                   <div>
-                    <strong>Sistema independiente de la tabla anterior</strong>
-                    <p>Los alimentos se intercambian solamente dentro del mismo subgrupo USFQ. Sus valores de
-                      carbohidratos, prote&iacute;nas y grasas no equivalen uno a uno a la matriz usada para calcular el plan.</p>
+                    <strong>C&oacute;mo comparar porciones</strong>
+                    <p>Compara alimentos del mismo subgrupo USFQ. Un intercambio de esta gu&iacute;a no equivale necesariamente a una raci&oacute;n de la tabla del plan.</p>
                   </div>
                 </div>
 
@@ -1360,6 +1368,7 @@
                   <div id="usfq_resumen" class="usfq-summary" aria-live="polite"></div>
                   <p id="usfq_contador" class="usfq-counter" aria-live="polite">Si no aparecen alimentos, recarga la p&aacute;gina para volver a cargar la gu&iacute;a.</p>
                 </div>
+                <p class="equivalentes-source-note">Pasa el mouse sobre un alimento o usa «Ver imagen» para ver cómo servir un intercambio. Usa la medida casera o el peso indicado; las ilustraciones no están a escala.</p>
                 <div id="usfq_resultados" class="usfq-results" aria-label="Porciones de intercambio USFQ"></div>
                 <div id="usfq_vacio" class="usfq-empty" hidden>
                   <span data-lucide="search-x" aria-hidden="true"></span>
@@ -1374,13 +1383,13 @@
                 <p class="equivalentes-source-note usfq-source-note">Fuente: <a
                     href="https://libros.usfq.edu.ec/index.php/usfqpress/catalog/book/72" target="_blank"
                     rel="noopener noreferrer">Lista de intercambios de alimentos ecuatorianos, 2.&ordf; edici&oacute;n,
-                    USFQ Press</a>. Se incorporan datos de porciones y referencia de p&aacute;gina; no se reproducen las fotograf&iacute;as.</p>
+                    USFQ Press</a> (porciones y referencias). Las ilustraciones se generaron para este programa y no son fotografías del libro.</p>
               </article>
 
               <article class="equivalentes-card">
                 <div class="equivalentes-card-heading equivalentes-card-heading--actions">
                   <div class="equivalentes-heading-copy">
-                    <span class="equivalentes-step-number">4</span>
+                    <span class="equivalentes-step-number">3</span>
                     <div>
                       <h4>Distribuci&oacute;n por tiempos de comida</h4>
                       <p>Reparte cada grupo y comprueba que la suma coincida con el plan diario.</p>
@@ -1393,7 +1402,7 @@
                       <option value="5">5 comidas</option>
                       <option value="6">6 comidas</option>
                     </select>
-                    <button type="button" id="equiv_distribuir" class="btn btn-success btn-sm">
+                    <button type="button" id="equiv_distribuir" class="btn btn-success equivalentes-plan-action">
                       <span data-lucide="layout-grid" aria-hidden="true"></span>
                       Distribuir autom&aacute;ticamente
                     </button>
@@ -1833,7 +1842,10 @@
   <script src="pdf-assets.js?v=20260915-guest-2"></script>
   <script src="script.js?v=20261021-food-actions-1"></script>
   <script src="intercambios-usfq.js?v=20261117-usfq-1"></script>
-  <script src="usfq-guia.js?v=20261117-1"></script>
+  <script src="usfq-ilustraciones.js?v=porciones-2"></script>
+  <script src="usfq-porcion-ilustrada.js?v=porciones-2"></script>
+  <script src="usfq-medida-visual.js?v=porciones-2"></script>
+  <script src="usfq-guia.js?v=porciones-2"></script>
   <script src="equivalentes.js?v=20261117-plan-2"></script>
   <script src="recetas.js?v=20260915-guest-2"></script>
   <script src="generador.js?v=20260915-guest-2"></script>
