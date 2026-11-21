@@ -613,10 +613,14 @@ function obtenerFilaCitaTablaUnica(datos) {
   const horasComida = datos.horas_comida && typeof datos.horas_comida === "object"
     ? datos.horas_comida
     : {};
+  const descripcionesComida = datos.descripciones_comida && typeof datos.descripciones_comida === "object"
+    ? datos.descripciones_comida
+    : (typeof obtenerDescripcionesComida === "function" ? obtenerDescripcionesComida() : {});
   const fila = {
     paciente_id: paciente.paciente_id,
     fecha_cita: paciente.fecha_evaluacion || new Date().toISOString().slice(0, 10),
     cita_schema_version: 19,
+    descripciones_comida: descripcionesComida,
     actividad: citaNumeroOpcional(paciente.actividad, 4),
     actividad_texto: paciente.actividad_texto || "",
     profesional_user_id: profesional.user_id || null,
@@ -756,6 +760,7 @@ function integrarDatosTablaUnicaCita(cita) {
     configuracion: {},
     macronutrientes: normalizarMacronutrientesTablaUnicaCita(cita),
     horas_comida: normalizarHorariosTablaUnicaCita(cita),
+    descripciones_comida: (cita.descripciones_comida && typeof cita.descripciones_comida === "object") ? cita.descripciones_comida : {},
     alimentos_por_tiempo: normalizarAlimentosRelacionalesCita(cita.cita_alimentos),
     totales: {
       requerimiento: obtenerRequerimientoTablaUnicaCita(cita)
@@ -1056,6 +1061,7 @@ function obtenerDatosCita() {
     configuracion: {},
     macronutrientes: obtenerMacronutrientesCita(),
     horas_comida: obtenerHorasComidaCita(),
+    descripciones_comida: typeof obtenerDescripcionesComida === "function" ? obtenerDescripcionesComida() : {},
     alimentos_por_tiempo: obtenerAlimentosPorTiempoCita(),
     totales: obtenerTotalesCita()
   };
@@ -1321,6 +1327,11 @@ function cargarCitaEnCalculadora(cita) {
   obtenerTiemposCita().forEach(tiempo => {
     asignarValorCita(`hora_${tiempo.replace(/\s+/g, "_")}`, horas[tiempo] || "");
   });
+
+  const descripciones = datos.descripciones_comida || {};
+  if (typeof establecerDescripcionesComida === "function") {
+    establecerDescripcionesComida(descripciones);
+  }
 
   cargarAlimentosCalculadoraCita(datos.alimentos_por_tiempo || {});
   if (typeof actualizarIndiceMasaCorporal === "function") actualizarIndiceMasaCorporal();
@@ -1593,7 +1604,7 @@ async function cargarCitas() {
     "req_sodio", "req_zinc", "req_vitamina_c", "req_vitamina_a", "req_folatos",
     "req_vitamina_b12", "macro_proteina_porcentaje", "macro_grasa_porcentaje",
     "hora_desayuno", "hora_media_manana", "hora_almuerzo", "hora_media_tarde",
-    "hora_merienda", "hora_cena"
+    "hora_merienda", "hora_cena", "descripciones_comida"
   ].join(",");
 
   let { data, error } = await client

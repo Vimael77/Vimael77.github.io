@@ -1311,6 +1311,7 @@ async function actualizarScopePesoIdealPersistido(session) {
   }
 
   aplicarVisibilidadColumnasAlimentos();
+  cargarDescripcionesComidaPersistidas();
 
   actualizarRequerimientoMacronutrientes();
 }
@@ -1570,6 +1571,164 @@ function obtenerEtiquetaTiempoConHora(tiempo, horas) {
   return hora ? `${tiempo} (${hora})` : tiempo;
 }
 
+function obtenerIdDescripcionTiempo(tiempo) {
+  return "desc_" + obtenerSlugTiempo(tiempo);
+}
+
+function obtenerDescripcionComida(tiempo, enHtml = true) {
+  const elemento = document.getElementById(obtenerIdDescripcionTiempo(tiempo));
+  if (!elemento) return "";
+  const texto = (elemento.innerText || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+  if (!texto) return "";
+  return enHtml ? elemento.innerHTML.trim() : texto;
+}
+
+function establecerDescripcionComida(tiempo, valor) {
+  const elemento = document.getElementById(obtenerIdDescripcionTiempo(tiempo));
+  if (!elemento) return;
+  elemento.innerHTML = valor || "";
+  actualizarEstadoVacioEditor(elemento);
+}
+
+function obtenerDescripcionesComida() {
+  const descripciones = {};
+  tiemposComida.forEach(function (tiempo) {
+    descripciones[tiempo] = obtenerDescripcionComida(tiempo, true);
+  });
+  return descripciones;
+}
+
+function establecerDescripcionesComida(descripciones) {
+  const datos = descripciones || {};
+  tiemposComida.forEach(function (tiempo) {
+    establecerDescripcionComida(tiempo, datos[tiempo] || "");
+  });
+}
+
+function limpiarDescripcionesComida() {
+  tiemposComida.forEach(function (tiempo) {
+    establecerDescripcionComida(tiempo, "");
+  });
+  guardarDescripcionesComidaPersistidas();
+}
+
+function convertirHtmlATextoPlano(html) {
+  if (!html) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+
+  temp.querySelectorAll("li").forEach(function (li) {
+    li.textContent = "• " + li.textContent.trim();
+  });
+
+  temp.querySelectorAll("br, p, div").forEach(function (el) {
+    el.after("\n");
+  });
+
+  return (temp.textContent || temp.innerText || "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function actualizarEstadoVacioEditor(editor) {
+  if (!editor) return;
+  const texto = (editor.innerText || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+  if (!texto) {
+    editor.dataset.empty = "true";
+  } else {
+    delete editor.dataset.empty;
+  }
+}
+
+const DESCRIPCIONES_COMIDA_STORAGE_PREFIX = "calculadora_descripciones_comida";
+
+function obtenerClaveDescripcionesComidaPersistidas() {
+  const scope = typeof pesoIdealStorageScope !== "undefined" ? pesoIdealStorageScope : "anonimo";
+  return `${DESCRIPCIONES_COMIDA_STORAGE_PREFIX}:${scope}`;
+}
+
+function guardarDescripcionesComidaPersistidas() {
+  try {
+    if (!window.localStorage) return;
+    const descripciones = obtenerDescripcionesComida();
+    const tieneContenido = Object.values(descripciones).some(v => Boolean(v && v.trim()));
+    const clave = obtenerClaveDescripcionesComidaPersistidas();
+    if (tieneContenido) {
+      window.localStorage.setItem(clave, JSON.stringify(descripciones));
+    } else {
+      window.localStorage.removeItem(clave);
+    }
+  } catch (e) {
+    // Las descripciones siguen disponibles aunque el navegador bloquee localStorage
+  }
+}
+
+function cargarDescripcionesComidaPersistidas() {
+  try {
+    if (!window.localStorage) return false;
+    const clave = obtenerClaveDescripcionesComidaPersistidas();
+    const valor = window.localStorage.getItem(clave);
+    if (!valor) return false;
+    const descripciones = JSON.parse(valor);
+    if (!descripciones || typeof descripciones !== "object") return false;
+    establecerDescripcionesComida(descripciones);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+let timerGuardarDescripciones = null;
+function programarGuardarDescripcionesComida() {
+  if (timerGuardarDescripciones) clearTimeout(timerGuardarDescripciones);
+  timerGuardarDescripciones = setTimeout(guardarDescripcionesComidaPersistidas, 600);
+}
+
+function configurarEditoresDescripcionComida() {
+  document.querySelectorAll(".meal-desc-btn[data-cmd]").forEach(function (btn) {
+    btn.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+    });
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const box = btn.closest(".meal-desc-box");
+      const editor = box ? box.querySelector(".meal-desc-editor") : null;
+      if (!editor) return;
+
+      if (document.activeElement !== editor) {
+        editor.focus();
+      }
+
+      const cmd = btn.dataset.cmd;
+      if (cmd) {
+        document.execCommand(cmd, false, null);
+        actualizarEstadoVacioEditor(editor);
+        programarGuardarDescripcionesComida();
+      }
+    });
+  });
+
+  document.querySelectorAll(".meal-desc-editor").forEach(function (editor) {
+    actualizarEstadoVacioEditor(editor);
+
+    editor.addEventListener("input", function () {
+      actualizarEstadoVacioEditor(editor);
+      programarGuardarDescripcionesComida();
+    });
+
+    editor.addEventListener("blur", function () {
+      actualizarEstadoVacioEditor(editor);
+      guardarDescripcionesComidaPersistidas();
+    });
+
+    editor.addEventListener("paste", function () {
+      setTimeout(function () {
+        actualizarEstadoVacioEditor(editor);
+        programarGuardarDescripcionesComida();
+      }, 0);
+    });
+  });
+}
+
 function obtenerAlimentoSeleccionadoPorId(id) {
   return alimentos_seleccionados.find(function (item) {
     return item[0] + "" === id + "";
@@ -1787,12 +1946,22 @@ async function descargar() {
     info.push({});
   }
 
-  if (secciones.has("horarios") && tieneHorasComida(horasComida)) {
-    info.push({ "Tiempo de Comida": "Horarios de comida", "nombre": "" });
-    tiemposComida.forEach(function (tiempo) {
-      if (horasComida[tiempo]) info.push({ "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo], "nombre": "" });
-    });
-    info.push({});
+  if (secciones.has("horarios")) {
+    const descripciones = typeof obtenerDescripcionesComida === "function" ? obtenerDescripcionesComida() : {};
+    const tieneDescripciones = Object.values(descripciones).some(v => Boolean(v && v.trim()));
+    if (tieneHorasComida(horasComida) || tieneDescripciones) {
+      info.push({ "Tiempo de Comida": "Horarios de comida", "nombre": "" });
+      tiemposComida.forEach(function (tiempo) {
+        if (horasComida[tiempo] || descripciones[tiempo]) {
+          const filaHorario = { "Tiempo de Comida": tiempo, "Hora": horasComida[tiempo] || "", "nombre": "" };
+          if (descripciones[tiempo]) {
+            filaHorario["Descripcion"] = convertirHtmlATextoPlano(descripciones[tiempo]);
+          }
+          info.push(filaHorario);
+        }
+      });
+      info.push({});
+    }
   }
 
   if (secciones.has("alimentos")) {
@@ -3229,6 +3398,13 @@ function reportePdfAlimentos(alimentosPorTiempo, horasComida, snapshot) {
     const items = alimentosPorTiempo && alimentosPorTiempo[tiempo] ? alimentosPorTiempo[tiempo] : [];
     filas.push(`<tr class="pdf-time-row"><td colspan="${campos.length + 2}">${reportePdfEscape(etiqueta)}</td></tr>`);
 
+    const descHtml = (snapshot && snapshot.descripciones_comida && snapshot.descripciones_comida[tiempo])
+      ? snapshot.descripciones_comida[tiempo]
+      : (typeof obtenerDescripcionComida === "function" ? obtenerDescripcionComida(tiempo) : "");
+    if (descHtml) {
+      filas.push(`<tr class="pdf-time-desc-row"><td colspan="${campos.length + 2}" class="pdf-time-desc-cell">${descHtml}</td></tr>`);
+    }
+
     if (!items.length) {
       filas.push(`<tr><td colspan="${campos.length + 2}" class="pdf-muted-cell">Sin alimentos.</td></tr>`);
       return;
@@ -3421,12 +3597,17 @@ function generarPDFResumenAnterior() {
         <h4 style="margin-top:0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Horarios de Comida</h4>
         <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
           <tbody>
-            ${tiemposComida.map(tiempo => `
+            ${tiemposComida.map(tiempo => {
+              const desc = typeof obtenerDescripcionComida === "function" ? obtenerDescripcionComida(tiempo) : "";
+              return `
               <tr>
-                <td style="padding: 4px; border-bottom: 1px solid #eee;"><strong>${tiempo}</strong></td>
-                <td style="padding: 4px; border-bottom: 1px solid #eee; text-align: right;">${horasComida[tiempo] || ""}</td>
+                <td style="padding: 4px; border-bottom: 1px solid #eee;">
+                  <strong>${tiempo}</strong>
+                  ${desc ? `<div style="font-size: 12px; color: #555; margin-top: 3px;">${desc}</div>` : ""}
+                </td>
+                <td style="padding: 4px; border-bottom: 1px solid #eee; text-align: right; vertical-align: top;">${horasComida[tiempo] || ""}</td>
               </tr>
-            `).join("")}
+            `;}).join("")}
           </tbody>
         </table>
       </div>
@@ -4428,6 +4609,17 @@ async function generarPDF(snapshotEntrada = null, opciones = {}) {
       doc.setTextColor(30, 40, 50);
       doc.text(obtenerEtiquetaTiempoConHora(tiempo, horasComida), margin + 2, y + 4.8);
       y += 8;
+      const descHtml = (snapshot && snapshot.descripciones_comida && snapshot.descripciones_comida[tiempo])
+      ? snapshot.descripciones_comida[tiempo]
+      : (typeof obtenerDescripcionComida === "function" ? obtenerDescripcionComida(tiempo) : "");
+      if (descHtml) {
+        const descTexto = convertirHtmlATextoPlano(descHtml);
+        if (descTexto) {
+          asegurar(7);
+          escribirTexto(descTexto, margin + 2, usableWidth - 4, { size: 6.8, color: [70, 85, 95] });
+          y += 2;
+        }
+      }
       if (!items.length) {
         escribirTexto("Sin alimentos.", margin + 2, usableWidth, { size: 7, color: [100, 110, 120] });
         y += 1;
@@ -4796,6 +4988,8 @@ document.addEventListener('DOMContentLoaded', function() {
   configurarEventosMacronutrientes();
   configurarEventosMedidasAntropometricas();
   configurarSeccionesCalculadora();
+  configurarEditoresDescripcionComida();
+  cargarDescripcionesComidaPersistidas();
   inicializarIconosLucide();
   actualizarRequerimientoMacronutrientes();
   buscar();

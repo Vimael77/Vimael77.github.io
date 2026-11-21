@@ -856,84 +856,174 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Desayuno</span>
-                              <label class="meal-time-control" for="hora_Desayuno">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Desayuno" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Desayuno</span>
+                                <label class="meal-time-control" for="hora_Desayuno">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Desayuno" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Desayuno">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Desayuno" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para Desayuno..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Desayuno"></tbody>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Media Mañana</span>
-                              <label class="meal-time-control" for="hora_Media_Mañana">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Media_Mañana" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Media Mañana</span>
+                                <label class="meal-time-control" for="hora_Media_Mañana">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Media_Mañana" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Media Mañana">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Media_Mañana" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para Media Mañana..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Media_Mañana"></tbody>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Almuerzo</span>
-                              <label class="meal-time-control" for="hora_Almuerzo">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Almuerzo" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Almuerzo</span>
+                                <label class="meal-time-control" for="hora_Almuerzo">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Almuerzo" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Almuerzo">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Almuerzo" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para el Almuerzo..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Almuerzo"></tbody>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Media Tarde</span>
-                              <label class="meal-time-control" for="hora_Media_Tarde">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Media_Tarde" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Media Tarde</span>
+                                <label class="meal-time-control" for="hora_Media_Tarde">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Media_Tarde" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Media Tarde">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Media_Tarde" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para Media Tarde..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Media_Tarde"></tbody>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Merienda</span>
-                              <label class="meal-time-control" for="hora_Merienda">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Merienda" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Merienda</span>
+                                <label class="meal-time-control" for="hora_Merienda">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Merienda" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Merienda">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Merienda" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para la Merienda..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
                       </tbody>
                       <tbody id="valores_Merienda"></tbody>
                       <tbody>
-                        <tr class="table-info">
-                          <td colspan="21" class="text-start fw-bold">
-                            <div class="meal-section-heading">
-                              <span>Cena</span>
-                              <label class="meal-time-control" for="hora_Cena">
-                                <span>Hora</span>
-                                <input type="time" id="hora_Cena" class="form-control form-control-sm">
-                              </label>
+                        <tr class="table-info meal-header-row">
+                          <td colspan="21" class="text-start">
+                            <div class="meal-section-wrap">
+                              <div class="meal-section-heading">
+                                <span class="meal-name">Cena</span>
+                                <label class="meal-time-control" for="hora_Cena">
+                                  <span>Hora</span>
+                                  <input type="time" id="hora_Cena" class="form-control form-control-sm">
+                                </label>
+                              </div>
+                              <div class="meal-desc-box">
+                                <div class="meal-desc-toolbar" role="toolbar" aria-label="Herramientas de formato para Cena">
+                                  <button type="button" class="meal-desc-btn" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+                                  <button type="button" class="meal-desc-btn" data-cmd="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertUnorderedList" title="Viñetas">• Viñetas</button>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-text" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                                  <span class="meal-desc-sep"></span>
+                                  <button type="button" class="meal-desc-btn meal-desc-btn-clear" data-cmd="removeFormat" title="Quitar formato">Limpiar</button>
+                                </div>
+                                <div class="meal-desc-editor" id="desc_Cena" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Descripción o indicaciones para la Cena..."></div>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1237,7 +1327,7 @@
                 </div>
               </header>
 
-              <p id="equiv_mensaje" class="equivalentes-message" role="status" aria-live="polite"></p>
+              <div id="equiv_mensaje_general"><p id="equiv_mensaje" class="equivalentes-message" role="status" aria-live="polite"></p></div>
 
               <article class="equivalentes-card">
                 <div class="equivalentes-card-heading">
@@ -1251,35 +1341,35 @@
                   <label class="equivalentes-field" for="equiv_energia">
                     <span>Energ&iacute;a diaria</span>
                     <span class="input-group">
-                      <input type="number" id="equiv_energia" class="form-control" min="1" step="1" value="1900" inputmode="decimal">
+                      <input type="number" id="equiv_energia" class="form-control" min="1" step="1" value="1700" inputmode="decimal">
                       <span class="input-group-text">kcal</span>
                     </span>
                   </label>
                   <label class="equivalentes-field" for="equiv_peso_ideal">
                     <span>Peso ideal</span>
                     <span class="input-group">
-                      <input type="number" id="equiv_peso_ideal" class="form-control" min="1" step="0.1" value="64" inputmode="decimal">
+                      <input type="number" id="equiv_peso_ideal" class="form-control" min="1" step="0.1" value="70" inputmode="decimal">
                       <span class="input-group-text">kg</span>
                     </span>
                   </label>
                   <label class="equivalentes-field" for="equiv_proteina_pct">
                     <span>Prote&iacute;nas</span>
                     <span class="input-group">
-                      <input type="number" id="equiv_proteina_pct" class="form-control" min="0" max="100" step="0.1" value="21" inputmode="decimal">
+                      <input type="number" id="equiv_proteina_pct" class="form-control" min="0" max="100" step="0.1" value="20" inputmode="decimal">
                       <span class="input-group-text">%</span>
                     </span>
                   </label>
                   <label class="equivalentes-field" for="equiv_grasa_pct">
                     <span>Grasas</span>
                     <span class="input-group">
-                      <input type="number" id="equiv_grasa_pct" class="form-control" min="0" max="100" step="0.1" value="28" inputmode="decimal">
+                      <input type="number" id="equiv_grasa_pct" class="form-control" min="0" max="100" step="0.1" value="26" inputmode="decimal">
                       <span class="input-group-text">%</span>
                     </span>
                   </label>
                   <label class="equivalentes-field" for="equiv_carbohidrato_pct">
                     <span>Carbohidratos</span>
                     <span class="input-group">
-                      <input type="text" id="equiv_carbohidrato_pct" class="form-control" value="51.0" readonly aria-readonly="true">
+                      <input type="text" id="equiv_carbohidrato_pct" class="form-control" value="54.0" readonly aria-readonly="true">
                       <span class="input-group-text">%</span>
                     </span>
                   </label>
@@ -1294,7 +1384,7 @@
                     <span class="equivalentes-step-number">2</span>
                     <div>
                       <h4>Equivalentes por grupo</h4>
-                      <p>Ajusta las raciones; los aportes y la adecuaci&oacute;n se actualizan al instante.</p>
+                      <p>Ajusta las raciones; los aportes y la adecuaci&oacute;n se actualizan al instante con la l&oacute;gica de intercambios USFQ 2024.</p>
                     </div>
                   </div>
                   <button type="button" id="equiv_sugerir" class="btn btn-success equivalentes-plan-action">
@@ -1302,18 +1392,29 @@
                     Sugerir equivalentes
                   </button>
                 </div>
+                <div class="mb-3">
+                  <label for="equiv_matriz" class="form-label fw-bold">Tabla de referencia del plan</label>
+                  <select id="equiv_matriz" class="form-select w-auto mw-100" aria-describedby="equiv_matriz_ayuda">
+                    <option value="usfq" selected>USFQ · 2da Ed. 2024 (L&oacute;gica del Excel)</option>
+                    <option value="clasica">Matriz cl&aacute;sica original</option>
+                  </select>
+                  <small id="equiv_matriz_ayuda" class="form-text">Sistema de intercambios de alimentos ecuatorianos (USFQ 2.&ordf; Ed. 2024) adaptado con la metodolog&iacute;a dietosint&eacute;tica del Excel.</small>
+                </div>
+                <p id="equiv_fuente_matriz" class="equivalentes-source-note" aria-live="polite">Fuente: USFQ Press, Lista de intercambios de alimentos ecuatorianos (2.ª Ed. 2024) y metodolog&iacute;a cl&iacute;nica del Excel.</p>
+                <div id="equiv_mensaje_en_tabla"></div>
                 <div class="table-responsive equivalentes-table-wrap">
                   <table class="table table-sm align-middle equivalentes-table" id="equiv_tabla_grupos">
                     <caption class="sr-only">Equivalentes por grupo de alimentos y su aporte de macronutrientes.</caption>
                     <thead>
                       <tr>
-                        <th scope="col">Grupo</th>
+                        <th scope="col" class="text-center" style="width: 85px;">N&deg; Raciones</th>
+                        <th scope="col">Grupo de alimentos</th>
                         <th scope="col">Subgrupo</th>
-                        <th scope="col" class="text-center">Equivalentes</th>
-                        <th scope="col" class="text-end">Prote&iacute;nas</th>
-                        <th scope="col" class="text-end">Grasas</th>
-                        <th scope="col" class="text-end">Carbohidratos</th>
-                        <th scope="col" class="text-end">Energ&iacute;a</th>
+                        <th scope="col" class="text-center" style="width: 105px;">Equivalentes</th>
+                        <th scope="col" class="text-end" id="col_meta_proteina" style="width: 95px;">Prote&iacute;nas</th>
+                        <th scope="col" class="text-end" id="col_meta_grasa" style="width: 95px;">L&iacute;pidos</th>
+                        <th scope="col" class="text-end" id="col_meta_carbohidrato" style="width: 105px;">Carbohidratos</th>
+                        <th scope="col" style="min-width: 250px;">Alimentos frecuentes / Notas</th>
                       </tr>
                     </thead>
                     <tbody id="equiv_grupos_body"></tbody>
@@ -1321,7 +1422,6 @@
                   </table>
                 </div>
                 <div id="equiv_adecuacion_resumen" class="equivalentes-adequacy-grid" aria-label="Adecuaci&oacute;n del plan"></div>
-                <p class="equivalentes-source-note">Valores por equivalente basados en la matriz principal de los documentos compartidos.</p>
               </article>
 
               <article class="equivalentes-card" id="usfq_catalogo">
@@ -1337,7 +1437,7 @@
                   <span class="usfq-notice-icon" data-lucide="info" aria-hidden="true"></span>
                   <div>
                     <strong>C&oacute;mo comparar porciones</strong>
-                    <p>Compara alimentos del mismo subgrupo USFQ. Un intercambio de esta gu&iacute;a no equivale necesariamente a una raci&oacute;n de la tabla del plan.</p>
+                    <p id="usfq_relacion_plan">Compara porciones dentro del mismo subgrupo USFQ. Usar esta guía no añade raciones al plan.</p>
                   </div>
                 </div>
 
@@ -1398,8 +1498,8 @@
                   <div class="equivalentes-meal-actions">
                     <label for="equiv_num_comidas">Tiempos</label>
                     <select id="equiv_num_comidas" class="form-select form-select-sm">
-                      <option value="4" selected>4 comidas</option>
-                      <option value="5">5 comidas</option>
+                      <option value="4">4 comidas</option>
+                      <option value="5" selected>5 comidas (Desayuno, MM, Almuerzo, MT, Merienda)</option>
                       <option value="6">6 comidas</option>
                     </select>
                     <button type="button" id="equiv_distribuir" class="btn btn-success equivalentes-plan-action">
@@ -1417,6 +1517,7 @@
                     <tfoot id="equiv_distribucion_foot"></tfoot>
                   </table>
                 </div>
+                <div id="equiv_almuerzo_resumen"></div>
                 <div class="equivalentes-legend" aria-label="Leyenda de cumplimiento">
                   <span><i class="equiv-status-dot equiv-status-ok"></i> Completo</span>
                   <span><i class="equiv-status-dot equiv-status-warning"></i> Pendiente</span>
@@ -1841,12 +1942,12 @@
   <script src="citas.js?v=20260915-guest-2"></script>
   <script src="pdf-assets.js?v=20260915-guest-2"></script>
   <script src="script.js?v=20261021-food-actions-1"></script>
-  <script src="intercambios-usfq.js?v=20261117-usfq-1"></script>
+  <script src="intercambios-usfq.js?v=20261120-tabla1-1"></script>
   <script src="usfq-ilustraciones.js?v=porciones-2"></script>
   <script src="usfq-porcion-ilustrada.js?v=porciones-2"></script>
   <script src="usfq-medida-visual.js?v=porciones-2"></script>
   <script src="usfq-guia.js?v=porciones-2"></script>
-  <script src="equivalentes.js?v=20261117-plan-2"></script>
+  <script src="equivalentes.js?v=20261120-sugerencia-usfq-1"></script>
   <script src="recetas.js?v=20260915-guest-2"></script>
   <script src="generador.js?v=20260915-guest-2"></script>
 
