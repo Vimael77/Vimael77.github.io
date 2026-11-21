@@ -98,47 +98,62 @@
   }
 
   // Una sola vista flotante: no se descargan imágenes al dibujar o paginar las fichas.
+  let fotosUSFQInicializado = false;
   function prepararFotosUSFQ(resultados, alimentos) {
+    if (fotosUSFQInicializado) return;
+    fotosUSFQInicializado = true;
+
     const porId = new Map(alimentos.map(alimento => [alimento.id, alimento]));
-    const vista = document.createElement("figure");
-    vista.id = "usfq_foto";
-    vista.className = "usfq-photo-preview";
-    vista.hidden = true;
-    vista.innerHTML = `<img decoding="async"><p hidden>No se pudo cargar la ilustración.</p>
-      <figcaption id="usfq_foto_pie">
-        <strong class="usfq-photo-name"></strong>
-        <span class="usfq-photo-serving"></span>
-        <span class="usfq-photo-diagram"></span>
-        <small>Ilustración orientativa de una porción, no a escala.</small>
-      </figcaption>`;
+    let vista = document.getElementById("usfq_foto");
+    if (!vista) {
+      vista = document.createElement("figure");
+      vista.id = "usfq_foto";
+      vista.className = "usfq-photo-preview";
+      vista.hidden = true;
+      vista.innerHTML = `<img decoding="async"><p hidden>No se pudo cargar la ilustración.</p>
+        <figcaption id="usfq_foto_pie">
+          <strong class="usfq-photo-name"></strong>
+          <span class="usfq-photo-serving"></span>
+          <div class="usfq-photo-macros"></div>
+          <span class="usfq-photo-diagram"></span>
+          <small>Ilustración orientativa de una porción, no a escala.</small>
+        </figcaption>`;
+      document.body.appendChild(vista);
+    }
     const imagen = vista.querySelector("img");
     const pie = vista.querySelector("figcaption");
     const error = vista.querySelector("p");
-    document.body.appendChild(vista);
     let activo = null;
     let desdePuntero = false;
     let pulsandoVista = false;
     let tipoApertura = "";
 
     cerrarFoto = function () {
-      if (!activo) return;
-      activo.textContent = "Ver imagen";
-      activo.setAttribute("aria-label", "Ver imagen de " + activo.closest("article").querySelector(".usfq-exchange-food").textContent);
-      activo.setAttribute("aria-expanded", "false");
-      activo.removeAttribute("aria-describedby");
-      activo = null;
+      if (activo) {
+        activo.classList.remove("usfq-card-active");
+        activo.removeAttribute("aria-expanded");
+        activo.removeAttribute("aria-describedby");
+        activo = null;
+      }
       vista.hidden = true;
       pulsandoVista = false;
       imagen.removeAttribute("src");
     };
 
-    function abrir(boton, origen) {
-      if (!boton || boton === activo) return;
-      const id = boton.dataset.usfqFoto;
+    function abrir(tarjeta, origen) {
+      if (!tarjeta) return;
+      if (tarjeta === activo) return;
+      const id = tarjeta.dataset.usfqId;
       const dato = window.FotosUSFQ?.[id], alimento = porId.get(id);
-      if (!dato?.src || !alimento) return;
+      if (!dato?.src || !alimento) {
+        cerrarFoto();
+        return;
+      }
       cerrarFoto();
-      activo = boton;
+      activo = tarjeta;
+      activo.classList.add("usfq-card-active");
+      activo.setAttribute("aria-expanded", "true");
+      activo.setAttribute("aria-describedby", pie.id);
       tipoApertura = origen;
       const nombre = alimento.nombre;
       const medida = window.PorcionIlustradaUSFQ?.de(alimento) || alimento.medida;
@@ -148,40 +163,67 @@
       imagen.alt = `${nombre}: 1 intercambio, ${medida} (${peso})`;
       pie.querySelector(".usfq-photo-name").textContent = nombre;
       pie.querySelector(".usfq-photo-serving").textContent = `1 intercambio = ${medida} (${peso})`;
+      const macrosPie = pie.querySelector(".usfq-photo-macros");
+      if (macrosPie) {
+        const datos = obtenerDatosUSFQ();
+        const mapa = datos ? mapaSubgruposUSFQ(datos) : {};
+        const subgrupo = mapa[alimento.subgrupoId];
+        if (subgrupo) {
+          macrosPie.innerHTML = `
+            <div class="usfq-card-macros">
+              <span class="usfq-macro-badge usfq-macro-cho">Carbohidratos: <strong>${formatear(subgrupo.carbohidrato)} g</strong></span>
+              <span class="usfq-macro-badge usfq-macro-prot">Proteínas: <strong>${formatear(subgrupo.proteina)} g</strong></span>
+              <span class="usfq-macro-badge usfq-macro-grasa">Grasas: <strong>${formatear(subgrupo.grasa)} g</strong></span>
+              <span class="usfq-macro-badge usfq-macro-kcal"><strong>${formatear(subgrupo.energia)} kcal</strong></span>
+            </div>`;
+          macrosPie.hidden = false;
+        } else {
+          macrosPie.hidden = true;
+        }
+      }
       const diagrama = pie.querySelector(".usfq-photo-diagram");
       diagrama.innerHTML = window.MedidaVisualUSFQ?.render(alimento) || "";
       diagrama.hidden = !diagrama.childElementCount;
       imagen.src = dato.src;
       vista.hidden = false;
       vista.scrollTop = 0;
-      boton.textContent = "Ocultar";
-      boton.setAttribute("aria-label", "Ocultar imagen de " + nombre);
-      boton.setAttribute("aria-expanded", "true");
-      boton.setAttribute("aria-describedby", pie.id);
       posicionar();
     }
 
     function posicionar() {
       if (!activo) return;
-      // El teclado en pantalla y el zoom pueden reducir el área visible sin cambiar clientWidth/clientHeight.
       const vp = window.visualViewport;
       const izq = vp?.offsetLeft || 0, arriba = vp?.offsetTop || 0;
       const der = izq + (vp?.width || document.documentElement.clientWidth);
       const abajo = arriba + (vp?.height || document.documentElement.clientHeight);
-      vista.style.maxWidth = Math.max(1, der - izq - 12) + "px";
-      vista.style.maxHeight = Math.max(1, abajo - arriba - 12) + "px";
-      const caja = activo.closest("article").getBoundingClientRect();
-      const ancho = vista.offsetWidth, alto = vista.offsetHeight;
-      const maxX = der - ancho - 6, maxY = abajo - alto - 6;
-      let x = caja.left, y = caja.bottom;
-      if (caja.right <= maxX || caja.left >= izq + ancho + 6) {
-        x = caja.right <= maxX ? caja.right : caja.left - ancho;
-        y = caja.top + (caja.height - alto) / 2;
-      } else if (y > maxY && caja.top - arriba > abajo - caja.bottom) {
-        y = caja.top - alto;
+      vista.style.maxWidth = Math.max(1, der - izq - 16) + "px";
+      vista.style.maxHeight = Math.max(1, abajo - arriba - 16) + "px";
+      const caja = activo.getBoundingClientRect();
+      const ancho = vista.offsetWidth || 280, alto = vista.offsetHeight || 260;
+      const maxX = der - ancho - 8, maxY = abajo - alto - 8;
+
+      let x = caja.right + 10;
+      let y = caja.top;
+
+      if (x > maxX) {
+        x = caja.left - ancho - 10;
       }
-      vista.style.left = Math.max(izq + 6, Math.min(x, maxX)) + "px";
-      vista.style.top = Math.max(arriba + 6, Math.min(y, maxY)) + "px";
+      if (x < izq + 8) {
+        x = Math.max(izq + 8, Math.min(caja.left, maxX));
+        y = caja.bottom + 8;
+        if (y + alto > maxY) {
+          y = Math.max(arriba + 8, caja.top - alto - 8);
+        }
+      }
+      if (y + alto > maxY) {
+        y = Math.max(arriba + 8, maxY);
+      }
+      if (y < arriba + 8) {
+        y = arriba + 8;
+      }
+
+      vista.style.left = Math.round(x) + "px";
+      vista.style.top = Math.round(y) + "px";
     }
 
     function mostrarError() {
@@ -191,52 +233,78 @@
       posicionar();
     }
     imagen.addEventListener("error", mostrarError);
-    function botonDeFicha(elemento) {
-      return elemento?.closest?.(".usfq-exchange-card")?.querySelector("[data-usfq-foto]");
-    }
+
+    // Detección directa sobre tarjetas
     resultados.addEventListener("pointerover", function (e) {
-      if (e.pointerType !== "mouse") return;
-      const boton = botonDeFicha(e.target);
-      if (boton && boton !== botonDeFicha(e.relatedTarget)) abrir(boton, "hover");
+      const tarjeta = e.target.closest(".usfq-exchange-card");
+      if (tarjeta && tarjeta !== activo) {
+        abrir(tarjeta, "hover");
+      }
     });
-    function salir(e) {
-      if (!activo || e.pointerType !== "mouse" || vista.contains(e.relatedTarget)) return;
-      if (!vista.contains(e.target) && botonDeFicha(e.target) !== activo) return;
-      if (botonDeFicha(e.relatedTarget) !== activo) cerrarFoto();
-    }
-    resultados.addEventListener("pointerout", salir);
-    vista.addEventListener("pointerleave", salir);
+
+    resultados.addEventListener("pointerout", function (e) {
+      if (!activo) return;
+      const related = e.relatedTarget;
+      if (!related || !activo.contains(related)) {
+        cerrarFoto();
+      }
+    });
+
+    // Verificación infalible a nivel de documento:
+    // Al tener .usfq-photo-preview pointer-events: none, la vista flotante nunca roba el puntero.
+    // Si el cursor no está dentro de la tarjeta activa, se cierra al instante.
+    document.addEventListener("pointermove", function (e) {
+      if (!activo) return;
+      if (!activo.contains(e.target)) {
+        cerrarFoto();
+      }
+    });
+
+    document.addEventListener("mouseleave", function () {
+      cerrarFoto();
+    });
+
     document.addEventListener("pointerdown", function (e) {
       desdePuntero = true;
       pulsandoVista = vista.contains(e.target);
-      if (activo && !pulsandoVista && e.target.closest?.("[data-usfq-foto]") !== activo) cerrarFoto();
+      if (activo && !pulsandoVista && !activo.contains(e.target)) {
+        cerrarFoto();
+      }
     });
+
     document.addEventListener("keydown", function (e) {
       desdePuntero = false;
       pulsandoVista = false;
       if (e.key === "Escape") cerrarFoto();
     });
+
     resultados.addEventListener("focusin", function (e) {
-      if (!desdePuntero && e.target.matches("[data-usfq-foto]")) abrir(e.target, "teclado");
+      const tarjeta = e.target.closest(".usfq-exchange-card");
+      if (tarjeta) abrir(tarjeta, "teclado");
     });
+
     resultados.addEventListener("focusout", function (e) {
-      if (e.target === activo && !vista.contains(e.relatedTarget) && !(pulsandoVista && !e.relatedTarget)) cerrarFoto();
+      if (!activo) return;
+      const related = e.relatedTarget;
+      if (!related || !activo.contains(related)) {
+        cerrarFoto();
+      }
     });
-    vista.addEventListener("focusout", function (e) {
-      if (e.relatedTarget !== activo && !vista.contains(e.relatedTarget) && !(pulsandoVista && !e.relatedTarget)) cerrarFoto();
-    });
+
     resultados.addEventListener("click", function (e) {
-      const boton = e.target.closest("[data-usfq-foto]");
-      if (!boton) return;
-      if (activo === boton) cerrarFoto(); else abrir(boton, desdePuntero ? "toque" : "teclado");
+      const tarjeta = e.target.closest(".usfq-exchange-card");
+      if (!tarjeta) return;
+      if (activo === tarjeta) {
+        cerrarFoto();
+      } else {
+        abrir(tarjeta, desdePuntero ? "toque" : "click");
+      }
     });
-    window.addEventListener("scroll", function (e) {
-      // Tab puede desplazar automáticamente la tarjeta recién enfocada.
-      if (!activo || (e.target instanceof Node && vista.contains(e.target))) return;
-      const caja = activo.getBoundingClientRect();
-      if (tipoApertura === "teclado" && caja.bottom >= 0 && caja.top <= window.innerHeight) posicionar();
-      else cerrarFoto();
+
+    window.addEventListener("scroll", function () {
+      cerrarFoto();
     }, { passive: true, capture: true });
+
     window.addEventListener("resize", posicionar);
     window.visualViewport?.addEventListener("resize", posicionar);
     window.visualViewport?.addEventListener("scroll", posicionar);
@@ -255,11 +323,15 @@
       const subgrupo = subgrupos[alimento.subgrupoId];
       const medida = alimento.medida.replace(/(^|[;:,]\s*)([¼½¾⅐-⅞]) (taza|vaso)\b/g, "$1$2 de $3");
       const peso = Number.isFinite(alimento.gramos) ? ` (${formatear(alimento.gramos)} g)` : "";
-      const foto = window.FotosUSFQ?.[alimento.id];
-      const botonFoto = foto?.src ? `<button type="button" class="usfq-photo-trigger" data-usfq-foto="${escaparHtml(alimento.id)}" aria-controls="usfq_foto" aria-expanded="false" aria-label="Ver imagen de ${escaparHtml(alimento.nombre)}">Ver imagen</button>` : "";
-      return `<article class="usfq-exchange-card">
-        <div class="usfq-food-heading"><h5 class="usfq-exchange-food">${escaparHtml(alimento.nombre)}</h5>${botonFoto}</div>
+      return `<article class="usfq-exchange-card" data-usfq-id="${escaparHtml(alimento.id)}" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false" title="Pasa el mouse para ver la imagen de porción">
+        <div class="usfq-food-heading"><h5 class="usfq-exchange-food">${escaparHtml(alimento.nombre)}</h5></div>
         <p class="usfq-exchange-portion">1 intercambio = <strong>${escaparHtml(medida)}${peso}</strong></p>
+        <div class="usfq-card-macros" aria-label="Nutrientes por intercambio">
+          <span class="usfq-macro-badge usfq-macro-cho">Carbohidratos: <strong>${formatear(subgrupo.carbohidrato)} g</strong></span>
+          <span class="usfq-macro-badge usfq-macro-prot">Proteínas: <strong>${formatear(subgrupo.proteina)} g</strong></span>
+          <span class="usfq-macro-badge usfq-macro-grasa">Grasas: <strong>${formatear(subgrupo.grasa)} g</strong></span>
+          <span class="usfq-macro-badge usfq-macro-kcal"><strong>${formatear(subgrupo.energia)} kcal</strong></span>
+        </div>
         <div class="usfq-exchange-meta">
           <span>${escaparHtml(subgrupo.grupo)}</span>
           ${subgrupo.nombre === subgrupo.grupo ? "" : `<span>${escaparHtml(subgrupo.nombre)}</span>`}
@@ -322,6 +394,7 @@
     });
     renderizarGuiaUSFQ();
   }
+  window.inicializarGuiaUSFQ = inicializarGuiaUSFQ;
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", inicializarGuiaUSFQ, { once: true });
   else inicializarGuiaUSFQ();
 })();

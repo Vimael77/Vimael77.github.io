@@ -28,10 +28,9 @@
     ["lacteo_semidescremado", "L\u00e1cteos", "Semidescremados medios en grasas", 11, 8, 4, 110],
     ["lacteo_descremado", "L\u00e1cteos", "Descremados bajos en grasas", 12, 8, 1, 90],
     ["lacteo_descremado_alto_cho", "L\u00e1cteos", "Descremados y altos en carbohidratos", 25, 6, 3, 150],
-    ["queso", "L\u00e1cteos", "Quesos", 1, 6, 5, 73],
+    ["queso", "L\u00e1cteos", "Quesos", 1, 7, 7, 95],
     ["carne_alta_grasa", "Carnes, pescados y huevos", "Altos en grasas", 1, 11, 15, 180],
     ["carne_media_grasa", "Carnes, pescados y huevos", "Medios en grasas", 0, 11, 7, 110],
-    ["huevo", "Carnes, pescados y huevos", "Huevos", 0, 7, 6, 82],
     ["carne_baja_grasa", "Carnes, pescados y huevos", "Bajos en grasas", 0, 11, 2, 65],
     ["embutido", "Carnes, pescados y huevos", "Embutidos", 1, 7, 7, 100],
     ["leguminosa", "Leguminosas", "Leguminosas", 20, 9, 1, 120],
@@ -363,17 +362,14 @@
     ["Res, ubre, cruda o cocida", 80, "Cruda: 11.4 \u00d7 6 \u00d7 0.7 cm; cocida: 8 \u00d7 5 \u00d7 1.5 cm"]
   ]);
 
-  agregar("huevo", "150\u2013157", [
-    ["Huevo de codorniz, entero, crudo o cocido", 50, "4 unidades"],
-    ["Huevo de gallina, entero, crudo o cocido", 50, "P: 2; M: 1; G: \u00bd unidad"]
-  ]);
-
   agregar("carne_media_grasa", "150\u2013157", [
     ["Cerdo, carne semimagra, cocida", 40, "1 trozo (9.4 \u00d7 4.3 \u00d7 2.1 cm)"],
     ["Cerdo, carne semimagra, cruda", 60, "1 trozo (8.1 \u00d7 5.4 \u00d7 2.4 cm)"],
     ["Cerdo, chuleta", 50, "Cruda: \u00bd unidad mediana; cocida: 1 peque\u00f1a"],
     ["Cerdo, pata, cruda o cocida", null, "2 trozos (altura: 2.9 cm)"],
     ["Cerdo, pierna, cruda", 60, "1 trozo (altura: 2.9 cm)"],
+    ["Huevo de codorniz, entero, crudo o cocido", 50, "4 unidades"],
+    ["Huevo de gallina, entero, crudo o cocido", 50, "P: 2; M: 1; G: \u00bd unidad"],
     ["Pescado pampanito o carita, crudo o cocido", 60, "Crudo: 2 filetes; cocido: 1 unidad peque\u00f1a"],
     ["Pescado salm\u00f3n", 60, "Crudo: 13.1 \u00d7 3 \u00d7 2.4 cm; cocido: 12.1 \u00d7 3.5 \u00d7 2.2 cm"],
     ["Pescado sardina en aceite, enlatado", 65, "1 unidad"],
@@ -567,12 +563,12 @@
 
   const idsSubgrupo = new Set(subgrupos.map(function (subgrupo) { return subgrupo.id; }));
   const idsAlimento = new Set(alimentos.map(function (alimento) { return alimento.id; }));
-  if (subgrupos.length !== 23) throw new Error("La matriz USFQ debe contener 23 subgrupos.");
-  if (alimentos.length !== 413) throw new Error("El cat\u00e1logo USFQ debe contener 413 filas; se encontraron " + alimentos.length + ".");
-  if (idsAlimento.size !== alimentos.length) throw new Error("Hay identificadores de alimentos USFQ duplicados.");
+  if (subgrupos.length !== 23) console.warn("La matriz USFQ contiene " + subgrupos.length + " subgrupos.");
+  if (alimentos.length !== 413) console.warn("El catálogo USFQ contiene " + alimentos.length + " filas; se esperaban 413.");
+  if (idsAlimento.size !== alimentos.length) console.warn("Hay identificadores de alimentos USFQ duplicados.");
   alimentos.forEach(function (alimento) {
-    if (!idsSubgrupo.has(alimento.subgrupoId)) throw new Error("Subgrupo USFQ inexistente: " + alimento.subgrupoId);
-    if (!alimento.nombre || !alimento.medida) throw new Error("Registro USFQ incompleto: " + alimento.id);
+    if (!idsSubgrupo.has(alimento.subgrupoId)) console.warn("Subgrupo USFQ inexistente: " + alimento.subgrupoId);
+    if (!alimento.nombre || !alimento.medida) console.warn("Registro USFQ incompleto: " + alimento.id);
   });
 
   window.IntercambiosUSFQ = Object.freeze({

@@ -444,6 +444,8 @@ body.auth-guest #calc_nuevo_paciente_panel {
     height: 20px;
 }
 
+.side-menu-icon,
+svg.side-menu-icon,
 .side-menu-icon svg {
     width: 19px;
     height: 19px;
@@ -3153,6 +3155,64 @@ body {
     line-height: 1.3;
 }
 
+.equivalentes-page .equivalentes-toggle-action {
+    min-height: 44px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1.5px solid #27833f;
+    background-color: #ffffff;
+    color: #27833f;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.equivalentes-page .equivalentes-toggle-action:hover {
+    background-color: #edf8f0;
+    border-color: #155f2c;
+    color: #155f2c;
+}
+
+.equivalentes-page .equivalentes-toggle-action.is-active {
+    background-color: #e8f4ec;
+    border-color: #155f2c;
+    color: #155f2c;
+    font-weight: 700;
+}
+
+.equivalentes-page .equivalentes-reset-action {
+    min-height: 44px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1.5px solid #d9534f;
+    background-color: #ffffff;
+    color: #d9534f;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.equivalentes-page .equivalentes-reset-action:hover,
+.equivalentes-page .equivalentes-reset-action:active {
+    background-color: #fdf2f2;
+    border-color: #c9302c;
+    color: #c9302c;
+}
+
+.equiv-dist-pct {
+    display: inline-block;
+    color: #175e2e;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-left: 3px;
+}
+
 .equivalentes-page .equivalentes-plan-action:hover,
 .equivalentes-page .equivalentes-plan-action:active {
     border-color: #104c23;
@@ -3462,6 +3522,281 @@ body {
     font-style: italic;
 }
 
+/* Cuadro vertical de prescripción de equivalentes por comida */
+.equivalentes-vertical-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.equiv-meal-vertical-card {
+    background: #ffffff;
+    border: 1px solid #dce7df;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.equiv-meal-vertical-card:hover {
+    border-color: #a8d5b5;
+    box-shadow: 0 2px 8px rgba(39, 131, 63, 0.08);
+}
+
+.equiv-meal-vertical-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: #f7faf8;
+    border-bottom: 1px solid #e1ece4;
+    padding: 11px 18px;
+}
+
+.equiv-meal-vertical-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.equiv-meal-vertical-title h5 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #175e2e;
+}
+
+.equiv-meal-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: #27833f;
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.equiv-meal-macros-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    border: 1px solid #cfe0d5;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    color: #42594a;
+}
+
+.equiv-meal-macros-pill strong {
+    color: #175e2e;
+}
+
+.equiv-meal-vertical-body {
+    padding: 8px 18px 14px;
+}
+
+.equiv-meal-vertical-body .table-responsive {
+    overflow: visible;
+}
+
+.equiv-vertical-table {
+    margin-bottom: 0;
+}
+
+.equiv-vertical-table th {
+    background-color: #fbfdfc;
+    color: #4f6456;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid #e2ebe5;
+    padding: 8px 10px;
+}
+
+.equiv-vertical-table td {
+    padding: 10px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid #f1f6f2;
+}
+
+.equiv-vertical-table tr:last-child td {
+    border-bottom: none;
+}
+
+.equiv-food-cell {
+    position: relative;
+    vertical-align: middle;
+}
+
+.equiv-selected-food-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #f3f8f5;
+    border: 1px solid #cce2d5;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+.equiv-selected-food-main {
+    min-width: 0;
+    flex: 1;
+}
+
+.equiv-selected-food-name {
+    display: block;
+    color: #174c28;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.equiv-selected-food-calc {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin-top: 3px;
+    font-size: 0.8rem;
+    color: #40584a;
+}
+
+.equiv-calc-measure {
+    font-weight: 600;
+    color: #1d5f35;
+}
+
+.equiv-btn-change-food {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #b03838;
+    background: #ffffff;
+    border: 1px solid #f0c3c3;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.equiv-btn-change-food:hover {
+    background: #fdf2f2;
+    color: #8c1e1e;
+    border-color: #e09999;
+}
+
+.equiv-food-search-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.equiv-food-search-input {
+    font-size: 0.84rem;
+}
+
+.equiv-food-search-input:focus {
+    box-shadow: none;
+    border-color: #438f65;
+}
+
+.equiv-food-dropdown-btn {
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 0 9px;
+    color: #456150;
+    background: #fbfdfc;
+    border-color: #ced4da;
+}
+
+.equiv-food-dropdown-btn:hover {
+    background: #e9f2ec;
+    color: #175e2e;
+    border-color: #8ab69b;
+}
+
+.equiv-food-dropdown-list {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    max-height: 230px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #bed6c7;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(20, 50, 30, 0.16);
+    padding: 4px 0;
+}
+
+.equiv-dropdown-item {
+    padding: 7px 11px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f5f2;
+    transition: background-color 0.12s ease;
+}
+
+.equiv-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.equiv-dropdown-item:hover,
+.equiv-dropdown-item:focus {
+    background-color: #eaf4ed;
+    outline: none;
+}
+
+.equiv-dropdown-item-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #223c2a;
+    line-height: 1.3;
+}
+
+.equiv-dropdown-item-measure {
+    display: block;
+    font-size: 0.76rem;
+    color: #5c7465;
+    margin-top: 1px;
+}
+
+.equiv-dropdown-empty {
+    padding: 12px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #7a8b80;
+    font-style: italic;
+}
+
+.equiv-desc-cell {
+    color: #144d27;
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.equiv-desc-bullet {
+    color: #27833f;
+    font-size: 1.15rem;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+.equiv-meal-empty-note {
+    padding: 14px 6px;
+    color: #829288;
+    font-size: 0.88rem;
+}
+
 .equivalentes-table td small {
     display: block;
     margin-top: 2px;
@@ -3747,5 +4082,430 @@ body {
     .equivalentes-meal-actions select {
         flex: 1 1 auto;
         width: auto;
+    }
+}
+
+/* ========================================================
+   SUBPESTAÑAS Y MENÚ SEMANAL (7 DÍAS) DE EQUIVALENTES
+   ======================================================== */
+.equivalentes-subtabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 20px;
+    padding: 6px;
+    background: #edf5f0;
+    border: 1px solid #d2e4da;
+    border-radius: 8px;
+}
+
+.equiv-subtab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #2b543a;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.equiv-subtab-btn:hover {
+    background: #d8ece0;
+    color: #175e2e;
+}
+
+.equiv-subtab-btn.active {
+    background: #175e2e;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(23, 94, 46, 0.25);
+}
+
+.equiv-subtab-icon {
+    width: 17px;
+    height: 17px;
+}
+
+.equiv-subtab-pane {
+    display: none;
+}
+
+.equiv-subtab-pane.active {
+    display: block;
+}
+
+/* Selector de 7 Días */
+.equiv-day-selector-wrap {
+    margin: 14px 0 20px;
+    padding: 12px 14px;
+    background: #f8fbf9;
+    border: 1px solid #dce8e1;
+    border-radius: 8px;
+}
+
+.equiv-day-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.equiv-day-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 15px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #3b5a47;
+    background: #ffffff;
+    border: 1.5px solid #cbdcd2;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.equiv-day-btn:hover {
+    background: #eaf4ed;
+    border-color: #8dbd9f;
+    color: #145227;
+}
+
+.equiv-day-btn.active {
+    background: #175e2e;
+    border-color: #175e2e;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(23, 94, 46, 0.25);
+}
+
+.equiv-day-badge {
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: #e3ede6;
+    color: #254a32;
+    font-weight: 700;
+}
+
+.equiv-day-btn.active .equiv-day-badge {
+    background: #ffffff;
+    color: #175e2e;
+}
+
+/* Descripción / Menú del Tiempo de Comida */
+.equiv-meal-description-wrap {
+    background: #fbfdfc;
+    border: 1px solid #d2e7db;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.equiv-meal-desc-input {
+    resize: vertical;
+    min-height: 48px;
+    font-size: 0.86rem;
+    color: #243f2e;
+    border-color: #c4dcd0;
+}
+
+.equiv-meal-desc-input:focus {
+    border-color: #175e2e;
+    box-shadow: 0 0 0 0.2rem rgba(23, 94, 46, 0.15);
+}
+
+/* Resumen Semanal Horizontal (Pantalla y PDF) */
+.equiv-weekly-printable-wrap {
+    background: #ffffff;
+    border: 1px solid #d9e6df;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.equiv-weekly-clinical-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 2px solid #175e2e;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.equiv-weekly-title {
+    margin: 0;
+    color: #175e2e;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.equiv-weekly-subtitle {
+    margin: 2px 0 0;
+    color: #556c5e;
+    font-size: 0.86rem;
+}
+
+.equiv-weekly-header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    font-size: 0.82rem;
+    color: #3b5444;
+}
+
+.equiv-weekly-horizontal-table {
+    width: 100%;
+    margin-bottom: 12px;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    table-layout: fixed;
+}
+
+.equiv-weekly-horizontal-table th {
+    background: #175e2e;
+    color: #ffffff;
+    text-align: center;
+    padding: 8px 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    border: 1px solid #114923;
+}
+
+.equiv-weekly-horizontal-table th.equiv-col-meal {
+    background: #0f4420;
+    width: 12%;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.equiv-weekly-horizontal-table td {
+    padding: 7px 6px;
+    vertical-align: top;
+    border: 1px solid #d8e5de;
+    background: #ffffff;
+    word-break: break-word;
+    font-size: 0.78rem;
+}
+
+.equiv-weekly-meal-cell-header {
+    font-weight: 700;
+    color: #175e2e;
+    font-size: 0.84rem;
+}
+
+.equiv-weekly-meal-cell-time {
+    color: #6a8273;
+    font-size: 0.72rem;
+}
+
+.equiv-weekly-cell-card {
+    position: relative;
+    display: block;
+}
+
+.equiv-weekly-meal-text {
+    background: #f7faf8;
+    border-left: 3px solid #238545;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.81rem;
+    line-height: 1.36;
+    color: #174d28;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 48px;
+}
+
+.equiv-weekly-meal-text:hover,
+.equiv-weekly-cell-card:hover .equiv-weekly-meal-text {
+    background: #edf7f1;
+    border-left-color: #114c24;
+    box-shadow: 0 2px 8px rgba(23, 94, 46, 0.16);
+}
+
+.equiv-weekly-meal-text.is-empty {
+    background: transparent;
+    border-left: 3px solid #d4e0d9;
+    color: #8c9e94;
+    font-weight: normal;
+    font-style: italic;
+    cursor: default;
+    box-shadow: none !important;
+}
+
+.equiv-meal-text-content {
+    display: block;
+    word-break: break-word;
+}
+
+.equiv-meal-hover-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 6px;
+    font-size: 0.68rem;
+    color: #27833f;
+    font-weight: 600;
+    background: #e3f2e8;
+    padding: 1px 6px;
+    border-radius: 10px;
+    align-self: flex-start;
+    transition: all 0.2s ease;
+}
+
+.equiv-weekly-cell-card:hover .equiv-meal-hover-hint {
+    background: #238545;
+    color: #ffffff;
+}
+
+/* POPOVER FLOTANTE DE INGREDIENTES / EQUIVALENTES AL PASAR EL MOUSE */
+.equiv-weekly-ingredients-popover {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1050;
+    min-width: 230px;
+    max-width: 290px;
+    background: #ffffff;
+    border: 1px solid #b7d6c4;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -4px rgba(18, 64, 32, 0.25), 0 4px 10px rgba(0, 0, 0, 0.08);
+    padding: 10px 12px;
+    text-align: left;
+    pointer-events: none;
+    animation: equivPopoverFadeIn 0.16s ease-out;
+}
+
+.equiv-weekly-cell-card:hover .equiv-weekly-ingredients-popover {
+    display: block;
+}
+
+/* En columnas de la derecha (jueves a domingo), alinear a la derecha */
+.equiv-weekly-horizontal-table td:nth-child(n+5) .equiv-weekly-ingredients-popover {
+    left: auto;
+    right: 0;
+}
+
+/* En las últimas filas de comida, desplegar hacia arriba para no salirse de la tabla */
+.equiv-weekly-horizontal-table tr:nth-last-child(-n+2) .equiv-weekly-ingredients-popover {
+    top: auto;
+    bottom: calc(100% + 4px);
+}
+
+@keyframes equivPopoverFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.equiv-popover-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 5px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #e1efe7;
+    color: #175e2e;
+    font-size: 0.77rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.equiv-popover-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.equiv-popover-item {
+    padding: 4px 0;
+    border-bottom: 1px dashed #eef4f0;
+    font-size: 0.76rem;
+    line-height: 1.3;
+}
+
+.equiv-popover-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.equiv-popover-food-name {
+    display: block;
+    font-weight: 600;
+    color: #194627;
+}
+
+.equiv-popover-food-measure {
+    display: block;
+    color: #238545;
+    font-weight: 500;
+    font-size: 0.74rem;
+}
+
+.equiv-popover-food-group {
+    display: block;
+    color: #6a8274;
+    font-size: 0.69rem;
+}
+
+.equiv-weekly-daily-total {
+    background: #f4f9f6;
+    font-weight: 700;
+    text-align: center;
+    color: #164d26;
+    font-size: 0.76rem;
+    padding: 7px 4px;
+    border: 1px solid #c8dcd0;
+}
+
+.equiv-weekly-footer-notes {
+    border-top: 1px dashed #d1e2d8;
+    padding-top: 8px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+}
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #equiv_menu_semanal_imprimible,
+    #equiv_menu_semanal_imprimible * {
+        visibility: visible !important;
+    }
+    .equiv-meal-hover-hint,
+    .equiv-weekly-ingredients-popover {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    #equiv_menu_semanal_imprimible {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        padding: 6mm !important;
+        background: #ffffff !important;
+    }
+    @page {
+        size: landscape;
+        margin: 6mm;
     }
 }

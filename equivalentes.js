@@ -346,6 +346,7 @@
   };
 
   let matriz = "usfq";
+  let ocultarCeros = false;
   const planesDeSesion = Object.create(null);
   function gruposActivos() { return matrices[matriz]; }
 
@@ -428,6 +429,27 @@
     maximumFractionDigits: 2
   });
 
+  const DIAS_SEMANA = [
+    { id: "lunes", label: "Lunes", corto: "Lun" },
+    { id: "martes", label: "Martes", corto: "Mar" },
+    { id: "miercoles", label: "Miércoles", corto: "Mié" },
+    { id: "jueves", label: "Jueves", corto: "Jue" },
+    { id: "viernes", label: "Viernes", corto: "Vie" },
+    { id: "sabado", label: "Sábado", corto: "Sáb" },
+    { id: "domingo", label: "Domingo", corto: "Dom" }
+  ];
+
+  function crearMenuSemanalInicial() {
+    const menu = {};
+    DIAS_SEMANA.forEach(function (dia) {
+      menu[dia.id] = {
+        descripciones: {},
+        alimentos: {}
+      };
+    });
+    return menu;
+  }
+
   let estado = crearEstadoInicial();
   let temporizadorGuardado = 0;
 
@@ -436,8 +458,25 @@
       objetivos: { energia: 1700, pesoIdeal: 70, proteinaPct: 20, grasaPct: 26 },
       equivalentes: { ...EQUIVALENTES_EJEMPLO_EXCEL },
       comidas: PRESETS_COMIDAS[5].map(copiarComida),
-      distribucion: {}
+      distribucion: {},
+      alimentosSeleccionados: {},
+      diaActivo: "lunes",
+      subtabActiva: "distribucion",
+      menuSemanal: crearMenuSemanalInicial()
     };
+  }
+
+  function obtenerDiaActivo() {
+    if (!estado.diaActivo || !DIAS_SEMANA.some(d => d.id === estado.diaActivo)) {
+      estado.diaActivo = "lunes";
+    }
+    if (!estado.menuSemanal) {
+      estado.menuSemanal = crearMenuSemanalInicial();
+    }
+    if (!estado.menuSemanal[estado.diaActivo]) {
+      estado.menuSemanal[estado.diaActivo] = { descripciones: {}, alimentos: {} };
+    }
+    return estado.diaActivo;
   }
 
   function copiarComida(comida) {
@@ -501,9 +540,10 @@
     };
   }
 
-  function calcularTotales(equivalentes, fuente = matriz) {
+  function calcularTotales(equivalentes = estado?.equivalentes, fuente = matriz) {
+    const equivs = equivalentes || estado?.equivalentes || {};
     return matrices[fuente].reduce(function (total, grupo) {
-      const cantidad = limitarNoNegativo(equivalentes[grupo.id]);
+      const cantidad = limitarNoNegativo(equivs[grupo.id]);
       total.proteina += cantidad * grupo.proteina;
       total.grasa += cantidad * grupo.grasa;
       total.carbohidrato += cantidad * grupo.carbohidrato;
@@ -800,6 +840,57 @@
 
     renderizarAdecuacion(totales, totales.energia);
     actualizarResumenDistribucion();
+    actualizarVisibilidadCeros();
+  }
+
+  function actualizarVisibilidadCeros() {
+    const elementoActivo = document.activeElement;
+    gruposActivos().forEach(function (grupo) {
+      const fila = document.querySelector(`[data-equivalent-row="${grupo.id}"]`);
+      const cantidad = limitarNoNegativo(estado.equivalentes[grupo.id]);
+      if (fila) {
+        const estaEditando = elementoActivo && fila.contains(elementoActivo);
+        if (ocultarCeros && cantidad === 0 && !estaEditando) {
+          fila.style.display = "none";
+        } else {
+          fila.style.display = "";
+        }
+      }
+
+      const filaDist = document.querySelector(`[data-distribution-row="${grupo.id}"]`);
+      if (filaDist) {
+        if (ocultarCeros && cantidad === 0) {
+          filaDist.style.display = "none";
+        } else {
+          filaDist.style.display = "";
+        }
+      }
+    });
+
+    const boton = document.getElementById("equiv_toggle_ceros");
+    const label = document.getElementById("equiv_toggle_ceros_label");
+    if (label) {
+      label.textContent = ocultarCeros ? "Mostrar equivalentes en 0" : "Ocultar Equivalentes en 0";
+    }
+    if (boton) {
+      if (ocultarCeros) {
+        boton.classList.add("is-active");
+      } else {
+        boton.classList.remove("is-active");
+      }
+      const icono = boton.querySelector("[data-lucide], svg");
+      if (icono) {
+        icono.outerHTML = `<span data-lucide="${ocultarCeros ? 'eye' : 'eye-off'}" aria-hidden="true"></span>`;
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+          window.lucide.createIcons();
+        }
+      }
+    }
+  }
+
+  function alternarOcultarCeros() {
+    ocultarCeros = !ocultarCeros;
+    actualizarVisibilidadCeros();
   }
 
   function renderizarAdecuacion(totales, energia) {
@@ -983,6 +1074,30 @@
     if (mostrarMensaje !== false) establecerMensaje("Los equivalentes se distribuyeron entre los tiempos de comida sin alterar el total diario.", "success");
   }
 
+  function encerarDistribucion() {
+    gruposActivos().forEach(function (grupo) {
+      estado.distribucion[grupo.id] = Array.from({ length: estado.comidas.length }, function () { return 0; });
+    });
+    renderizarEstructuraDistribucion();
+    renderizarCuadroVertical();
+    if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
+    if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
+    programarGuardado();
+    establecerMensaje("Se han encerado todos los valores de la distribución por tiempos de comida.", "info");
+  }
+
+  function encerarEquivalentes() {
+    gruposActivos().forEach(function (grupo) {
+      estado.equivalentes[grupo.id] = 0;
+    });
+    renderizarFilasGrupos();
+    actualizarCalculosGrupos();
+    actualizarVisibilidadCeros();
+    renderizarEstructuraDistribucion();
+    programarGuardado();
+    establecerMensaje("Se han encerado todos los equivalentes por grupo.", "info");
+  }
+
   function normalizarDistribucion() {
     const cantidad = estado.comidas.length;
     gruposActivos().forEach(function (grupo) {
@@ -1009,11 +1124,11 @@
       <th scope="col">Grupo</th>
       <th scope="col">Subgrupo</th>
       ${estado.comidas.map(function (comida, indice) {
-        return `<th scope="col" class="text-center">
+      return `<th scope="col" class="text-center">
           <span data-meal-heading="${indice}">${escaparHtml(comida.nombre || `Comida ${indice + 1}`)}</span>
           <small class="d-block text-muted">${escaparHtml(comida.hora)}</small>
         </th>`;
-      }).join("")}
+    }).join("")}
       <th scope="col" class="text-center">Asignado / Requerido</th>
       <th scope="col">Estado</th>
     </tr>`;
@@ -1026,12 +1141,12 @@
         <th scope="row" class="equivalentes-group-name">${escaparHtml(grupo.grupo)}</th>
         <td>${escaparHtml(grupo.subgrupo)}</td>
         ${estado.comidas.map(function (_, indice) {
-          const valor = limitarNoNegativo(estado.distribucion[grupo.id][indice]);
-          return `<td class="text-center">
+        const valor = limitarNoNegativo(estado.distribucion[grupo.id][indice]);
+        return `<td class="text-center">
             <input type="number" class="form-control form-control-sm equivalentes-allocation-input" min="0" step="${STEP_EQUIVALENTE}" value="${valor}"
               data-allocation-group="${grupo.id}" data-allocation-meal="${indice}" aria-label="${escaparHtml(grupo.grupo)}, ${escaparHtml(grupo.subgrupo)}, ${escaparHtml(estado.comidas[indice].nombre)}">
           </td>`;
-        }).join("")}
+      }).join("")}
         <td class="text-center" data-distribution-sum></td>
         <td data-distribution-status></td>
       </tr>`;
@@ -1078,32 +1193,56 @@
 
   function actualizarResumenDistribucion() {
     const body = document.getElementById("equiv_distribucion_body");
-    if (!body) return;
+    if (!body || !body.children.length) return;
     gruposActivos().forEach(function (grupo) {
       const fila = body.querySelector(`[data-distribution-row="${grupo.id}"]`);
       if (!fila) return;
       const asignado = (estado.distribucion[grupo.id] || []).reduce(function (suma, valor) { return suma + limitarNoNegativo(valor); }, 0);
       const requerido = limitarNoNegativo(estado.equivalentes[grupo.id]);
       const estadoFila = estadoDistribucion(asignado, requerido);
-      fila.querySelector("[data-distribution-sum]").textContent = `${formatear(asignado)} / ${formatear(requerido)}`;
+      const celdaSuma = fila.querySelector("[data-distribution-sum]");
+      if (celdaSuma) celdaSuma.textContent = `${formatear(asignado)} / ${formatear(requerido)}`;
       const celdaEstado = fila.querySelector("[data-distribution-status]");
-      celdaEstado.className = estadoFila.clase;
-      celdaEstado.textContent = estadoFila.texto;
+      if (celdaEstado) {
+        celdaEstado.className = estadoFila.clase;
+        celdaEstado.textContent = estadoFila.texto;
+      }
     });
 
     const comidaTotales = totalesPorComida();
+    const totalesPlan = calcularTotales(estado.equivalentes);
+    const sumaComidas = comidaTotales.reduce(function (acc, t) {
+      acc.energia += t.energia;
+      acc.proteina += t.proteina;
+      acc.grasa += t.grasa;
+      acc.carbohidrato += t.carbohidrato;
+      return acc;
+    }, { energia: 0, proteina: 0, grasa: 0, carbohidrato: 0 });
+
+    const baseTotales = {
+      energia: totalesPlan.energia > 0 ? totalesPlan.energia : sumaComidas.energia,
+      proteina: totalesPlan.proteina > 0 ? totalesPlan.proteina : sumaComidas.proteina,
+      grasa: totalesPlan.grasa > 0 ? totalesPlan.grasa : sumaComidas.grasa,
+      carbohidrato: totalesPlan.carbohidrato > 0 ? totalesPlan.carbohidrato : sumaComidas.carbohidrato
+    };
+
     comidaTotales.forEach(function (total, indice) {
       const relacion = total.proteina > 0 ? total.carbohidrato / total.proteina : null;
+      const pctEnergia = baseTotales.energia > 0 ? (total.energia / baseTotales.energia) * 100 : 0;
+      const pctProteina = baseTotales.proteina > 0 ? (total.proteina / baseTotales.proteina) * 100 : 0;
+      const pctGrasa = baseTotales.grasa > 0 ? (total.grasa / baseTotales.grasa) * 100 : 0;
+      const pctCarbohidrato = baseTotales.carbohidrato > 0 ? (total.carbohidrato / baseTotales.carbohidrato) * 100 : 0;
+
       const valores = {
-        energia: `${formatear(total.energia, 0)} kcal`,
-        proteina: `${formatear(total.proteina, 1)} g`,
-        grasa: `${formatear(total.grasa, 1)} g`,
-        carbohidrato: `${formatear(total.carbohidrato, 1)} g`,
+        energia: `${formatear(total.energia, 0)} kcal <span class="equiv-dist-pct">(${formatear(pctEnergia, 1)}%)</span>`,
+        proteina: `${formatear(total.proteina, 1)} g <span class="equiv-dist-pct">(${formatear(pctProteina, 1)}%)</span>`,
+        grasa: `${formatear(total.grasa, 1)} g <span class="equiv-dist-pct">(${formatear(pctGrasa, 1)}%)</span>`,
+        carbohidrato: `${formatear(total.carbohidrato, 1)} g <span class="equiv-dist-pct">(${formatear(pctCarbohidrato, 1)}%)</span>`,
         relacion: relacion === null ? "—" : formatear(relacion, 2)
       };
       Object.keys(valores).forEach(function (key) {
         const celda = document.querySelector(`[data-meal-total="${key}"][data-meal-total-index="${indice}"]`);
-        if (celda) celda.textContent = valores[key];
+        if (celda) celda.innerHTML = valores[key];
       });
     });
 
@@ -1141,6 +1280,887 @@
       } else {
         contenedorAlmuerzo.innerHTML = "";
       }
+    }
+
+    renderizarCuadroVertical();
+    if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
+  }
+
+  function normalizarTextoSubgrupo(grupo) {
+    if (!grupo) return "";
+    const id = grupo.id;
+    const mapeoUSFQ = {
+      cereal_alto_cho_baja_grasa: "altos en CHO y bajos en grasa",
+      cereal_medio_cho_media_grasa: "medios en CHO y medios en grasa",
+      cereal_medio_cho_baja_grasa: "medios en CHO y bajos en grasa",
+      lacteo_entero: "enteros altos en grasa",
+      lacteo_semidescremado: "semidescremados medios en grasa",
+      lacteo_descremado: "descremados bajos en grasa",
+      lacteo_descremado_alto_cho: "descremados altos en CHO",
+      queso: "medios o bajos en grasa",
+      leguminosa: "",
+      vegetal_bajo_cho: "bajos en CHO",
+      vegetal_libre: "de libre consumo",
+      carne_alta_grasa: "altos en grasa",
+      carne_media_grasa: "medios en grasa",
+      huevo: "",
+      carne_baja_grasa: "bajos en grasa",
+      embutido: "",
+      fruta_media_cho: "medias en CHO",
+      fruta_baja_cho: "bajas en CHO",
+      fruta_deshidratada: "deshidratadas",
+      grasa_alta: "altos en grasa",
+      grasa_media: "medios en grasa",
+      grasa_alta_bajo_cho: "altos en grasa y bajos en CHO",
+      grasa_media_bajo_cho: "medios en grasa y bajos en CHO",
+      azucar: ""
+    };
+
+    if (mapeoUSFQ[id] !== undefined) {
+      return mapeoUSFQ[id];
+    }
+
+    let sub = (grupo.subgrupo || "").trim();
+    if (sub.toLowerCase() === (grupo.grupo || "").toLowerCase()) return "";
+    return sub;
+  }
+
+  function generarDescripcionRacion(grupo, cantidad) {
+    const cantNum = limitarNoNegativo(cantidad);
+    const cantTxt = formatear(cantNum);
+    const palabraRacion = Math.abs(cantNum - 1) < 0.001 ? "ración" : "raciones";
+    const subLimpio = normalizarTextoSubgrupo(grupo);
+
+    let nombreCompleto = grupo.grupo;
+    if (grupo.id === "queso") {
+      nombreCompleto = "Quesos " + (subLimpio || "medios o bajos en grasa");
+    } else if (grupo.id === "huevo") {
+      nombreCompleto = "Huevos";
+    } else if (grupo.id === "embutido") {
+      nombreCompleto = "Embutidos";
+    } else if (grupo.id === "leguminosa") {
+      nombreCompleto = "Leguminosas";
+    } else if (grupo.id === "azucar") {
+      nombreCompleto = "Azúcares y alimentos azucarados";
+    } else if (subLimpio) {
+      nombreCompleto = `${grupo.grupo} ${subLimpio}`;
+    }
+
+    return `${cantTxt} ${palabraRacion} de ${nombreCompleto}`;
+  }
+
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function obtenerAlimentosParaGrupo(grupoId) {
+    const datos = window.IntercambiosUSFQ;
+    if (!datos || !Array.isArray(datos.alimentos)) return [];
+
+    if (grupoId === "huevo") {
+      return datos.alimentos.filter(a => a.subgrupoId === "huevo" || /huevo/i.test(a.nombre));
+    }
+
+    const filtrados = datos.alimentos.filter(a => a.subgrupoId === grupoId);
+    if (filtrados.length > 0) return filtrados;
+
+    const mapaClasico = {
+      cereal_sin_grasa: ["cereal_alto_cho_baja_grasa", "cereal_medio_cho_baja_grasa"],
+      queso_semidescremado: ["queso"],
+      queso_descremado: ["queso"],
+      leguminosa_seca: ["leguminosa"],
+      verdura_libre: ["vegetal_libre"],
+      verdura_baja_cho: ["vegetal_bajo_cho"],
+      animal_muy_bajo: ["carne_baja_grasa"],
+      animal_bajo: ["carne_baja_grasa"],
+      animal_moderado: ["carne_media_grasa"],
+      animal_alto: ["carne_alta_grasa"],
+      grasa_sin_proteina: ["grasa_alta", "grasa_media"],
+      grasa_con_proteina: ["grasa_alta_bajo_cho", "grasa_media_bajo_cho"],
+      azucar_sin_grasa: ["azucar"],
+      azucar_con_grasa: ["azucar"],
+      fruta: ["fruta_media_cho", "fruta_baja_cho", "fruta_deshidratada"]
+    };
+
+    if (mapaClasico[grupoId]) {
+      return datos.alimentos.filter(a => mapaClasico[grupoId].includes(a.subgrupoId));
+    }
+
+    return datos.alimentos.filter(a => a.subgrupoId.startsWith(grupoId) || grupoId.startsWith(a.subgrupoId));
+  }
+
+  const MAPA_UNICODE_FRACCION = {
+    "\u00bd": 0.5, "½": 0.5,
+    "\u2153": 1 / 3, "⅓": 1 / 3,
+    "\u00bc": 0.25, "¼": 0.25,
+    "\u2154": 2 / 3, "⅔": 2 / 3,
+    "\u00be": 0.75, "¾": 0.75,
+    "\u215b": 0.125, "⅛": 0.125,
+    "\u215c": 0.375, "⅜": 0.375,
+    "\u215d": 0.625, "⅝": 0.625,
+    "\u215e": 0.875, "⅞": 0.875
+  };
+
+  const LISTA_FRACCIONES_CULINARIAS = [
+    { val: 1 / 4, txt: "1/4" },
+    { val: 1 / 3, txt: "1/3" },
+    { val: 1 / 2, txt: "1/2" },
+    { val: 2 / 3, txt: "2/3" },
+    { val: 3 / 4, txt: "3/4" }
+  ];
+
+  function redondearFraccionCulinaria(v) {
+    if (v <= 0) return "0";
+    const entero = Math.floor(v);
+    const resto = v - entero;
+
+    if (entero === 0) {
+      let mejor = LISTA_FRACCIONES_CULINARIAS[0];
+      let menorDif = Math.abs(v - mejor.val);
+      for (let i = 1; i < LISTA_FRACCIONES_CULINARIAS.length; i++) {
+        const dif = Math.abs(v - LISTA_FRACCIONES_CULINARIAS[i].val);
+        if (dif < menorDif) {
+          menorDif = dif;
+          mejor = LISTA_FRACCIONES_CULINARIAS[i];
+        }
+      }
+      if (Math.abs(v - 1) < menorDif) return "1";
+      return mejor.txt;
+    }
+
+    if (resto < 0.125) return String(entero);
+    if (resto >= 0.875) return String(entero + 1);
+
+    let mejor = LISTA_FRACCIONES_CULINARIAS[0];
+    let menorDif = Math.abs(resto - mejor.val);
+    for (let i = 1; i < LISTA_FRACCIONES_CULINARIAS.length; i++) {
+      const dif = Math.abs(resto - LISTA_FRACCIONES_CULINARIAS[i].val);
+      if (dif < menorDif) {
+        menorDif = dif;
+        mejor = LISTA_FRACCIONES_CULINARIAS[i];
+      }
+    }
+    return `${entero} ${mejor.txt}`;
+  }
+
+  function parsearValorFraccion(str) {
+    if (!str) return NaN;
+    const limpio = str.trim();
+    if (MAPA_UNICODE_FRACCION[limpio] !== undefined) return MAPA_UNICODE_FRACCION[limpio];
+    if (limpio.includes("/")) {
+      const p = limpio.split("/");
+      return Number(p[0]) / Number(p[1]);
+    }
+    return Number(limpio.replace(",", "."));
+  }
+
+  function escalarMedidaCasera(medida, cantidad) {
+    if (!medida || Math.abs(cantidad - 1) < 0.001) return medida || "";
+
+    const dimensiones = [];
+    let texto = medida.replace(/\([^)]*(?:cm|×|x)[^)]*\)/gi, function (m) {
+      dimensiones.push(m);
+      return `__DIM_${dimensiones.length - 1}__`;
+    });
+
+    texto = texto.replace(/(\d+)\s*([½⅓¼⅔¾⅛⅜⅝⅞]|\d+\/\d+)|([½⅓¼⅔¾⅛⅜⅝⅞])|(\d+\/\d+)|(\b\d+(?:[\.,]\d+)?\b)/g, function (match, m1, m2, m3, m4, m5) {
+      if (match.indexOf("__DIM_") !== -1) return match;
+      let val = 0;
+      if (m1 && m2) {
+        val = Number(m1) + parsearValorFraccion(m2);
+      } else if (m3) {
+        val = parsearValorFraccion(m3);
+      } else if (m4) {
+        val = parsearValorFraccion(m4);
+      } else if (m5) {
+        val = Number(m5.replace(",", "."));
+      }
+      if (!Number.isFinite(val) || val <= 0) return match;
+      return redondearFraccionCulinaria(val * cantidad);
+    });
+
+    texto = texto.replace(/__DIM_(\d+)__/g, function (_, idx) {
+      return dimensiones[Number(idx)] || "";
+    });
+
+    return texto;
+  }
+
+  function calcularMedidaAlimento(alimento, cantidad) {
+    if (!alimento) return "";
+    const cantNum = limitarNoNegativo(cantidad);
+    const medidaOriginal = (alimento.medida || "").trim();
+    const medidaEscalada = escalarMedidaCasera(medidaOriginal, cantNum);
+
+    if (Number.isFinite(alimento.gramos) && alimento.gramos > 0) {
+      const gramosTotales = Math.round(alimento.gramos * cantNum * 10) / 10;
+      if (Math.abs(cantNum - 1) < 0.001) {
+        return `${medidaOriginal} (${formatear(alimento.gramos)} g)`;
+      }
+      return `${medidaEscalada} (~${formatear(gramosTotales)} g)`;
+    }
+    if (Math.abs(cantNum - 1) < 0.001) {
+      return medidaOriginal || "1 porción";
+    }
+    return medidaEscalada || `${formatear(cantNum)} porciones`;
+  }
+
+  function cerrarTodosLosDropdownsAlimentos() {
+    document.querySelectorAll(".equiv-food-dropdown-list").forEach(function (el) {
+      el.style.display = "none";
+    });
+  }
+
+  function mostrarDropdownAlimentos(mealIndex, groupId, query) {
+    cerrarTodosLosDropdownsAlimentos();
+    const dropdown = document.getElementById(`dropdown_${mealIndex}_${groupId}`);
+    if (!dropdown) return;
+
+    const todos = obtenerAlimentosParaGrupo(groupId);
+    const busqueda = normalizarTexto(query);
+    const palabras = busqueda.split(/\s+/).filter(Boolean);
+
+    const filtrados = palabras.length === 0
+      ? todos
+      : todos.filter(function (a) {
+        const haystack = normalizarTexto(`${a.nombre} ${a.medida} ${a.gramos || ""}`);
+        return palabras.every(p => haystack.includes(p));
+      });
+
+    if (filtrados.length === 0) {
+      dropdown.innerHTML = `<div class="equiv-dropdown-empty">No se encontraron alimentos en este subgrupo</div>`;
+    } else {
+      dropdown.innerHTML = filtrados.map(function (alimento) {
+        const peso = Number.isFinite(alimento.gramos) ? ` (${formatear(alimento.gramos)} g)` : "";
+        return `
+          <div class="equiv-dropdown-item" data-action="seleccionar-alimento"
+            data-meal="${mealIndex}" data-group="${groupId}" data-food-id="${escaparHtml(alimento.id)}"
+            role="button" tabindex="0">
+            <span class="equiv-dropdown-item-name">${escaparHtml(alimento.nombre)}</span>
+            <small class="equiv-dropdown-item-measure">1 interc. = ${escaparHtml(alimento.medida)}${peso}</small>
+          </div>
+        `;
+      }).join("");
+    }
+
+    dropdown.style.display = "block";
+  }
+
+  function renderizarBotonesDias() {
+    const contenedor = document.getElementById("equiv_day_selector_buttons");
+    if (!contenedor) return;
+
+    const diaActivo = obtenerDiaActivo();
+    const diaObj = DIAS_SEMANA.find(d => d.id === diaActivo) || DIAS_SEMANA[0];
+    const badgeActivo = document.getElementById("equiv_dia_activo_badge");
+    if (badgeActivo) badgeActivo.textContent = diaObj.label;
+    const indicadorResumen = document.getElementById("equiv_dia_resumen_indicador");
+    if (indicadorResumen) indicadorResumen.textContent = `Editando: ${diaObj.label}`;
+
+    let html = "";
+    DIAS_SEMANA.forEach(function (dia) {
+      const esActivo = dia.id === diaActivo;
+      const datosDia = estado.menuSemanal[dia.id] || { descripciones: {}, alimentos: {} };
+      const numAlimentos = Object.keys(datosDia.alimentos || {}).length;
+      const tieneDesc = Object.values(datosDia.descripciones || {}).some(t => (t || "").trim().length > 0);
+
+      let infoBadge = "";
+      if (numAlimentos > 0) {
+        infoBadge = `<span class="equiv-day-badge">${numAlimentos}</span>`;
+      } else if (tieneDesc) {
+        infoBadge = `<span class="equiv-day-badge" title="Con notas de preparación">✓</span>`;
+      }
+
+      html += `
+        <button type="button" class="equiv-day-btn${esActivo ? " active" : ""}" data-dia="${dia.id}">
+          <span>${dia.label}</span>
+          ${infoBadge}
+        </button>
+      `;
+    });
+
+    contenedor.innerHTML = html;
+  }
+
+  function cambiarDiaActivo(nuevoDia) {
+    if (!DIAS_SEMANA.some(d => d.id === nuevoDia)) return;
+    estado.diaActivo = nuevoDia;
+    const diaDatos = estado.menuSemanal[nuevoDia];
+    estado.alimentosSeleccionados = diaDatos ? diaDatos.alimentos : {};
+    renderizarBotonesDias();
+    renderizarCuadroVertical();
+    programarGuardado();
+  }
+
+  function copiarDiaActualATodos() {
+    const diaActivo = obtenerDiaActivo();
+    const diaNombre = DIAS_SEMANA.find(d => d.id === diaActivo)?.label || diaActivo;
+
+    if (!window.confirm(`¿Copiar el menú completo (alimentos y notas de preparación) de ${diaNombre} a los otros 6 días de la semana?`)) {
+      return;
+    }
+
+    const origen = estado.menuSemanal[diaActivo];
+    DIAS_SEMANA.forEach(function (dia) {
+      if (dia.id !== diaActivo) {
+        estado.menuSemanal[dia.id] = {
+          descripciones: { ...(origen.descripciones || {}) },
+          alimentos: JSON.parse(JSON.stringify(origen.alimentos || {}))
+        };
+      }
+    });
+
+    renderizarBotonesDias();
+    programarGuardado();
+    establecerMensaje(`El menú y preparación de ${diaNombre} se han copiado a todos los demás días de la semana.`, "success");
+  }
+
+  function limpiarDiaActual() {
+    const diaActivo = obtenerDiaActivo();
+    const diaNombre = DIAS_SEMANA.find(d => d.id === diaActivo)?.label || diaActivo;
+
+    if (!window.confirm(`¿Deseas vaciar los alimentos y notas de preparación asignados para el día ${diaNombre}?`)) {
+      return;
+    }
+
+    estado.menuSemanal[diaActivo] = {
+      descripciones: {},
+      alimentos: {}
+    };
+    estado.alimentosSeleccionados = estado.menuSemanal[diaActivo].alimentos;
+
+    renderizarBotonesDias();
+    renderizarCuadroVertical();
+    programarGuardado();
+    establecerMensaje(`Se han limpiado los alimentos y notas de ${diaNombre}.`, "info");
+  }
+
+  function actualizarDescripcionComida(indiceComida, texto) {
+    const dia = obtenerDiaActivo();
+    if (!estado.menuSemanal[dia].descripciones) {
+      estado.menuSemanal[dia].descripciones = {};
+    }
+    estado.menuSemanal[dia].descripciones[indiceComida] = texto;
+    renderizarBotonesDias();
+    programarGuardado();
+  }
+
+  function cambiarSubpestanaEquivalentes(pestanaId) {
+    const pestanasValidas = ["distribucion", "menu", "resumen"];
+    if (!pestanasValidas.includes(pestanaId)) pestanaId = "distribucion";
+    estado.subtabActiva = pestanaId;
+
+    document.querySelectorAll(".equiv-subtab-btn").forEach(function (btn) {
+      const activo = btn.dataset.equivSubtab === pestanaId;
+      btn.classList.toggle("active", activo);
+      btn.setAttribute("aria-selected", activo ? "true" : "false");
+    });
+
+    const panelDist = document.getElementById("equiv_panel_distribucion");
+    const panelMenu = document.getElementById("equiv_panel_menu");
+    const panelResumen = document.getElementById("equiv_panel_resumen");
+
+    if (panelDist) panelDist.classList.toggle("active", pestanaId === "distribucion");
+    if (panelMenu) panelMenu.classList.toggle("active", pestanaId === "menu");
+    if (panelResumen) panelResumen.classList.toggle("active", pestanaId === "resumen");
+
+    if (pestanaId === "menu") {
+      renderizarBotonesDias();
+      renderizarCuadroVertical();
+    } else if (pestanaId === "resumen") {
+      renderizarResumenSemanalHorizontal();
+    }
+
+    programarGuardado();
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  }
+
+  function seleccionarAlimentoParaComida(mealIndex, groupId, foodId) {
+    const todos = obtenerAlimentosParaGrupo(groupId);
+    const alimento = todos.find(a => a.id === foodId) || (window.IntercambiosUSFQ?.alimentos || []).find(a => a.id === foodId);
+    if (!alimento) return;
+
+    const dia = obtenerDiaActivo();
+    const clave = `${mealIndex}_${groupId}`;
+    if (!estado.menuSemanal[dia]) estado.menuSemanal[dia] = { descripciones: {}, alimentos: {} };
+    if (!estado.menuSemanal[dia].alimentos) estado.menuSemanal[dia].alimentos = {};
+    estado.menuSemanal[dia].alimentos[clave] = {
+      id: alimento.id,
+      nombre: alimento.nombre,
+      medida: alimento.medida,
+      gramos: alimento.gramos
+    };
+    estado.alimentosSeleccionados = estado.menuSemanal[dia].alimentos;
+
+    cerrarTodosLosDropdownsAlimentos();
+    programarGuardado();
+    renderizarBotonesDias();
+    renderizarCuadroVertical();
+    if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
+  }
+
+  function quitarAlimentoDeComida(mealIndex, groupId) {
+    const dia = obtenerDiaActivo();
+    const clave = `${mealIndex}_${groupId}`;
+    if (estado.menuSemanal[dia]?.alimentos?.[clave]) {
+      delete estado.menuSemanal[dia].alimentos[clave];
+      estado.alimentosSeleccionados = estado.menuSemanal[dia].alimentos;
+      programarGuardado();
+      renderizarBotonesDias();
+      renderizarCuadroVertical();
+      if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
+    }
+  }
+
+  function renderizarCuadroVertical() {
+    const contenedor = document.getElementById("equiv_prescripcion_vertical");
+    if (!contenedor) return;
+
+    const diaActivo = obtenerDiaActivo();
+    const comidas = estado.comidas;
+    const grupos = gruposActivos();
+    const totalesComida = totalesPorComida();
+    const datosDia = estado.menuSemanal[diaActivo] || { descripciones: {}, alimentos: {} };
+
+    let html = "";
+    comidas.forEach(function (comida, indiceComida) {
+      const itemsAsignados = [];
+      grupos.forEach(function (grupo) {
+        const cantidad = limitarNoNegativo((estado.distribucion[grupo.id] || [])[indiceComida]);
+        if (cantidad > 0) {
+          itemsAsignados.push({ grupo, cantidad });
+        }
+      });
+
+      const totalNutri = totalesComida[indiceComida] || { energia: 0, proteina: 0, grasa: 0, carbohidrato: 0 };
+      const nombreComida = comida.nombre || `Comida ${indiceComida + 1}`;
+      const horaComida = comida.hora ? `(${comida.hora})` : "";
+      const descComida = datosDia.descripciones?.[indiceComida] || "";
+
+      html += `
+        <div class="equiv-meal-vertical-card">
+          <div class="equiv-meal-vertical-header">
+            <div class="equiv-meal-vertical-title">
+              <span class="equiv-meal-badge">${indiceComida + 1}</span>
+              <h5>${escaparHtml(nombreComida)} <small class="text-muted fw-normal">${escaparHtml(horaComida)}</small></h5>
+            </div>
+            <div class="equiv-meal-macros-pill">
+              <span><strong>${formatear(totalNutri.energia, 0)}</strong> kcal</span>
+              <span><strong>${formatear(totalNutri.carbohidrato, 1)}g</strong> CHO</span>
+              <span><strong>${formatear(totalNutri.proteina, 1)}g</strong> Prot</span>
+              <span><strong>${formatear(totalNutri.grasa, 1)}g</strong> Grasa</span>
+            </div>
+          </div>
+          <div class="equiv-meal-vertical-body">
+            <!-- NOTAS Y PREPARACIÓN DEL TIEMPO DE COMIDA -->
+            <div class="equiv-meal-description-wrap mb-3">
+              <label class="form-label small fw-bold text-muted d-flex align-items-center gap-1 mb-1">
+                <span data-lucide="utensils" style="width:14px;height:14px;"></span>
+                <span>Preparación o menú sugerido para ${escaparHtml(nombreComida)}:</span>
+              </label>
+              <textarea class="form-control form-control-sm equiv-meal-desc-input"
+                rows="2"
+                data-meal-index="${indiceComida}"
+                placeholder="Ej: Avena cocida con leche descremada, manzana en rodajas y 1 huevo revuelto...">${escaparHtml(descComida)}</textarea>
+            </div>
+
+            ${itemsAsignados.length > 0 ? `
+              <div class="table-responsive">
+                <table class="table table-sm align-middle equiv-vertical-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="width: 32%;">Grupo de alimentos</th>
+                      <th scope="col" class="text-center" style="width: 18%;">Equivalentes</th>
+                      <th scope="col" style="width: 50%;">Alimento seleccionado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemsAsignados.map(function (item) {
+        const clave = `${indiceComida}_${item.grupo.id}`;
+        const alimentoSel = datosDia.alimentos?.[clave];
+        const cantidad = item.cantidad;
+
+        return `
+                        <tr>
+                          <td>
+                            <strong>${escaparHtml(item.grupo.grupo)}</strong>
+                            <span class="d-block text-muted small">${escaparHtml(item.grupo.subgrupo)}</span>
+                          </td>
+                          <td class="text-center">
+                            <span class="badge bg-light text-success border border-success fw-bold px-2 py-1">
+                              ${formatear(item.cantidad)} ${Math.abs(item.cantidad - 1) < 0.001 ? "ración" : "raciones"}
+                            </span>
+                          </td>
+                          <td class="equiv-food-cell" data-meal-index="${indiceComida}" data-group-id="${item.grupo.id}">
+                            ${alimentoSel ? `
+                              <div class="equiv-selected-food-box">
+                                <div class="equiv-selected-food-main">
+                                  <strong class="equiv-selected-food-name">${escaparHtml(alimentoSel.nombre)}</strong>
+                                  <div class="equiv-selected-food-calc">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold">
+                                      ${formatear(cantidad)} ${Math.abs(cantidad - 1) < 0.001 ? "ración" : "raciones"}:
+                                    </span>
+                                    <span class="equiv-calc-measure ms-1">${escaparHtml(calcularMedidaAlimento(alimentoSel, cantidad))}</span>
+                                  </div>
+                                </div>
+                                <button type="button" class="btn btn-sm equiv-btn-change-food" data-action="quitar-alimento" data-meal="${indiceComida}" data-group="${item.grupo.id}" title="Cambiar o seleccionar otro alimento">
+                                  <span data-lucide="x" style="width:13px;height:13px;"></span> Cambiar
+                                </button>
+                              </div>
+                            ` : `
+                              <div class="equiv-food-search-wrap">
+                                <div class="input-group input-group-sm">
+                                  <span class="input-group-text bg-white border-end-0 text-muted">
+                                    <span data-lucide="search" style="width:13px;height:13px;"></span>
+                                  </span>
+                                  <input type="text" class="form-control form-control-sm border-start-0 border-end-0 equiv-food-search-input"
+                                    placeholder="Buscar alimento en este subgrupo..."
+                                    data-meal-index="${indiceComida}"
+                                    data-group-id="${item.grupo.id}"
+                                    autocomplete="off">
+                                  <button type="button" class="btn btn-outline-secondary btn-sm equiv-food-dropdown-btn"
+                                    data-action="toggle-dropdown"
+                                    data-meal-index="${indiceComida}"
+                                    data-group-id="${item.grupo.id}"
+                                    title="Ver todos los alimentos de este subgrupo">▾</button>
+                                </div>
+                                <div class="equiv-food-dropdown-list" id="dropdown_${indiceComida}_${item.grupo.id}" style="display: none;"></div>
+                              </div>
+                            `}
+                          </td>
+                        </tr>
+                      `;
+      }).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `
+              <div class="equiv-meal-empty-note">
+                <span class="text-muted fst-italic">No hay equivalentes asignados a este tiempo de comida.</span>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    });
+
+    contenedor.innerHTML = html;
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  }
+
+  function renderizarResumenSemanalHorizontal() {
+    const cuerpo = document.getElementById("equiv_tabla_semanal_body");
+    const pie = document.getElementById("equiv_tabla_semanal_foot");
+    if (!cuerpo) return;
+
+    // Actualizar metadatos del encabezado clínico
+    const campoNombre = document.getElementById("perfil_nombre");
+    const nombrePaciente = (campoNombre && campoNombre.value.trim()) ? campoNombre.value.trim() : "Paciente General";
+    const elNombre = document.getElementById("equiv_pdf_paciente_nombre");
+    if (elNombre) elNombre.textContent = nombrePaciente;
+
+    const elCal = document.getElementById("equiv_pdf_calorias");
+    if (elCal) elCal.textContent = `${formatear(estado.objetivos.energia, 0)} kcal`;
+
+    const elMacros = document.getElementById("equiv_pdf_macros");
+    if (elMacros) {
+      elMacros.textContent = `${formatear(estado.objetivos.proteinaPct, 0)}% P · ${formatear(estado.objetivos.grasaPct, 0)}% G · ${formatear(estado.objetivos.carbohidratoPct, 0)}% CHO`;
+    }
+
+    const elFecha = document.getElementById("equiv_pdf_fecha");
+    if (elFecha) {
+      const fecha = new Date();
+      elFecha.textContent = fecha.toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" });
+    }
+
+    const comidas = estado.comidas;
+    const grupos = gruposActivos();
+    const totalesComida = totalesPorComida();
+    const totalesPlan = calcularTotales(estado.equivalentes);
+
+    let htmlBody = "";
+    comidas.forEach(function (comida, indiceComida) {
+      const itemsAsignados = [];
+      grupos.forEach(function (grupo) {
+        const cantidad = limitarNoNegativo((estado.distribucion[grupo.id] || [])[indiceComida]);
+        if (cantidad > 0) itemsAsignados.push({ grupo, cantidad });
+      });
+
+      const totalNutri = totalesComida[indiceComida] || { energia: 0, proteina: 0, grasa: 0, carbohidrato: 0 };
+      const nombreComida = comida.nombre || `Comida ${indiceComida + 1}`;
+      const horaComida = comida.hora ? comida.hora : "";
+
+      htmlBody += `
+        <tr>
+          <th scope="row" class="equiv-col-meal">
+            <div class="equiv-weekly-meal-cell-header">${escaparHtml(nombreComida)}</div>
+            ${horaComida ? `<div class="equiv-weekly-meal-cell-time">${escaparHtml(horaComida)}</div>` : ""}
+            <div class="equiv-meal-macros-mini mt-1">
+              <span>${formatear(totalNutri.energia, 0)} kcal</span>
+            </div>
+          </th>
+      `;
+
+      DIAS_SEMANA.forEach(function (dia) {
+        const datosDia = estado.menuSemanal[dia.id] || { descripciones: {}, alimentos: {} };
+        const desc = (datosDia.descripciones?.[indiceComida] || "").trim();
+
+        // 1. Determinar el texto del tiempo de comida
+        let textoComida = desc;
+        if (!textoComida) {
+          if (itemsAsignados.length > 0) {
+            const nombres = itemsAsignados.map(function (item) {
+              const clave = `${indiceComida}_${item.grupo.id}`;
+              const al = datosDia.alimentos?.[clave];
+              return al ? al.nombre : (item.grupo.subgrupo || item.grupo.grupo);
+            }).filter(Boolean);
+            textoComida = nombres.length > 0 ? nombres.join(", ") : `Menú de ${nombreComida}`;
+          } else {
+            textoComida = "Sin asignar";
+          }
+        }
+
+        const tieneIngredientes = itemsAsignados.length > 0;
+        let popoverHtml = "";
+
+        if (tieneIngredientes) {
+          popoverHtml = `
+            <div class="equiv-weekly-ingredients-popover">
+              <div class="equiv-popover-header">
+                <span data-lucide="utensils" style="width:12px;height:12px;" aria-hidden="true"></span>
+                <span>Ingredientes / Equivalentes:</span>
+              </div>
+              <ul class="equiv-popover-list">
+                ${itemsAsignados.map(function (item) {
+                  const clave = `${indiceComida}_${item.grupo.id}`;
+                  const al = datosDia.alimentos?.[clave];
+                  if (al) {
+                    const med = calcularMedidaAlimento(al, item.cantidad);
+                    return `
+                      <li class="equiv-popover-item">
+                        <strong class="equiv-popover-food-name">${escaparHtml(al.nombre)}</strong>
+                        <span class="equiv-popover-food-measure">${escaparHtml(med)}</span>
+                        <small class="equiv-popover-food-group">${escaparHtml(item.grupo.grupo)}</small>
+                      </li>
+                    `;
+                  } else {
+                    return `
+                      <li class="equiv-popover-item">
+                        <span class="equiv-popover-food-name">${escaparHtml(generarDescripcionRacion(item.grupo, item.cantidad))}</span>
+                        <small class="equiv-popover-food-group">${escaparHtml(item.grupo.subgrupo || item.grupo.grupo)}</small>
+                      </li>
+                    `;
+                  }
+                }).join("")}
+              </ul>
+            </div>
+          `;
+        }
+
+        const esVacio = !tieneIngredientes && !desc;
+        const celdaHtml = `
+          <td>
+            <div class="equiv-weekly-cell-card${esVacio ? " is-empty" : ""}">
+              <div class="equiv-weekly-meal-text${esVacio ? " is-empty" : ""}" title="${tieneIngredientes ? "Pasa el cursor para ver los ingredientes (equivalentes)" : ""}">
+                <span class="equiv-meal-text-content">${escaparHtml(textoComida)}</span>
+                ${tieneIngredientes ? `
+                  <span class="equiv-meal-hover-hint">
+                    <span data-lucide="eye" style="width:10px;height:10px;" aria-hidden="true"></span>
+                    <span>Ingredientes</span>
+                  </span>
+                ` : ""}
+              </div>
+              ${popoverHtml}
+            </div>
+          </td>
+        `;
+
+        htmlBody += celdaHtml;
+      });
+
+      htmlBody += `</tr>`;
+    });
+
+    cuerpo.innerHTML = htmlBody;
+
+    if (pie) {
+      pie.innerHTML = `
+        <tr>
+          <th scope="row" class="text-end fw-bold" style="background:#f4f9f6; color:#175e2e;">Total diario:</th>
+          ${DIAS_SEMANA.map(function () {
+        return `
+              <td class="equiv-weekly-daily-total">
+                <div><strong>${formatear(totalesPlan.energia, 0)} kcal</strong></div>
+                <div class="text-muted" style="font-size:0.7rem;">${formatear(totalesPlan.carbohidrato, 0)}g C · ${formatear(totalesPlan.proteina, 0)}g P · ${formatear(totalesPlan.grasa, 0)}g G</div>
+              </td>
+            `;
+      }).join("")}
+        </tr>
+      `;
+    }
+
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  }
+
+  function descargarPdfMenuSemanal() {
+    const elemento = document.getElementById("equiv_menu_semanal_imprimible");
+    if (!elemento) {
+      establecerMensaje("No se encontró el contenedor del menú para generar PDF.", "error");
+      return;
+    }
+
+    if (typeof window.html2pdf === "undefined") {
+      establecerMensaje("El conversor a PDF no se encuentra disponible en este momento. Utiliza la opción de imprimir.", "error");
+      return;
+    }
+
+    establecerMensaje("Generando PDF del menú semanal de 7 días...", "info");
+
+    const paciente = document.getElementById("equiv_pdf_paciente_nombre")?.textContent || "Paciente";
+    const fecha = new Date().toISOString().slice(0, 10);
+    const nombreLimpio = paciente.replace(/[^a-zA-Z0-9_\-]/g, "_");
+
+    const opciones = {
+      margin: [6, 6, 6, 6],
+      filename: `Menu_Semanal_7_Dias_${nombreLimpio}_${fecha}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+    };
+
+    window.html2pdf().set(opciones).from(elemento).save().then(function () {
+      establecerMensaje("PDF del menú semanal descargado con éxito.", "success");
+    }).catch(function (error) {
+      console.error("Error al exportar PDF:", error);
+      establecerMensaje("Hubo un detalle al exportar a PDF. Puedes utilizar el botón 'Imprimir' o guardar como PDF desde el navegador.", "info");
+    });
+  }
+
+  function imprimirMenuSemanal() {
+    window.print();
+  }
+
+  function copiarResumenSemanalTexto() {
+    const comidas = estado.comidas;
+    const grupos = gruposActivos();
+    const lineas = [
+      "PLAN NUTRICIONAL SEMANAL - MENÚ DE 7 DÍAS",
+      `Energía diaria: ${formatear(estado.objetivos.energia, 0)} kcal | Distribución: ${formatear(estado.objetivos.proteinaPct, 0)}% Prot · ${formatear(estado.objetivos.grasaPct, 0)}% Grasa · ${formatear(estado.objetivos.carbohidratoPct, 0)}% CHO`,
+      "===========================================================",
+      ""
+    ];
+
+    DIAS_SEMANA.forEach(function (dia) {
+      lineas.push(`=== ${dia.label.toUpperCase()} ===`);
+      const datosDia = estado.menuSemanal[dia.id] || { descripciones: {}, alimentos: {} };
+
+      comidas.forEach(function (comida, indiceComida) {
+        const hora = comida.hora ? ` (${comida.hora})` : "";
+        lineas.push(`  [${comida.nombre.toUpperCase()}${hora}]`);
+
+        const desc = (datosDia.descripciones?.[indiceComida] || "").trim();
+        if (desc) {
+          lineas.push(`  Preparación: ${desc}`);
+        }
+
+        let hayItems = false;
+        grupos.forEach(function (grupo) {
+          const cantidad = limitarNoNegativo((estado.distribucion[grupo.id] || [])[indiceComida]);
+          if (cantidad > 0) {
+            hayItems = true;
+            const clave = `${indiceComida}_${grupo.id}`;
+            const alimento = datosDia.alimentos?.[clave];
+            if (alimento) {
+              lineas.push(`    • ${alimento.nombre}: ${calcularMedidaAlimento(alimento, cantidad)}`);
+            } else {
+              lineas.push(`    • ${generarDescripcionRacion(grupo, cantidad)}`);
+            }
+          }
+        });
+
+        if (!hayItems && !desc) {
+          lineas.push("    (Sin asignación)");
+        }
+        lineas.push("");
+      });
+      lineas.push("");
+    });
+
+    const texto = lineas.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        establecerMensaje("Menú semanal de 7 días copiado al portapapeles con éxito.", "success");
+      }).catch(function () {
+        establecerMensaje("Menú copiado al portapapeles.", "info");
+      });
+    } else {
+      establecerMensaje("Menú copiado al portapapeles.", "info");
+    }
+  }
+
+  function copiarPrescripcionTexto() {
+    const diaActivo = obtenerDiaActivo();
+    const diaNombre = DIAS_SEMANA.find(d => d.id === diaActivo)?.label || diaActivo;
+    const comidas = estado.comidas;
+    const grupos = gruposActivos();
+    const datosDia = estado.menuSemanal[diaActivo] || { descripciones: {}, alimentos: {} };
+
+    const lineas = [
+      `PLAN NUTRICIONAL - PRESCRIPCIÓN DE EQUIVALENTES (${diaNombre.toUpperCase()})`,
+      ""
+    ];
+
+    comidas.forEach(function (comida, indiceComida) {
+      const nombreComida = comida.nombre || `Comida ${indiceComida + 1}`;
+      const horaComida = comida.hora ? ` (${comida.hora})` : "";
+      lineas.push(`${nombreComida.toUpperCase()}${horaComida}:`);
+
+      const desc = (datosDia.descripciones?.[indiceComida] || "").trim();
+      if (desc) {
+        lineas.push(`  Preparación: ${desc}`);
+      }
+
+      let hayItems = false;
+      grupos.forEach(function (grupo) {
+        const cantidad = limitarNoNegativo((estado.distribucion[grupo.id] || [])[indiceComida]);
+        if (cantidad > 0) {
+          hayItems = true;
+          const clave = `${indiceComida}_${grupo.id}`;
+          const alimentoSel = datosDia.alimentos?.[clave];
+          if (alimentoSel) {
+            const medidaTxt = calcularMedidaAlimento(alimentoSel, cantidad);
+            lineas.push(`  • ${alimentoSel.nombre}: ${medidaTxt} (${grupo.grupo})`);
+          } else {
+            lineas.push(`  • ${generarDescripcionRacion(grupo, cantidad)}`);
+          }
+        }
+      });
+
+      if (!hayItems && !desc) {
+        lineas.push("  (Sin equivalentes asignados)");
+      }
+      lineas.push("");
+    });
+
+    const texto = lineas.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        establecerMensaje(`Prescripción de ${diaNombre} copiada al portapapeles con éxito.`, "success");
+      }).catch(function () {
+        establecerMensaje("Prescripción generada. Puedes copiarla desde la pantalla.", "info");
+      });
+    } else {
+      establecerMensaje("Prescripción generada. Puedes copiarla desde la pantalla.", "info");
     }
   }
 
@@ -1240,9 +2260,35 @@
         return { nombre: String(comida.nombre || respaldo.nombre), hora: String(comida.hora || respaldo.hora) };
       });
       estado.distribucion = guardado.distribucion && typeof guardado.distribucion === "object" ? guardado.distribucion : {};
+      estado.subtabActiva = (guardado.subtabActiva && ["distribucion", "menu", "resumen"].includes(guardado.subtabActiva)) ? guardado.subtabActiva : "distribucion";
+      estado.diaActivo = (guardado.diaActivo && DIAS_SEMANA.some(d => d.id === guardado.diaActivo)) ? guardado.diaActivo : "lunes";
+
+      estado.menuSemanal = crearMenuSemanalInicial();
+      if (guardado.menuSemanal && typeof guardado.menuSemanal === "object") {
+        DIAS_SEMANA.forEach(function (dia) {
+          if (guardado.menuSemanal[dia.id]) {
+            estado.menuSemanal[dia.id] = {
+              descripciones: typeof guardado.menuSemanal[dia.id].descripciones === "object" ? { ...guardado.menuSemanal[dia.id].descripciones } : {},
+              alimentos: typeof guardado.menuSemanal[dia.id].alimentos === "object" ? { ...guardado.menuSemanal[dia.id].alimentos } : {}
+            };
+          }
+        });
+      }
+
+      // Migración si venía de un solo día
+      if (guardado.alimentosSeleccionados && typeof guardado.alimentosSeleccionados === "object" && Object.keys(guardado.alimentosSeleccionados).length > 0) {
+        if (Object.keys(estado.menuSemanal.lunes.alimentos).length === 0) {
+          estado.menuSemanal.lunes.alimentos = { ...guardado.alimentosSeleccionados };
+        }
+      }
+
+      estado.alimentosSeleccionados = estado.menuSemanal[estado.diaActivo].alimentos;
       normalizarDistribucion();
       return true;
-    } catch (_error) { estado = crearEstadoInicial(); return false; }
+    } catch (_error) {
+      estado = crearEstadoInicial();
+      return false;
+    }
   }
 
   function activarMatriz(fuente, objetivosPrevios) {
@@ -1261,8 +2307,10 @@
     document.getElementById("equiv_num_comidas").value = String(estado.comidas.length);
     renderizarFilasGrupos();
     renderizarConfiguracionComidas();
+    renderizarBotonesDias();
     if (teniaPlan) renderizarEstructuraDistribucion();
     else distribuirAutomaticamente(false);
+    cambiarSubpestanaEquivalentes(estado.subtabActiva || "distribucion");
   }
 
   function cambiarMatriz(fuente) {
@@ -1411,6 +2459,7 @@
       input.value = valor;
       estado.equivalentes[input.dataset.equivalentInput] = valor;
       actualizarCalculosGrupos();
+      actualizarVisibilidadCeros();
       programarGuardado();
     });
 
@@ -1447,15 +2496,160 @@
         const hora = encabezado ? encabezado.parentElement.querySelector("small") : null;
         if (hora) hora.textContent = campo.value;
       }
+      renderizarCuadroVertical();
+      if (estado.subtabActiva === "resumen") renderizarResumenSemanalHorizontal();
       programarGuardado();
     });
 
     document.getElementById("equiv_num_comidas").addEventListener("change", function (event) { cambiarCantidadComidas(event.target.value); });
     document.getElementById("equiv_cargar_calculadora").addEventListener("click", cargarDesdeCalculadora);
+    const btnToggleCeros = document.getElementById("equiv_toggle_ceros");
+    if (btnToggleCeros) btnToggleCeros.addEventListener("click", alternarOcultarCeros);
+    const btnEncerarGrupos = document.getElementById("equiv_encerar_grupos");
+    if (btnEncerarGrupos) btnEncerarGrupos.addEventListener("click", encerarEquivalentes);
+    const btnEncerarDistribucion = document.getElementById("equiv_encerar_distribucion");
+    if (btnEncerarDistribucion) btnEncerarDistribucion.addEventListener("click", encerarDistribucion);
+    const btnCopiarPrescripcion = document.getElementById("equiv_copiar_prescripcion");
+    if (btnCopiarPrescripcion) btnCopiarPrescripcion.addEventListener("click", copiarPrescripcionTexto);
     document.getElementById("equiv_sugerir").addEventListener("click", sugerirEquivalentes);
     document.getElementById("equiv_distribuir").addEventListener("click", function () { distribuirAutomaticamente(true); });
     document.getElementById("equiv_exportar").addEventListener("click", exportarExcel);
-    document.getElementById("equiv_reiniciar").addEventListener("click", reiniciarSistema);
+    const btnReiniciar = document.getElementById("equiv_reiniciar");
+    if (btnReiniciar) btnReiniciar.addEventListener("click", reiniciarSistema);
+
+    // NAVEGACIÓN ENTRE SUBPESTAÑAS
+    document.querySelectorAll(".equiv-subtab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        cambiarSubpestanaEquivalentes(btn.dataset.equivSubtab);
+      });
+    });
+
+    document.addEventListener("click", function (event) {
+      const btnNav = event.target.closest("[data-action='ir-a-subtab']");
+      if (btnNav) {
+        event.preventDefault();
+        cambiarSubpestanaEquivalentes(btnNav.dataset.target);
+        const subtabsNav = document.querySelector(".equivalentes-subtabs-nav");
+        if (subtabsNav) {
+          subtabsNav.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    });
+
+    // SELECTOR DE DÍAS (PLANIFICADOR SEMANAL 7 DÍAS)
+    const contenedorDias = document.getElementById("equiv_day_selector_buttons");
+    if (contenedorDias) {
+      contenedorDias.addEventListener("click", function (event) {
+        const btnDia = event.target.closest(".equiv-day-btn");
+        if (btnDia && btnDia.dataset.dia) {
+          cambiarDiaActivo(btnDia.dataset.dia);
+        }
+      });
+    }
+
+    const btnCopiarDia = document.getElementById("equiv_copiar_dia_actual");
+    if (btnCopiarDia) btnCopiarDia.addEventListener("click", copiarDiaActualATodos);
+
+    const btnLimpiarDia = document.getElementById("equiv_limpiar_dia_actual");
+    if (btnLimpiarDia) btnLimpiarDia.addEventListener("click", limpiarDiaActual);
+
+    // BOTONES DE EXPORTACIÓN Y RESUMEN
+    const btnDescargarPdf = document.getElementById("equiv_descargar_pdf_menu");
+    if (btnDescargarPdf) btnDescargarPdf.addEventListener("click", descargarPdfMenuSemanal);
+
+    const btnImprimirMenu = document.getElementById("equiv_imprimir_menu");
+    if (btnImprimirMenu) btnImprimirMenu.addEventListener("click", imprimirMenuSemanal);
+
+    const btnCopiarResumenTexto = document.getElementById("equiv_copiar_resumen_texto");
+    if (btnCopiarResumenTexto) btnCopiarResumenTexto.addEventListener("click", copiarResumenSemanalTexto);
+
+    const contVertical = document.getElementById("equiv_prescripcion_vertical");
+    if (contVertical) {
+      contVertical.addEventListener("input", function (event) {
+        const txtDesc = event.target.closest(".equiv-meal-desc-input");
+        if (txtDesc) {
+          actualizarDescripcionComida(Number(txtDesc.dataset.mealIndex), txtDesc.value);
+          return;
+        }
+
+        const input = event.target.closest(".equiv-food-search-input");
+        if (!input) return;
+        mostrarDropdownAlimentos(input.dataset.mealIndex, input.dataset.groupId, input.value);
+      });
+
+      contVertical.addEventListener("focusin", function (event) {
+        const input = event.target.closest(".equiv-food-search-input");
+        if (!input) return;
+        mostrarDropdownAlimentos(input.dataset.mealIndex, input.dataset.groupId, input.value);
+      });
+
+      contVertical.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          const input = event.target.closest(".equiv-food-search-input");
+          if (!input) return;
+          event.preventDefault();
+          const mealIndex = input.dataset.mealIndex;
+          const groupId = input.dataset.groupId;
+          const dropdown = document.getElementById(`dropdown_${mealIndex}_${groupId}`);
+          const primerItem = dropdown ? dropdown.querySelector("[data-action='seleccionar-alimento']") : null;
+          if (primerItem) {
+            seleccionarAlimentoParaComida(mealIndex, groupId, primerItem.dataset.foodId);
+          }
+        }
+      });
+
+      contVertical.addEventListener("click", function (event) {
+        const btnToggle = event.target.closest("[data-action='toggle-dropdown']");
+        if (btnToggle) {
+          event.stopPropagation();
+          const mealIndex = btnToggle.dataset.mealIndex;
+          const groupId = btnToggle.dataset.groupId;
+          const dropdown = document.getElementById(`dropdown_${mealIndex}_${groupId}`);
+          if (dropdown && dropdown.style.display !== "none") {
+            dropdown.style.display = "none";
+          } else {
+            mostrarDropdownAlimentos(mealIndex, groupId, "");
+            const input = btnToggle.closest(".equiv-food-search-wrap")?.querySelector(".equiv-food-search-input");
+            if (input) input.focus();
+          }
+          return;
+        }
+
+        const itemDropdown = event.target.closest("[data-action='seleccionar-alimento']");
+        if (itemDropdown) {
+          event.stopPropagation();
+          seleccionarAlimentoParaComida(itemDropdown.dataset.meal, itemDropdown.dataset.group, itemDropdown.dataset.foodId);
+          return;
+        }
+
+        const btnQuitar = event.target.closest("[data-action='quitar-alimento']");
+        if (btnQuitar) {
+          event.stopPropagation();
+          quitarAlimentoDeComida(btnQuitar.dataset.meal, btnQuitar.dataset.group);
+          return;
+        }
+      });
+    }
+
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest(".equiv-food-search-wrap")) {
+        cerrarTodosLosDropdownsAlimentos();
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        cerrarTodosLosDropdownsAlimentos();
+      }
+    });
+
+    const linkEquivalentes = document.getElementById("side-equivalentes-link");
+    if (linkEquivalentes) {
+      linkEquivalentes.addEventListener("shown.bs.tab", function () {
+        if (typeof window.inicializarGuiaUSFQ === "function") window.inicializarGuiaUSFQ();
+        if (window.lucide) window.lucide.createIcons();
+      });
+    }
   }
 
   function inicializarEquivalentes() {
@@ -1467,6 +2661,7 @@
     } catch (_error) { }
     activarMatriz(inicial);
     configurarEventos();
+    if (typeof window.inicializarGuiaUSFQ === "function") window.inicializarGuiaUSFQ();
     if (window.lucide) window.lucide.createIcons();
   }
 

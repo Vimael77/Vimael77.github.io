@@ -1329,15 +1329,33 @@
 
               <div id="equiv_mensaje_general"><p id="equiv_mensaje" class="equivalentes-message" role="status" aria-live="polite"></p></div>
 
-              <article class="equivalentes-card">
-                <div class="equivalentes-card-heading">
-                  <span class="equivalentes-step-number">1</span>
-                  <div>
-                    <h4>Objetivo dietosint&eacute;tico</h4>
-                    <p>Define energ&iacute;a, peso ideal y distribuci&oacute;n de macronutrientes.</p>
+              <!-- NAVEGACIÓN EN PESTAÑAS DEL SISTEMA DE EQUIVALENTES -->
+              <nav class="equivalentes-subtabs-nav" aria-label="Secciones del sistema de equivalentes">
+                <button type="button" class="equiv-subtab-btn active" data-equiv-subtab="distribucion">
+                  <span data-lucide="calculator" class="equiv-subtab-icon" aria-hidden="true"></span>
+                  <span class="equiv-subtab-title">1. Distribuci&oacute;n de Equivalentes</span>
+                </button>
+                <button type="button" class="equiv-subtab-btn" data-equiv-subtab="menu">
+                  <span data-lucide="calendar-days" class="equiv-subtab-icon" aria-hidden="true"></span>
+                  <span class="equiv-subtab-title">2. Planificador Semanal (7 d&iacute;as)</span>
+                </button>
+                <button type="button" class="equiv-subtab-btn" data-equiv-subtab="resumen">
+                  <span data-lucide="layout-grid" class="equiv-subtab-icon" aria-hidden="true"></span>
+                  <span class="equiv-subtab-title">3. Resumen Horizontal y PDF</span>
+                </button>
+              </nav>
+
+              <!-- PANEL 1: CÁLCULO Y DISTRIBUCIÓN -->
+              <div class="equiv-subtab-pane active" id="equiv_panel_distribucion">
+                <article class="equivalentes-card">
+                  <div class="equivalentes-card-heading">
+                    <span class="equivalentes-step-number">1</span>
+                    <div>
+                      <h4>Objetivo dietosint&eacute;tico</h4>
+                      <p>Define energ&iacute;a, peso ideal y distribuci&oacute;n de macronutrientes.</p>
+                    </div>
                   </div>
-                </div>
-                <div class="equivalentes-objective-grid">
+                  <div class="equivalentes-objective-grid">
                   <label class="equivalentes-field" for="equiv_energia">
                     <span>Energ&iacute;a diaria</span>
                     <span class="input-group">
@@ -1387,10 +1405,20 @@
                       <p>Ajusta las raciones; los aportes y la adecuaci&oacute;n se actualizan al instante con la l&oacute;gica de intercambios USFQ 2024.</p>
                     </div>
                   </div>
-                  <button type="button" id="equiv_sugerir" class="btn btn-success equivalentes-plan-action">
-                    <span data-lucide="wand-sparkles" aria-hidden="true"></span>
-                    Sugerir equivalentes
-                  </button>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button" id="equiv_toggle_ceros" class="btn equivalentes-toggle-action">
+                      <span data-lucide="eye-off" aria-hidden="true"></span>
+                      <span id="equiv_toggle_ceros_label">Ocultar Equivalentes en 0</span>
+                    </button>
+                    <button type="button" id="equiv_encerar_grupos" class="btn equivalentes-reset-action">
+                      <span data-lucide="rotate-ccw" aria-hidden="true"></span>
+                      Encerar equivalentes
+                    </button>
+                    <button type="button" id="equiv_sugerir" class="btn btn-success equivalentes-plan-action">
+                      <span data-lucide="wand-sparkles" aria-hidden="true"></span>
+                      Sugerir equivalentes
+                    </button>
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="equiv_matriz" class="form-label fw-bold">Tabla de referencia del plan</label>
@@ -1422,6 +1450,49 @@
                   </table>
                 </div>
                 <div id="equiv_adecuacion_resumen" class="equivalentes-adequacy-grid" aria-label="Adecuaci&oacute;n del plan"></div>
+              </article>
+
+              <article class="equivalentes-card">
+                <div class="equivalentes-card-heading equivalentes-card-heading--actions">
+                  <div class="equivalentes-heading-copy">
+                    <span class="equivalentes-step-number">3</span>
+                    <div>
+                      <h4>Distribuci&oacute;n por tiempos de comida</h4>
+                      <p>Reparte cada grupo y comprueba que la suma coincida con el plan diario.</p>
+                    </div>
+                  </div>
+                  <div class="equivalentes-meal-actions">
+                    <label for="equiv_num_comidas">Tiempos</label>
+                    <select id="equiv_num_comidas" class="form-select form-select-sm">
+                      <option value="4">4 comidas</option>
+                      <option value="5" selected>5 comidas (Desayuno, MM, Almuerzo, MT, Merienda)</option>
+                      <option value="6">6 comidas</option>
+                    </select>
+                    <button type="button" id="equiv_encerar_distribucion" class="btn equivalentes-reset-action">
+                      <span data-lucide="rotate-ccw" aria-hidden="true"></span>
+                      Encerar distribuci&oacute;n
+                    </button>
+                    <button type="button" id="equiv_distribuir" class="btn btn-success equivalentes-plan-action">
+                      <span data-lucide="layout-grid" aria-hidden="true"></span>
+                      Distribuir autom&aacute;ticamente
+                    </button>
+                  </div>
+                </div>
+                <div id="equiv_comidas_config" class="equivalentes-meal-config" aria-label="Horarios y nombres de comidas"></div>
+                <div class="table-responsive equivalentes-table-wrap">
+                  <table class="table table-sm align-middle equivalentes-table equivalentes-distribution-table" id="equiv_tabla_distribucion">
+                    <caption class="sr-only">Distribuci&oacute;n de equivalentes por tiempo de comida y resumen nutricional.</caption>
+                    <thead id="equiv_distribucion_head"></thead>
+                    <tbody id="equiv_distribucion_body"></tbody>
+                    <tfoot id="equiv_distribucion_foot"></tfoot>
+                  </table>
+                </div>
+                <div id="equiv_almuerzo_resumen"></div>
+                <div class="equivalentes-legend" aria-label="Leyenda de cumplimiento">
+                  <span><i class="equiv-status-dot equiv-status-ok"></i> Completo</span>
+                  <span><i class="equiv-status-dot equiv-status-warning"></i> Pendiente</span>
+                  <span><i class="equiv-status-dot equiv-status-over"></i> Excedido</span>
+                </div>
               </article>
 
               <article class="equivalentes-card" id="usfq_catalogo">
@@ -1468,7 +1539,7 @@
                   <div id="usfq_resumen" class="usfq-summary" aria-live="polite"></div>
                   <p id="usfq_contador" class="usfq-counter" aria-live="polite">Si no aparecen alimentos, recarga la p&aacute;gina para volver a cargar la gu&iacute;a.</p>
                 </div>
-                <p class="equivalentes-source-note">Pasa el mouse sobre un alimento o usa «Ver imagen» para ver cómo servir un intercambio. Usa la medida casera o el peso indicado; las ilustraciones no están a escala.</p>
+                <p class="equivalentes-source-note">Pasa el cursor sobre la tarjeta de cualquier alimento para ver la ilustración de su porción de intercambio. Usa la medida casera o el peso indicado; las ilustraciones no están a escala.</p>
                 <div id="usfq_resultados" class="usfq-results" aria-label="Porciones de intercambio USFQ"></div>
                 <div id="usfq_vacio" class="usfq-empty" hidden>
                   <span data-lucide="search-x" aria-hidden="true"></span>
@@ -1486,44 +1557,153 @@
                     USFQ Press</a> (porciones y referencias). Las ilustraciones se generaron para este programa y no son fotografías del libro.</p>
               </article>
 
-              <article class="equivalentes-card">
+              <div class="equiv-tab-footer-nav d-flex justify-content-end mt-4 mb-2">
+                <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-action="ir-a-subtab" data-target="menu">
+                  <span>Diseñar Menú Semanal (7 días)</span>
+                  <span data-lucide="arrow-right" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div> <!-- Fin #equiv_panel_distribucion -->
+
+            <!-- PANEL 2: PLANIFICADOR SEMANAL (7 DÍAS) -->
+            <div class="equiv-subtab-pane" id="equiv_panel_menu">
+              <article class="equivalentes-card" id="equiv_prescripcion_card">
                 <div class="equivalentes-card-heading equivalentes-card-heading--actions">
                   <div class="equivalentes-heading-copy">
-                    <span class="equivalentes-step-number">3</span>
+                    <span class="equivalentes-step-number">4</span>
                     <div>
-                      <h4>Distribuci&oacute;n por tiempos de comida</h4>
-                      <p>Reparte cada grupo y comprueba que la suma coincida con el plan diario.</p>
+                      <h4>Planificador del Men&uacute; Semanal (7 d&iacute;as)</h4>
+                      <p>Dise&ntilde;a el men&uacute; de cada d&iacute;a de la semana: a&ntilde;ade la descripci&oacute;n/preparaci&oacute;n del plato y selecciona los alimentos correspondientes.</p>
                     </div>
                   </div>
-                  <div class="equivalentes-meal-actions">
-                    <label for="equiv_num_comidas">Tiempos</label>
-                    <select id="equiv_num_comidas" class="form-select form-select-sm">
-                      <option value="4">4 comidas</option>
-                      <option value="5" selected>5 comidas (Desayuno, MM, Almuerzo, MT, Merienda)</option>
-                      <option value="6">6 comidas</option>
-                    </select>
-                    <button type="button" id="equiv_distribuir" class="btn btn-success equivalentes-plan-action">
-                      <span data-lucide="layout-grid" aria-hidden="true"></span>
-                      Distribuir autom&aacute;ticamente
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button" id="equiv_copiar_dia_actual" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Duplicar el menú y alimentos de este día a toda la semana">
+                      <span data-lucide="copy-check" aria-hidden="true"></span>
+                      <span>Copiar este d&iacute;a a los 7 d&iacute;as</span>
+                    </button>
+                    <button type="button" id="equiv_limpiar_dia_actual" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Borrar alimentos y descripción de este día">
+                      <span data-lucide="trash-2" aria-hidden="true"></span>
+                      <span>Limpiar d&iacute;a</span>
+                    </button>
+                    <button type="button" id="equiv_copiar_prescripcion" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                      <span data-lucide="copy" aria-hidden="true"></span>
+                      <span>Copiar d&iacute;a actual</span>
                     </button>
                   </div>
                 </div>
-                <div id="equiv_comidas_config" class="equivalentes-meal-config" aria-label="Horarios y nombres de comidas"></div>
-                <div class="table-responsive equivalentes-table-wrap">
-                  <table class="table table-sm align-middle equivalentes-table equivalentes-distribution-table" id="equiv_tabla_distribucion">
-                    <caption class="sr-only">Distribuci&oacute;n de equivalentes por tiempo de comida y resumen nutricional.</caption>
-                    <thead id="equiv_distribucion_head"></thead>
-                    <tbody id="equiv_distribucion_body"></tbody>
-                    <tfoot id="equiv_distribucion_foot"></tfoot>
-                  </table>
+
+                <!-- Selector de día de la semana -->
+                <div class="equiv-day-selector-wrap" aria-label="Selector de día de la semana">
+                  <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                    <span class="fw-bold text-success small d-inline-flex align-items-center gap-1">
+                      <span data-lucide="calendar" style="width: 14px; height: 14px;" aria-hidden="true"></span>
+                      Selecciona el d&iacute;a a planificar:
+                    </span>
+                    <span class="text-muted small" id="equiv_dia_resumen_indicador">Editando: <strong id="equiv_dia_activo_badge" class="text-success">Lunes</strong></span>
+                  </div>
+                  <div class="equiv-day-selector" id="equiv_day_selector_buttons">
+                    <!-- Botones de Lunes a Domingo se inyectan dinámicamente -->
+                  </div>
                 </div>
-                <div id="equiv_almuerzo_resumen"></div>
-                <div class="equivalentes-legend" aria-label="Leyenda de cumplimiento">
-                  <span><i class="equiv-status-dot equiv-status-ok"></i> Completo</span>
-                  <span><i class="equiv-status-dot equiv-status-warning"></i> Pendiente</span>
-                  <span><i class="equiv-status-dot equiv-status-over"></i> Excedido</span>
+
+                <!-- Contenedor vertical de tiempos de comida para el día seleccionado -->
+                <div id="equiv_prescripcion_vertical" class="equivalentes-vertical-container" aria-label="Tiempos de comida y selección de alimentos del día"></div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
+                  <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-action="ir-a-subtab" data-target="distribucion">
+                    <span data-lucide="arrow-left" aria-hidden="true"></span>
+                    <span>Volver a Distribuci&oacute;n</span>
+                  </button>
+                  <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-action="ir-a-subtab" data-target="resumen">
+                    <span>Ver Resumen Semanal y Descargar PDF</span>
+                    <span data-lucide="arrow-right" aria-hidden="true"></span>
+                  </button>
                 </div>
               </article>
+            </div> <!-- Fin #equiv_panel_menu -->
+
+            <!-- PANEL 3: RESUMEN HORIZONTAL DE 7 DÍAS Y PDF -->
+            <div class="equiv-subtab-pane" id="equiv_panel_resumen">
+              <article class="equivalentes-card" id="equiv_resumen_semanal_card">
+                <div class="equivalentes-card-heading equivalentes-card-heading--actions">
+                  <div class="equivalentes-heading-copy">
+                    <span class="equivalentes-step-number">5</span>
+                    <div>
+                      <h4>Resumen Horizontal del Men&uacute; Semanal (7 d&iacute;as)</h4>
+                      <p>Cuadro horizontal con el men&uacute; de los 7 d&iacute;as. Pasa el cursor sobre el texto de cada comida para ver sus ingredientes y equivalentes.</p>
+                    </div>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button" id="equiv_descargar_pdf_menu" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
+                      <span data-lucide="file-down" aria-hidden="true"></span>
+                      <span>Descargar en PDF (Horizontal)</span>
+                    </button>
+                    <button type="button" id="equiv_imprimir_menu" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                      <span data-lucide="printer" aria-hidden="true"></span>
+                      <span>Imprimir</span>
+                    </button>
+                    <button type="button" id="equiv_copiar_resumen_texto" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                      <span data-lucide="copy" aria-hidden="true"></span>
+                      <span>Copiar texto de los 7 d&iacute;as</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Contenedor visual y para exportación PDF horizontal -->
+                <div id="equiv_menu_semanal_imprimible" class="equiv-weekly-printable-wrap">
+                  <div class="equiv-weekly-clinical-header">
+                    <div class="equiv-weekly-header-brand">
+                      <h3 class="equiv-weekly-title">PLAN NUTRICIONAL SEMANAL</h3>
+                      <p class="equiv-weekly-subtitle">Sistema de Intercambios y Men&uacute; Diet&eacute;tico de 7 d&iacute;as</p>
+                    </div>
+                    <div class="equiv-weekly-header-meta">
+                      <div class="equiv-weekly-meta-item">
+                        <span>Paciente:</span> <strong id="equiv_pdf_paciente_nombre">Paciente General</strong>
+                      </div>
+                      <div class="equiv-weekly-meta-item">
+                        <span>Energ&iacute;a Diaria:</span> <strong id="equiv_pdf_calorias">1700 kcal</strong>
+                      </div>
+                      <div class="equiv-weekly-meta-item">
+                        <span>Distribuci&oacute;n:</span> <strong id="equiv_pdf_macros">20% P &middot; 26% G &middot; 54% CHO</strong>
+                      </div>
+                      <div class="equiv-weekly-meta-item">
+                        <span>Fecha:</span> <strong id="equiv_pdf_fecha"></strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="table-responsive equiv-weekly-table-wrap">
+                    <table class="table table-bordered align-top equiv-weekly-horizontal-table" id="equiv_tabla_semanal_horizontal">
+                      <thead>
+                        <tr>
+                          <th scope="col" class="equiv-col-meal">Tiempo</th>
+                          <th scope="col">Lunes</th>
+                          <th scope="col">Martes</th>
+                          <th scope="col">Mi&eacute;rcoles</th>
+                          <th scope="col">Jueves</th>
+                          <th scope="col">Viernes</th>
+                          <th scope="col">S&aacute;bado</th>
+                          <th scope="col">Domingo</th>
+                        </tr>
+                      </thead>
+                      <tbody id="equiv_tabla_semanal_body"></tbody>
+                      <tfoot id="equiv_tabla_semanal_foot"></tfoot>
+                    </table>
+                  </div>
+
+                  <div class="equiv-weekly-footer-notes">
+                    <small class="text-muted d-block"><strong>Nota:</strong> Los alimentos pueden intercambiarse por otros del mismo subgrupo respetando la porci&oacute;n indicada. Mantener adecuada hidrataci&oacute;n diaria.</small>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-start align-items-center mt-4 pt-3 border-top">
+                  <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-action="ir-a-subtab" data-target="menu">
+                    <span data-lucide="arrow-left" aria-hidden="true"></span>
+                    <span>Volver al Planificador Semanal</span>
+                  </button>
+                </div>
+              </article>
+            </div> <!-- Fin #equiv_panel_resumen -->
             </section>
           </div>
 
@@ -1934,7 +2114,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="lucide.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();</script>
 
   <script src="auth.js?v=20260915-guest-2"></script>
   <script src="perfil.js?v=20260915-guest-2"></script>

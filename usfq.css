@@ -170,6 +170,17 @@
     border-radius: 6px;
     background: #fbfdfb;
     overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, transform 0.12s ease;
+}
+
+.usfq-exchange-card:hover,
+.usfq-exchange-card.usfq-card-active,
+.usfq-exchange-card:focus-visible {
+    border-color: #5195a6;
+    background-color: #f2f8f6;
+    box-shadow: 0 4px 14px rgba(38, 95, 72, 0.1);
+    outline: none;
 }
 
 .usfq-exchange-food {
@@ -230,6 +241,7 @@
     background: #fff;
     color: #294636;
     box-shadow: 0 6px 24px #223b2b30;
+    pointer-events: none;
 }
 
 .usfq-photo-preview[hidden],
@@ -303,7 +315,7 @@
 }
 
 .usfq-exchange-portion {
-    margin: 5px 0 12px;
+    margin: 5px 0 8px;
     color: #40584a;
     font-size: 0.94rem;
     line-height: 1.5;
@@ -312,6 +324,77 @@
 .usfq-exchange-portion strong {
     color: #245735;
     font-weight: 700;
+}
+
+.usfq-card-macros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    margin: 3px 0 10px;
+}
+
+.usfq-macro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    font-weight: 500;
+}
+
+.usfq-macro-badge strong {
+    font-weight: 700;
+}
+
+.usfq-macro-cho {
+    background: #eef6fc;
+    color: #1a577d;
+    border: 1px solid #cce2f4;
+}
+
+.usfq-macro-cho strong {
+    color: #0f4464;
+}
+
+.usfq-macro-prot {
+    background: #fdf2f0;
+    color: #8c2e24;
+    border: 1px solid #f7d2cc;
+}
+
+.usfq-macro-prot strong {
+    color: #701d14;
+}
+
+.usfq-macro-grasa {
+    background: #fef9ed;
+    color: #8a6515;
+    border: 1px solid #fae8ba;
+}
+
+.usfq-macro-grasa strong {
+    color: #6e4f0a;
+}
+
+.usfq-macro-kcal {
+    background: #edf6ef;
+    color: #1e663a;
+    border: 1px solid #cbe7d3;
+}
+
+.usfq-macro-kcal strong {
+    color: #134e2a;
+}
+
+.usfq-photo-macros {
+    margin: 6px 0 8px;
+}
+
+.usfq-photo-macros .usfq-card-macros {
+    margin: 0;
 }
 
 .usfq-exchange-meta {
